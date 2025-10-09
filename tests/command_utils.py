@@ -44,6 +44,7 @@ def execute_train(
         # "pkill -9 python; "
         "pkill -9 miles; "
         "pkill -9 redis; "
+        "true; "
     )
 
     exec_command(

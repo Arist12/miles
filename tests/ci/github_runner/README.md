@@ -7,7 +7,17 @@ The token can be found at https://github.com/radixark/miles/settings/actions/run
 
 WARN: The `GITHUB_RUNNER_TOKEN` changes after a while.
 
-### Step 2: Run
+### Step 2: Prepare `/home/runner/externals`
+
+```shell
+docker run --rm -it --privileged --pid=host -v /:/host_root ubuntu /bin/bash -c 'rm -rf /host_root/home/runner/externals && mkdir -p /host_root/home/runner/externals && chmod -R 777 /host_root/home/runner/externals'
+docker run -d --name temp-runner ghcr.io/actions/actions-runner:2.328.0 tail -f /dev/null
+docker cp temp-runner:/home/runner/externals /home/runner/externals
+docker rm -f temp-runner
+ls -alh /home/runner/externals
+```
+
+### Step 3: Run
 
 ```shell
 cd /data/tom/primary_synced/miles/tests/ci/github_runner

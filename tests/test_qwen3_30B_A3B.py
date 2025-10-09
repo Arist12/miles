@@ -1,7 +1,12 @@
+import os
+
 import command_utils as U
 
 MODEL_NAME = "Qwen3-30B-A3B"
 MODEL_TYPE = "qwen3-30B-A3B"
+
+
+TIGHT_HOST_MEMORY = bool(int(os.environ.get("MILES_TEST_TIGHT_HOST_MEMORY", "1")))
 
 
 def prepare():
@@ -52,7 +57,7 @@ def execute():
         "--recompute-method uniform "
         "--recompute-num-layers 1 "
         "--use-dynamic-batch-size "
-        "--max-tokens-per-gpu 16384 "
+        f"--max-tokens-per-gpu {4096 if TIGHT_HOST_MEMORY else 16384} "
     )
 
     grpo_args = (

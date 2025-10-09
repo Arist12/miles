@@ -93,7 +93,12 @@ def get_default_wandb_args(test_file: str):
         run_name += f"_{x}"
 
     # do not put wandb_api_key value here to avoid leaking to logs explicitly
-    return "--use-wandb " f"--wandb-project miles-ci-{test_name} " f"--wandb-group {run_name} " f"--wandb-key ${{WANDB_API_KEY}} "
+    return (
+        "--use-wandb "
+        f"--wandb-project miles-ci-{test_name} "
+        f"--wandb-group {run_name} "
+        f"--wandb-key ${{WANDB_API_KEY}} "
+    )
 
 
 def exec_command(cmd: str, capture_output: bool = False):

@@ -10,6 +10,8 @@ services:
       replicas: 4
     restart: always
     privileged: true
+    ipc: host
+    user: root
     # ref: https://github.com/actions/runner/issues/367#issuecomment-2007558723
     # ref: https://github.com/actions/runner
     entrypoint: >

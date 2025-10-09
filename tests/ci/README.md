@@ -1,8 +1,10 @@
 # Doc about CI
 
-## Configure secrets
+## Configure GitHub secrets
 
+https://github.com/radixark/miles/settings/secrets/actions
 
+* `WANDB_API_KEY`: get from https://wandb.ai/authorize
 
 ## Setup new GitHub runners
 

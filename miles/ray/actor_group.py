@@ -78,7 +78,7 @@ class RayTrainGroup:
         if self.args.use_routing_replay:
             env_vars["ENABLE_ROUTING_REPLAY"] = "1"
 
-        backend = os.environ.get("MILES_BACKEND", "megatron").lower()
+        backend = self.args.train_backend
         if backend == "megatron":
             from miles.backends.megatron_utils import MegatronTrainRayActor
 

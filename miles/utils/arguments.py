@@ -966,7 +966,7 @@ def warning_for_unfinished_backend(backend: str):
 def parse_args(add_custom_arguments=None):
     add_miles_arguments = get_miles_extra_args_provider(add_custom_arguments)
 
-    backend = os.environ.get("MILES_BACKEND", "megatron").lower()
+    backend = TODO
     if backend == "megatron":
         from miles.backends.megatron_utils import parse_args as megatron_parse_args
         from miles.backends.megatron_utils import set_default_megatron_args

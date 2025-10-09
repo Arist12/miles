@@ -1,0 +1,19 @@
+# NOTE: need to have a `.env` file mimicking `.env.example`
+
+version: "3.9"
+
+services:
+  runner:
+    image: ghcr.io/actions/actions-runner:2.328.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      replicas: 4
+    restart: always
+    # ref: https://github.com/actions/runner/issues/367#issuecomment-2007558723
+    # ref: https://github.com/actions/runner
+    entrypoint: >
+      sh -c "
+      ./config.sh --url https://github.com/radixark/miles --token ${GITHUB_RUNNER_TOKEN} --unattended &&
+      ./run.sh
+      "

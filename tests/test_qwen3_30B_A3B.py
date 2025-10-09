@@ -15,8 +15,8 @@ def prepare():
 
 def execute():
     ckpt_args = (
-        "--hf-checkpoint /root/models/Qwen3-30B-A3B-FP8 "
-        "--ref-load /root/Qwen3-30B-A3B_torch_dist "
+        f"--hf-checkpoint /root/models/{MODEL_NAME}-FP8 "
+        f"--ref-load /root/{MODEL_NAME}_torch_dist "
     )
 
     rollout_args = (

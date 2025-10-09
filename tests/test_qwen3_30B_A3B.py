@@ -63,7 +63,7 @@ def execute():
 
     grpo_args = (
         "--advantage-estimator gspo "
-        "--use-kl-loss "
+        f"{'' if TIGHT_HOST_MEMORY else '--use-kl-loss '}"
         "--kl-loss-coef 0.00 "
         "--kl-loss-type low_var_kl "
         "--kl-coef 0.00 "

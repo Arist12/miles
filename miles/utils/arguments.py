@@ -1027,6 +1027,10 @@ def parse_args(add_custom_arguments=None):
 
 
 def parse_args_train_backend():
+    if (x := os.environ.get("MILES_BACKEND")) is not None:
+        print("WARN: `MILES_BACKEND` is deprecated, please use --train-backend directly.")
+        return x
+
     parser = argparse.ArgumentParser()
     get_miles_extra_args_provider()(parser)
     args_partial, _ = parser.parse_known_args()

@@ -56,4 +56,4 @@ jobs:
 
       - name: Execute
         shell: bash
-        run: python tests/${{ matrix.test_file }}
+        run: python tests/${{ matrix.info.test_file }}

@@ -16,6 +16,7 @@ services:
     user: root
     # ref: https://github.com/actions/runner/issues/367#issuecomment-2007558723
     # ref: https://github.com/actions/runner
+    # args ref: https://github.com/actions/runner/blob/68ff57dbc4c836d50f46602a8a53301fb9513eb4/src/Runner.Listener/CommandSettings.cs#L53
     entrypoint: >
       sh -c "
       ./config.sh --url ${GITHUB_RUNNER_URL} --token ${GITHUB_RUNNER_TOKEN} --unattended --work /data/miles_ci/runner_$(hostname) &&

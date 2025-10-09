@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 from typing import Any, Dict
@@ -978,7 +979,7 @@ def warning_for_unfinished_backend(backend: str):
 def parse_args(add_custom_arguments=None):
     add_miles_arguments = get_miles_extra_args_provider(add_custom_arguments)
 
-    backend = TODO
+    backend = parse_args_train_backend()
     if backend == "megatron":
         from miles.backends.megatron_utils import parse_args as megatron_parse_args
         from miles.backends.megatron_utils import set_default_megatron_args
@@ -1024,6 +1025,12 @@ def parse_args(add_custom_arguments=None):
 
     return args
 
+
+def parse_args_train_backend():
+    parser = argparse.ArgumentParser()
+    get_miles_extra_args_provider()(parser)
+    args_partial, _ = parser.parse_known_args()
+    return args_partial.train_backend
 
 def miles_validate_args(args):
     if args.kl_coef != 0 or args.use_kl_loss:

@@ -9,8 +9,9 @@ services:
     deploy:
       replicas: 4
     restart: always
+    environment:
+      RUNNER_ALLOW_RUNASROOT: "1"
     privileged: true
-    ipc: host
     user: root
     # ref: https://github.com/actions/runner/issues/367#issuecomment-2007558723
     # ref: https://github.com/actions/runner

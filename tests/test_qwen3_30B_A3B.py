@@ -3,6 +3,7 @@ import command_utils as U
 MODEL_NAME = "Qwen3-30B-A3B"
 MODEL_TYPE = "qwen3-30B-A3B"
 
+
 def prepare():
     U.exec_command("mkdir -p /root/models /root/datasets")
     U.exec_command("hf download Qwen/Qwen3-30B-A3B --local-dir /root/models/Qwen3-30B-A3B")
@@ -14,10 +15,7 @@ def prepare():
 
 
 def execute():
-    ckpt_args = (
-        f"--hf-checkpoint /root/models/{MODEL_NAME}-FP8 "
-        f"--ref-load /root/{MODEL_NAME}_torch_dist "
-    )
+    ckpt_args = f"--hf-checkpoint /root/models/{MODEL_NAME}-FP8 " f"--ref-load /root/{MODEL_NAME}_torch_dist "
 
     rollout_args = (
         "--prompt-data /root/datasets/dapo-math-17k/dapo-math-17k.jsonl "
@@ -101,7 +99,6 @@ def execute():
         "--attention-backend flash "
         "--moe-token-dispatcher-type flex "
         "--moe-enable-deepep "
-
         "--ci-test "
         "--actor-num-nodes 1 "
         "--actor-num-gpus-per-node 4 "

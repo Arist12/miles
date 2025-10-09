@@ -80,12 +80,7 @@ def get_default_wandb_args():
     if (x := os.environ.get("GITHUB_COMMIT_NAME")) is not None:
         name += f"_{x}"
 
-    return (
-        "--use-wandb "
-        "--wandb-project miles-ci "
-        f"--wandb-group {name} "
-        f"--wandb-key {wandb_api_key} "
-    )
+    return "--use-wandb " "--wandb-project miles-ci " f"--wandb-group {name} " f"--wandb-key {wandb_api_key} "
 
 
 def exec_command(cmd: str, capture_output: bool = False):

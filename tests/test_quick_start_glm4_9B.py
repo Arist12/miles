@@ -3,6 +3,7 @@ import command_utils as U
 MODEL_NAME = "GLM-Z1-9B-0414"
 MODEL_TYPE = "glm4-9B"
 
+
 def prepare():
     U.exec_command("mkdir -p /root/models /root/datasets")
     U.exec_command("hf download zai-org/GLM-Z1-9B-0414 --local-dir /root/models/GLM-Z1-9B-0414")
@@ -79,10 +80,7 @@ def execute():
         "--adam-beta2 0.98 "
     )
 
-    sglang_args = (
-        "--rollout-num-gpus-per-engine 2 "
-        "--use-slime-router "
-    )
+    sglang_args = "--rollout-num-gpus-per-engine 2 " "--use-slime-router "
 
     misc_args = (
         # default dropout in megatron is 0.1
@@ -94,7 +92,6 @@ def execute():
         # need to comment this when using model with MLA
         "--attention-backend flash "
         "--ci-test "
-
         "--actor-num-nodes 1 "
         "--actor-num-gpus-per-node 4 "
         "--rollout-num-gpus 4 "

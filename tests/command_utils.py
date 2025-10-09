@@ -71,6 +71,11 @@ def check_has_nvlink():
 
 
 def get_default_wandb_args():
+    wandb_api_key = os.environ.get("WANDB_API_KEY")
+    if not wandb_api_key:
+        print("Skip wandb configuration since WANDB_API_KEY is not foudn")
+        return ""
+
     name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000000)}"
     if (x := os.environ.get("GITHUB_COMMIT_NAME")) is not None:
         name += f"_{x}"
@@ -79,7 +84,7 @@ def get_default_wandb_args():
         "--use-wandb "
         "--wandb-project miles-ci "
         f"--wandb-group {name} "
-        f"--wandb-key {wandb_key} "
+        f"--wandb-key {wandb_api_key} "
     )
 
 

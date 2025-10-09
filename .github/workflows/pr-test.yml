@@ -12,20 +12,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  primary_test:
+  e2e-test:
     # TODO may use run-ci label etc
     if: github.event.pull_request.draft == false
-    runs-on: self-hosted
+    runs-on: ${{ matrix.info.runs_on }}
     container:
       image: slimerl/slime:latest
       options: --gpus all --ipc=host --shm-size=16g --ulimit memlock=-1 --ulimit stack=67108864 --memory=0 --memory-swap=0 -v /data/models:/root/models -v /data/datasets:/root/datasets
     strategy:
       fail-fast: false
       matrix:
-        test_name:
-          - test_quick_start_glm4_9B
-          - test_qwen3_30B_A3B
-          # TODO more
+        info:
+          - {test_name: test_quick_start_glm4_9B, runs_on: 8-h100-runner}
+          - {test_name: test_qwen3_30B_A3B, runs_on: 8-h100-runner}
     defaults:
       run:
         working-directory: ${{ github.workspace }}

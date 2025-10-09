@@ -9,6 +9,7 @@ services:
     deploy:
       replicas: 4
     restart: always
+    privileged: true
     # ref: https://github.com/actions/runner/issues/367#issuecomment-2007558723
     # ref: https://github.com/actions/runner
     entrypoint: >

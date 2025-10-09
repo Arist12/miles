@@ -1,0 +1,32 @@
+name: PR Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [synchronize, labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-disaggregate-glm4-9B:
+    if: github.event.pull_request.draft == false
+    runs-on: self-hosted
+    container:
+      image: slimerl/slime:latest
+      options: --gpus all --ipc=host --shm-size=16g --ulimit memlock=-1 --ulimit stack=67108864 --memory=0 --memory-swap=0 -v /data/models:/root/models -v /data/datasets:/root/datasets
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Execute
+        run: TODO
+        shell: bash

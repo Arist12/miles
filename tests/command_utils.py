@@ -31,19 +31,19 @@ def execute_train(
     master_addr: str = "127.0.0.1",
 ):
     exec_command(
-        "pkill -9 sglang;"
-        "sleep 3;"
-        "ray stop --force;"
-        "pkill -9 ray;"
+        "pkill -9 sglang; "
+        "sleep 3; "
+        "ray stop --force; "
+        "pkill -9 ray; "
         # cannot be run in CI, o/w kill the parent script
         # TODO: do we really need this kill? (or can we instead kill miles)
-        # "pkill -9 python;"
-        "pkill -9 miles;"
-        "sleep 3;"
-        "pkill -9 ray;"
-        # "pkill -9 python;"
-        "pkill -9 miles;"
-        "pkill -9 redis;"
+        # "pkill -9 python; "
+        "pkill -9 miles; "
+        "sleep 3; "
+        "pkill -9 ray; "
+        # "pkill -9 python; "
+        "pkill -9 miles; "
+        "pkill -9 redis; "
     )
 
     exec_command(

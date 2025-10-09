@@ -15,10 +15,8 @@ def prepare():
 
 def execute():
     ckpt_args = (
-        f"--hf-checkpoint /root/models/{MODEL_NAME}-FP8/ "
-        f"--ref-load /root/{MODEL_TYPE}_torch_dist "
-        "--fp8-format e4m3 "
-        "--fp8-recipe blockwise "
+        "--hf-checkpoint /root/models/Qwen3-30B-A3B-FP8 "
+        "--ref-load /root/Qwen3-30B-A3B_torch_dist "
     )
 
     rollout_args = (
@@ -46,29 +44,29 @@ def execute():
     )
 
     perf_args = (
-        "--tensor-model-parallel-size 2 "
+        "--tensor-model-parallel-size 4 "
         "--sequence-parallel "
         "--pipeline-model-parallel-size 1 "
         "--context-parallel-size 2 "
-        "--expert-model-parallel-size 1 "
+        "--expert-model-parallel-size 8 "
         "--expert-tensor-parallel-size 1 "
         "--recompute-granularity full "
         "--recompute-method uniform "
         "--recompute-num-layers 1 "
         "--use-dynamic-batch-size "
-        "--max-tokens-per-gpu 4608 "
+        "--max-tokens-per-gpu 16384 "
     )
 
     grpo_args = (
-        "--advantage-estimator grpo "
+        "--advantage-estimator gspo "
         "--use-kl-loss "
         "--kl-loss-coef 0.00 "
         "--kl-loss-type low_var_kl "
+        "--kl-coef 0.00 "
         "--entropy-coef 0.00 "
-        "--eps-clip 0.2 "
-        "--eps-clip-high 0.28 "
+        "--eps-clip 4e-4 "
         "--use-tis "
-        "--calculate-per-token-loss "
+        "--use-routing-replay "
     )
 
     optimizer_args = (
@@ -78,11 +76,18 @@ def execute():
         "--weight-decay 0.1 "
         "--adam-beta1 0.9 "
         "--adam-beta2 0.98 "
+        "--optimizer-cpu-offload "
+        "--overlap-cpu-optimizer-d2h-h2d "
+        "--use-precision-aware-optimizer "
     )
 
     sglang_args = (
-        "--rollout-num-gpus-per-engine 2 "
-        "--use-slime-router "
+        "--rollout-num-gpus-per-engine 8 "
+        "--sglang-mem-fraction-static 0.8 "
+        "--sglang-moe-a2a-backend deepep "
+        "--sglang-deepep-mode auto "
+        "--sglang-max-running-requests 512 "
+        "--sglang-disable-radix-cache "
     )
 
     misc_args = (
@@ -94,6 +99,8 @@ def execute():
         "--attention-softmax-in-fp32 "
         # need to comment this when using model with MLA
         "--attention-backend flash "
+        "--moe-token-dispatcher-type flex "
+        "--moe-enable-deepep "
         "--ci-test "
     )
 
@@ -102,7 +109,6 @@ def execute():
         f"{rollout_args} "
         f"{optimizer_args} "
         f"{grpo_args} "
-        f"{distributed_args} "
         f"{wandb_args} "
         f"{perf_args} "
         f"{eval_args} "

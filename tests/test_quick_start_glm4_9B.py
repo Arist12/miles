@@ -101,7 +101,6 @@ def execute():
         f"{rollout_args} "
         f"{optimizer_args} "
         f"{grpo_args} "
-        f"{distributed_args} "
         f"{wandb_args} "
         f"{perf_args} "
         f"{eval_args} "

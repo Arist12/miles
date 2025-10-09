@@ -80,7 +80,7 @@ def execute():
     )
 
     sglang_args = (
-        "--rollout-num-gpus-per-engine 4 "
+        "--rollout-num-gpus-per-engine 8 "
         "--sglang-mem-fraction-static 0.8 "
         "--sglang-moe-a2a-backend deepep "
         "--sglang-deepep-mode auto "
@@ -101,7 +101,7 @@ def execute():
         "--moe-enable-deepep "
         "--ci-test "
         "--actor-num-nodes 1 "
-        "--actor-num-gpus-per-node 4 "
+        "--actor-num-gpus-per-node 8 "
         "--colocate "
     )
 

@@ -10,3 +10,9 @@ The token can be found at https://github.com/radixark/miles/settings/actions/run
 ```shell
 (cd /data/tom/primary_synced/miles/tests/ci/github_runner && docker compose up -d)
 ```
+
+### Debugging
+
+```shell
+(cd /data/tom/primary_synced/miles/tests/ci/github_runner && docker compose logs -f)
+```

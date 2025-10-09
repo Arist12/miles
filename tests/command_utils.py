@@ -69,7 +69,14 @@ def check_has_nvlink():
 
 
 def get_default_wandb_args():
-    return TODO
+    name = TODO
+
+    return (
+        "--use-wandb "
+        "--wandb-project miles-ci "
+        f"--wandb-group {name} "
+        f"--wandb-key {wandb_key} "
+    )
 
 
 def exec_command(cmd: str, capture_output: bool = False):

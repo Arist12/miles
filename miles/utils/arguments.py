@@ -88,6 +88,17 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
 
             return parser
 
+        def add_train_arguments(parser):
+            parser.add_argument(
+                "--train-backend",
+                type=str,
+                choices=["megatron", "fsdp"],
+                default="megatron",
+                help="The backend for training.",
+            )
+
+            return parser
+
         # rollout
         def add_rollout_arguments(parser):
             parser.add_argument(
@@ -928,6 +939,7 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
             parser = add_custom_arguments(parser)
 
         parser = add_cluster_arguments(parser)
+        parser = add_train_arguments(parser)
         parser = add_rollout_arguments(parser)
         parser = add_data_arguments(parser)
         parser = add_eval_arguments(parser)

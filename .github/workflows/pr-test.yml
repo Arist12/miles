@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   test-disaggregate-glm4-9B:
+    # TODO may use run-ci label etc
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
     container:
@@ -27,6 +28,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Execute
-        run: TODO
+      - name: Install
         shell: bash
+        run: cd $GITHUB_WORKSPACE && pip install -e .
+
+      - name: Execute
+        shell: bash
+        run: TODO

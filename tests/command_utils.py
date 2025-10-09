@@ -10,7 +10,7 @@ repo_base_dir = Path(os.path.abspath(__file__)).resolve().parents[1]
 
 def convert_checkpoint(model_name, model_type):
     exec_command(
-        f"source {repo_base_dir}/scripts/models/{model_type}.sh && "
+        f". {repo_base_dir}/scripts/models/{model_type}.sh && "
         "PYTHONPATH=/root/Megatron-LM torchrun --nproc-per-node 8 tools/convert_hf_to_torch_dist.py "
         "${MODEL_ARGS[@]} "
         f"--hf-checkpoint /root/models/{model_name} "
@@ -55,7 +55,7 @@ def execute_train(
 
     exec_command(
         f"export PYTHONBUFFERED=16 && "
-        f'source "{repo_base_dir}/scripts/models/{model_type}.sh" && '
+        f'. "{repo_base_dir}/scripts/models/{model_type}.sh" && '
         # TODO should this 127.0.0.1 be `master_addr` instead
         f'ray job submit --address="http://127.0.0.1:8265" '
         f'--runtime-env-json="{runtime_env_json}" '

@@ -23,6 +23,7 @@ def ray_start_and_submit(
     master_addr: str = "127.0.0.1",
 ):
     exec_command(
+        # will prevent ray from buffering stdout/stderr
         f"export PYTHONBUFFERED=16 && "
         f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus} --disable-usage-stats"
     )

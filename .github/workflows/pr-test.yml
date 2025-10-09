@@ -42,6 +42,10 @@ jobs:
       GITHUB_COMMIT_NAME: ${{ github.sha }}_${{ github.event.pull_request.number || 'non-pr' }}
 
     steps:
+      - name: Information
+        shell: bash
+        run: whoami
+
       - name: Checkout repository
         uses: actions/checkout@v4
 

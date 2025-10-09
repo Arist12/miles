@@ -8,11 +8,20 @@ The token can be found at https://github.com/radixark/miles/settings/actions/run
 ### Step 2: Run
 
 ```shell
-(cd /data/tom/primary_synced/miles/tests/ci/github_runner && docker compose up -d)
+cd /data/tom/primary_synced/miles/tests/ci/github_runner
+docker compose up -d
 ```
 
 ### Debugging
 
+Logs
+
 ```shell
-(cd /data/tom/primary_synced/miles/tests/ci/github_runner && docker compose logs -f)
+docker compose logs -f
+```
+
+Exec
+
+```shell
+docker exec -it github_runner-runner-1 /bin/bash
 ```

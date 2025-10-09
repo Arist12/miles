@@ -26,10 +26,11 @@ jobs:
           - test_quick_start_glm4_9B
           - test_qwen3_30B_A3B
           # TODO more
-
     defaults:
       run:
         working-directory: ${{ github.workspace }}
+    env:
+      GITHUB_COMMIT_NAME: ${{ github.sha }}_${{ github.event.pull_request.number || 'non-pr' }}
 
     steps:
       - name: Checkout repository

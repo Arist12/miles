@@ -69,7 +69,7 @@ def check_has_nvlink():
 
 
 def get_default_wandb_args():
-    name = TODO
+    name = os.environ.get("GITHUB_COMMIT_NAME")
 
     return (
         "--use-wandb "

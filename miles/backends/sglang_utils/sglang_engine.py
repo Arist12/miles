@@ -102,7 +102,9 @@ class SGLangEngine(RayActor):
             if name in _EXTERNAL_ENGINE_SKIP_CHECK_FIELDS:
                 continue
             actual_value = actual_server_args.get(name)
-            assert actual_value == expect_value, f"{name=} {expect_value=} {actual_value=} {server_args_dict=} {actual_server_args=}"
+            assert (
+                actual_value == expect_value
+            ), f"{name=} {expect_value=} {actual_value=} {server_args_dict=} {actual_server_args=}"
 
     def _init_normal(self, server_args_dict):
         print(f"Launch HttpServerEngineAdapter at: {self.server_host}:{self.server_port}")
@@ -345,6 +347,7 @@ def _compute_server_args(args, rank, dist_init_addr, nccl_port, host, port):
             kwargs.pop(key)
 
     return kwargs
+
 
 _EXTERNAL_ENGINE_SKIP_CHECK_FIELDS = [
     "model_path",

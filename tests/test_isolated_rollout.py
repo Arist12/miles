@@ -72,9 +72,7 @@ def execute():
         "--adam-beta2 0.98 "
     )
 
-    sglang_args = (
-        "--rollout-num-gpus-per-engine 1 " f"--sglang-mem-fraction-static 0.6 "
-    )
+    sglang_args = "--rollout-num-gpus-per-engine 1 " f"--sglang-mem-fraction-static 0.6 "
 
     ci_args = (
         "--ci-test "
@@ -96,7 +94,6 @@ def execute():
         f"--actor-num-gpus-per-node 2 "
         # TODO support non-colocate (e.g. remove rollout engine resource occupation)
         "--colocate "
-        
         # isolated-rollout related
         "--sglang-external "
         "--sglang-router-ip 127.0.0.1 "

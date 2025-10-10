@@ -80,6 +80,12 @@ def execute():
         "--rollout-num-gpus-per-engine 1 " f"--sglang-mem-fraction-static {0.6 if TIGHT_DEVICE_MEMORY else 0.7} "
     )
 
+    ci_args = (
+        "--ci-test "
+        "--ci-metric-checker-key eval/gsm8k "
+        "--ci-metric-checker-threshold 0.55 " # loose threshold at 250 step
+    )
+
     misc_args = (
         # default dropout in megatron is 0.1
         "--attention-dropout 0.0 "
@@ -103,6 +109,7 @@ def execute():
         f"{perf_args} "
         f"{eval_args} "
         f"{sglang_args} "
+        f"{ci_args} "
         f"{misc_args} "
     )
 

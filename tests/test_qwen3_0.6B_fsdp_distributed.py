@@ -70,6 +70,12 @@ def execute():
         "--train-backend fsdp "
     )
 
+    ci_args = (
+        "--ci-test "
+        "--ci-metric-checker-key eval/gsm8k "
+        "--ci-metric-checker-threshold 0.71 "  # loose threshold at 60 step
+    )
+
     train_args = (
         f"{ckpt_args} "
         f"{rollout_args} "
@@ -78,6 +84,7 @@ def execute():
         f"{U.get_default_wandb_args(__file__)} "
         f"{eval_args} "
         f"{sglang_args} "
+        f"{ci_args} "
         f"{misc_args} "
     )
 

@@ -66,6 +66,12 @@ def execute():
         "--update-weight-buffer-size 536870912 "  # 512MB
     )
 
+    ci_args = (
+        "--ci-test "
+        "--ci-metric-checker-key eval/gsm8k "
+        "--ci-metric-checker-threshold 0.71 "  # loose threshold at 60 step
+    )
+
     misc_args = "--actor-num-nodes 1 " "--actor-num-gpus-per-node 2 " "--colocate " "--train-backend fsdp "
 
     train_args = (
@@ -77,6 +83,7 @@ def execute():
         f"{U.get_default_wandb_args(__file__)} "
         f"{eval_args} "
         f"{fsdp_args} "
+        f"{ci_args} "
         f"{misc_args} "
     )
 

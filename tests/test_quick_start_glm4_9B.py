@@ -88,6 +88,10 @@ def execute():
 
     sglang_args = "--rollout-num-gpus-per-engine 2 " "--use-miles-router "
 
+    ci_args = (
+        "--ci-test "
+    )
+
     misc_args = (
         # default dropout in megatron is 0.1
         "--attention-dropout 0.0 "
@@ -97,7 +101,6 @@ def execute():
         "--attention-softmax-in-fp32 "
         # need to comment this when using model with MLA
         "--attention-backend flash "
-        "--ci-test "
         "--actor-num-nodes 1 "
         "--actor-num-gpus-per-node 4 "
         "--rollout-num-gpus 4 "
@@ -112,6 +115,7 @@ def execute():
         f"{perf_args} "
         f"{eval_args} "
         f"{sglang_args} "
+        f"{ci_args} "
         f"{misc_args} "
     )
 

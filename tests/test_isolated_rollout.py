@@ -97,6 +97,7 @@ def execute():
         "--colocate "
         # isolated-rollout related
         "--rollout-external "
+        # TODO test multi-engine
         f"--rollout-external-engine-addrs 127.0.0.1:{SGLANG_ENGINE_PORT} "
         "--sglang-router-ip 127.0.0.1 "
         f"--sglang-router-port {SGLANG_ROUTER_PORT} "

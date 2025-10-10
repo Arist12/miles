@@ -136,6 +136,7 @@ def _launch_sglang_router():
     from sglang_router.launch_router import RouterArgs
     from miles.utils.http_utils import run_router
 
+    print("launch_sglang_router", flush=True)
     router_args = RouterArgs(
         host=SGLANG_ROUTER_IP,
         port=SGLANG_ROUTER_PORT,
@@ -155,6 +156,7 @@ def _launch_sglang_engine():
     from miles.backends.sglang_utils.sglang_engine import launch_server_process
     from sglang.srt.server_args import ServerArgs
 
+    print("launch_sglang_engine", flush=True)
     launch_server_process(
         ServerArgs(
             model_path=f"/root/models/{MODEL_NAME}/",

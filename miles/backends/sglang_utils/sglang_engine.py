@@ -95,6 +95,8 @@ class SGLangEngine(RayActor):
             self._init_normal(server_args_dict)
 
     def _init_external(self, server_args_dict):
+        print(f"Use external SGLang engine (expect server_args: {server_args_dict})")
+
         actual_server_args = TODO
 
         # sanity check values should agree

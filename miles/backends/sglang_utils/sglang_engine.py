@@ -88,18 +88,20 @@ class SGLangEngine(RayActor):
         self.router_port = self.args.sglang_router_port
 
         host = host or get_host_info()[1]
-        server_args_dict = _compute_server_args(self.args, self.rank, dist_init_addr, nccl_port, host, port)
+        server_args_dict, external_engine_need_check_fields = _compute_server_args(
+            self.args, self.rank, dist_init_addr, nccl_port, host, port
+        )
 
         self.node_rank = server_args_dict["node_rank"]
         self.server_host = server_args_dict["host"]
         self.server_port = server_args_dict["port"]
 
         if self.args.rollout_external:
-            self._init_external(server_args_dict)
+            self._init_external(server_args_dict, external_engine_need_check_fields=external_engine_need_check_fields)
         else:
             self._init_normal(server_args_dict)
 
-    def _init_external(self, expect_server_args):
+    def _init_external(self, expect_server_args, external_engine_need_check_fields):
         print(f"Use external SGLang engine (rank={self.rank}, expect_server_args={expect_server_args})")
 
         def _get_actual_server_args():
@@ -108,9 +110,8 @@ class SGLangEngine(RayActor):
             return response.json()
 
         def _sanity_check_server_args(actual_server_args, expect_server_args):
-            for name, expect_value in expect_server_args.items():
-                if name in _EXTERNAL_ENGINE_SKIP_CHECK_FIELDS:
-                    continue
+            for name in external_engine_need_check_fields:
+                expect_value = expect_server_args.get(name)
                 actual_value = actual_server_args.get(name)
                 assert (
                     actual_value == expect_value
@@ -352,6 +353,8 @@ def _compute_server_args(args, rank, dist_init_addr, nccl_port, host, port):
         "skip_server_warmup": True,
     }
 
+    external_engine_need_check_fields = [k for k in kwargs.keys() if k not in _EXTERNAL_ENGINE_SKIP_CHECK_FIELDS]
+
     unused_keys = set(kwargs.keys())
     for attr in dataclasses.fields(ServerArgs):
         if hasattr(args, f"sglang_{attr.name}") and attr.name not in kwargs:
@@ -364,7 +367,7 @@ def _compute_server_args(args, rank, dist_init_addr, nccl_port, host, port):
         for key in unused_keys:
             kwargs.pop(key)
 
-    return kwargs
+    return kwargs, external_engine_need_check_fields
 
 
 _EXTERNAL_ENGINE_SKIP_CHECK_FIELDS = [

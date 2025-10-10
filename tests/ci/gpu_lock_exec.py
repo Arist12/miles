@@ -23,15 +23,6 @@ def main():
     print(f"Acquired GPUs: {dev_list}", flush=True)
 
     cmd = args.cmd
-    if not cmd:
-        print("ERROR: missing command to run. Use -- before command.", file=sys.stderr)
-        for _, fd in locks:
-            try:
-                fd.close()
-            except Exception as e_close:
-                print(f"Warning: Failed to close lock file descriptor on missing command: {e_close}", file=sys.stderr)
-        sys.exit(2)
-
     if cmd[0] == "--":
         cmd = cmd[1:]
     os.execvp(cmd[0], cmd)
@@ -58,8 +49,10 @@ def _parse_args():
     args = p.parse_args()
 
     if "{i}" not in args.lock_pattern:
-        print("ERROR: --lock-pattern must contain '{i}' placeholder.", file=sys.stderr)
-        sys.exit(2)
+        raise Exception("ERROR: --lock-pattern must contain '{i}' placeholder.")
+
+    if not args.cmd:
+        raise Exception("ERROR: missing command to run. Use -- before command.")
 
     return args
 

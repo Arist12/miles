@@ -18,13 +18,15 @@ def execute():
         "--label-key label "
         "--apply-chat-template "
         "--rollout-shuffle "
-        "--rm-type deepscaler "
-        "--num-rollout 1000 "
-        "--rollout-batch-size 8 "
+        "--rm-type math "
+        "--num-rollout 3000 "
+        "--rollout-batch-size 32 "
         "--n-samples-per-prompt 8 "
-        "--rollout-max-response-len 4096 "
+        "--rollout-max-response-len 1024 "
         "--rollout-temperature 0.8 "
-        "--global-batch-size 64 "
+        "--over-sampling-batch-size 64 "
+        "--dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
+        "--global-batch-size 256 "
     )
 
     eval_args = (

@@ -338,7 +338,7 @@ def init_rollout_engines(args, pg, all_rollout_engines):
         return num_new_engines
 
     if args.rollout_external:
-        addr_and_ports = _allocate_rollout_engine_addr_and_ports_external(args=args)
+        addr_and_ports = _allocate_rollout_engine_addr_and_ports_external(args=args, rollout_engines=rollout_engines)
     else:
         addr_and_ports = _allocate_rollout_engine_addr_and_ports_normal(
             args=args, num_engines=num_engines, rollout_engines=rollout_engines

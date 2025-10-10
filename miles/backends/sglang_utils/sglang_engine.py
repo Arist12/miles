@@ -117,6 +117,11 @@ class SGLangEngine(RayActor):
                     actual_value == expect_value
                 ), f"{name=} {expect_value=} {actual_value=} {expect_server_args=} {actual_server_args=}"
 
+        _wait_server_healthy(
+            base_url=f"http://{self.server_host}:{self.server_port}",
+            api_key=None,
+            is_process_alive=lambda: True,
+        )
         actual_server_args = _get_actual_server_args()
         _sanity_check_server_args(actual_server_args, expect_server_args)
 

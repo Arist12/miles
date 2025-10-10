@@ -82,7 +82,8 @@ class SGLangEngine(RayActor):
         self.router_ip = self.args.sglang_router_ip
         self.router_port = self.args.sglang_router_port
 
-        server_args = _compute_server_args(self.args, self.rank, dist_init_addr, nccl_port, port)
+        server_args_dict = _compute_server_args(self.args, self.rank, dist_init_addr, nccl_port, port)
+        server_args = ServerArgs(**server_args_dict)
 
         self.node_rank = server_args.node_rank
         self.server_host = server_args.host
@@ -324,4 +325,4 @@ def _compute_server_args(args, rank, dist_init_addr, nccl_port, port):
         for key in unused_keys:
             kwargs.pop(key)
 
-    return ServerArgs(**kwargs)
+    return kwargs

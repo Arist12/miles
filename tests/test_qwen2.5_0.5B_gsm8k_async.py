@@ -26,7 +26,7 @@ def execute():
         "--apply-chat-template "
         "--rollout-shuffle "
         "--rm-type math "
-        f"--num-rollout {250} "
+        f"--num-rollout {3000 if U.get_env_enable_infinite_run() else 250} "
         "--rollout-batch-size 32 "
         "--n-samples-per-prompt 8 "
         "--rollout-max-response-len 1024 "

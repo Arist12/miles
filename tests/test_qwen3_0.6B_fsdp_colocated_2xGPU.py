@@ -1,3 +1,4 @@
+import os
 import command_utils as U
 
 MODEL_NAME = "Qwen3-0.6B"
@@ -49,13 +50,6 @@ def execute():
 
     sglang_args = "--rollout-num-gpus-per-engine 2 " "--sglang-decode-log-interval 1000 "
 
-    wandb_args = (
-        "--use-wandb "
-        '--wandb-project "gsm8k_async_rl" '
-        '--wandb-group "fsdp-2gpu-colocated" '
-        '--wandb-mode "online" '
-    )
-
     fsdp_args = "--update-weights-bucket-size 536870912 "  # 512 * 1024 * 1024
 
     misc_args = "--actor-num-nodes 1 " "--actor-num-gpus-per-node 2 " "--colocate " "--slime-backend fsdp "
@@ -66,7 +60,7 @@ def execute():
         f"{optimizer_args} "
         f"{grpo_args} "
         f"{sglang_args} "
-        f"{wandb_args} "
+        f"{U.get_default_wandb_args(__file__)} "
         f"{fsdp_args} "
         f"{misc_args} "
     )

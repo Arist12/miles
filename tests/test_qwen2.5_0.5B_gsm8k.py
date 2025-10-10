@@ -1,3 +1,4 @@
+import os
 import command_utils as U
 
 MODEL_NAME = "Qwen2.5-0.5B-Instruct"
@@ -69,8 +70,6 @@ def execute():
         "--adam-beta2 0.98 "
     )
 
-    wandb_args = "--use-wandb " "--wandb-project slime-test " "--wandb-group test-qwen2.5-0.5B-gsm8k "
-
     sglang_args = "--rollout-num-gpus-per-engine 1 " "--sglang-mem-fraction-static 0.7 "
 
     misc_args = (
@@ -89,7 +88,7 @@ def execute():
         f"{rollout_args} "
         f"{optimizer_args} "
         f"{grpo_args} "
-        f"{wandb_args} "
+        f"{U.get_default_wandb_args(__file__)} "
         f"{perf_args} "
         f"{eval_args} "
         f"{sglang_args} "

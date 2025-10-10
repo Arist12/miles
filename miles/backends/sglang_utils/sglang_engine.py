@@ -79,13 +79,10 @@ class SGLangEngine(RayActor):
         self.rank = rank
 
     def init(self, dist_init_addr, port, nccl_port):
-        args = self.args
-        rank = self.rank
+        self.router_ip = self.args.sglang_router_ip
+        self.router_port = self.args.sglang_router_port
 
-        self.router_ip = args.sglang_router_ip
-        self.router_port = args.sglang_router_port
-
-        server_args = _compute_server_args(args, rank, dist_init_addr, nccl_port, port)
+        server_args = _compute_server_args(self.args, self.rank, dist_init_addr, nccl_port, port)
 
         self.node_rank = server_args.node_rank
         self.server_host = server_args.host

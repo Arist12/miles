@@ -108,7 +108,6 @@ def execute():
         "--attention-backend flash "
         "--moe-token-dispatcher-type flex "
         "--moe-enable-deepep "
-        "--ci-test "
         "--actor-num-nodes 1 "
         "--actor-num-gpus-per-node 8 "
         "--colocate "

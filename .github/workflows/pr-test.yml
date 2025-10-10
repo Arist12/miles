@@ -16,7 +16,10 @@ concurrency:
 jobs:
   e2e-test:
     # TODO may use run-ci label etc
-    if: github.event.pull_request.draft == false
+    if: >
+      ${{ github.event_name == 'workflow_dispatch' || 
+        (github.event.pull_request && github.event.pull_request.draft == false && 
+        contains(join(github.event.pull_request.labels.*.name, ','), matrix.info.required_label)) }}
     runs-on: self-hosted
     container:
       image: slimerl/slime:latest
@@ -35,12 +38,12 @@ jobs:
       fail-fast: false
       matrix:
         info:
-          - {test_file: test_quick_start_glm4_9B.py, num_gpus: 8}
-          - {test_file: test_qwen3_30B_A3B.py, num_gpus: 8}
-          - {test_file: test_qwen2.5_0.5B_gsm8k.py, num_gpus: 2}
-          - {test_file: test_qwen2.5_0.5B_gsm8k_async.py, num_gpus: 2}
-          - {test_file: test_qwen3_0.6B_fsdp_colocated_2xGPU.py, num_gpus: 2}
-          - {test_file: test_qwen3_0.6B_fsdp_distributed.py, num_gpus: 2}
+          - {test_file: test_quick_start_glm4_9B.py, num_gpus: 8, required_label: run-ci-short}
+          - {test_file: test_qwen3_30B_A3B.py, num_gpus: 8, required_label: run-ci-short}
+          - {test_file: test_qwen2.5_0.5B_gsm8k.py, num_gpus: 2, required_label: run-ci-long}
+          - {test_file: test_qwen2.5_0.5B_gsm8k_async.py, num_gpus: 2, required_label: run-ci-long}
+          - {test_file: test_qwen3_0.6B_fsdp_colocated_2xGPU.py, num_gpus: 2, required_label: run-ci-long}
+          - {test_file: test_qwen3_0.6B_fsdp_distributed.py, num_gpus: 2, required_label: run-ci-long}
           # TODO use deterministic kernel
     defaults:
       run:

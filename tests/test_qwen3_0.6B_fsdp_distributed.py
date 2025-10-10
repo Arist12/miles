@@ -59,7 +59,7 @@ def execute():
         "--actor-num-nodes 1 "
         f"--actor-num-gpus-per-node {2 if FEW_GPU else 4} "
         "--colocate "
-        "--slime-backend fsdp "
+        "--train-backend fsdp "
     )
 
     train_args = (

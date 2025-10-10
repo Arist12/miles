@@ -121,6 +121,7 @@ def execute():
         f"{misc_args} "
     )
 
+    # Here we use infra in miles, but real users will use their own infra
     _launch_sglang_router_and_engine()
 
     U.execute_train(
@@ -130,12 +131,7 @@ def execute():
     )
 
 
-def _launch_sglang_router_and_engine():
-    """Here we use infra in miles, but real users will use their own infra"""
-
-    import requests
-    from miles.backends.sglang_utils.sglang_engine import launch_server_process
-    from sglang.srt.server_args import ServerArgs
+def _launch_sglang_router():
     from sglang_router.launch_router import RouterArgs
     from miles.utils.http_utils import run_router
 
@@ -152,6 +148,11 @@ def _launch_sglang_router_and_engine():
     proc_router.start()
     time.sleep(3)
     assert proc_router.is_alive()
+
+def _launch_sglang_engine():
+    import requests
+    from miles.backends.sglang_utils.sglang_engine import launch_server_process
+    from sglang.srt.server_args import ServerArgs
 
     launch_server_process(
         ServerArgs(

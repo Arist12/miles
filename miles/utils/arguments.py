@@ -335,6 +335,20 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                     "It may be helpful for updating loss mask."
                 ),
             )
+
+            parser.add_argument(
+                "--rollout-external-ip",
+                type=str,
+                default=None,
+                help="If not none, use the provided external SGLang instances instead of launching them inside framework.",
+            )
+            parser.add_argument(
+                "--rollout-external-port",
+                type=int,
+                default=None,
+                help="If not none, use the provided external SGLang instances instead of launching them inside framework.",
+            )
+
             return parser
 
         # data

@@ -19,7 +19,7 @@ def main():
 
     fd_locks = _try_acquire(args)
 
-    dev_list = ",".join(d.gpu_id for d, _ in fd_locks)
+    dev_list = ",".join(x.gpu_id for x, _ in fd_locks)
     os.environ[args.target_env_name] = dev_list
     print(f"[gpu_lock_exec] Acquired GPUs: {dev_list}", flush=True)
 
@@ -95,8 +95,8 @@ def _try_acquire_specific(devs: List[int], lock_dir: str, pattern: str, timeout:
     start = time.time()
     try:
         _ensure_lock_files(lock_dir, pattern, max(devs) + 1)
-        for d in devs:
-            fd_lock = FdLock(lock_dir, pattern, gpu_id=d)
+        for gpu_id in devs:
+            fd_lock = FdLock(lock_dir, pattern, gpu_id=gpu_id)
             fd_lock.open()
             while True:
                 try:
@@ -104,7 +104,7 @@ def _try_acquire_specific(devs: List[int], lock_dir: str, pattern: str, timeout:
                     break
                 except BlockingIOError:
                     if time.time() - start > timeout:
-                        raise TimeoutError(f"Timeout while waiting for GPU {d}")
+                        raise TimeoutError(f"Timeout while waiting for GPU {gpu_id}")
                     time.sleep(SLEEP_BACKOFF * random.random())
             fd_locks.append(fd_lock)
         return fd_locks
@@ -120,8 +120,8 @@ def _try_acquire_count(count: int, total_gpus: int, lock_dir: str, pattern: str,
     _ensure_lock_files(lock_dir, pattern, total_gpus)
     while True:
         fd_locks: List = []
-        for i in range(total_gpus):
-            fd_lock = FdLock(lock_dir, pattern, gpu_id=i)
+        for gpu_id in range(total_gpus):
+            fd_lock = FdLock(lock_dir, pattern, gpu_id=gpu_id)
             try:
                 fd_lock.open()
             except Exception as e:
@@ -165,8 +165,8 @@ class FdLock:
 
 def _ensure_lock_files(lock_dir: str, pattern: str, total_gpus: int):
     os.makedirs(lock_dir, exist_ok=True)
-    for i in range(total_gpus):
-        p = _get_lock_path(lock_dir, pattern, i)
+    for gpu_id in range(total_gpus):
+        p = _get_lock_path(lock_dir, pattern, gpu_id)
         try:
             open(p, "a").close()
         except Exception as e:

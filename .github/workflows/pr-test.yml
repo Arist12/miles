@@ -35,8 +35,8 @@ jobs:
       fail-fast: false
       matrix:
         info:
-          - {test_file: test_quick_start_glm4_9B.py}
-          - {test_file: test_qwen3_30B_A3B.py}
+          - {test_file: test_quick_start_glm4_9B.py, num_gpus: 8}
+          - {test_file: test_qwen3_30B_A3B.py, num_gpus: 8}
           # TODO use deterministic kernel
     defaults:
       run:
@@ -55,4 +55,4 @@ jobs:
 
       - name: Execute
         shell: bash
-        run: python tests/${{ matrix.info.test_file }}
+        run: python tests/ci/gpu_lock_exec.py --count ${{ matrix.info.num_gpus }} -- python tests/${{ matrix.info.test_file }}

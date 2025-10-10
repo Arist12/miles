@@ -67,7 +67,7 @@ def _execute_print_only(args):
     for i in range(args.total_gpus):
         path = _get_lock_path(args.lock_path_pattern, i)
         try:
-            fd = open(path, "w")
+            fd = open(path, "a+")
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 fcntl.flock(fd, fcntl.LOCK_UN)
@@ -149,7 +149,7 @@ class FdLock:
 
     def open(self):
         assert self.fd is None
-        self.fd = open(self.path, "w")
+        self.fd = open(self.path, "a+")
 
     def lock(self):
         assert self.fd is not None

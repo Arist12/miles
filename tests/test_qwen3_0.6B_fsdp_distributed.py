@@ -10,14 +10,14 @@ FEW_GPU = bool(int(os.environ.get("MILES_TEST_FEW_GPU", "1")))
 def prepare():
     U.exec_command("mkdir -p /root/models /root/datasets")
     U.exec_command(f"huggingface-cli download Qwen/Qwen3-0.6B --local-dir /root/models/{MODEL_NAME}")
-    U.hf_download_dataset("zhuzilin/dapo-math-17k")
+    U.hf_download_dataset("zhuzilin/gsm8k")
 
 
 def execute():
     ckpt_args = f"--hf-checkpoint /root/models/{MODEL_NAME} "
 
     rollout_args = (
-        "--prompt-data /root/datasets/dapo-math-17k/dapo-math-17k.jsonl "
+        "--prompt-data /root/datasets/gsm8k/train.parquet "
         "--input-key prompt "
         "--label-key label "
         "--apply-chat-template "
@@ -29,6 +29,14 @@ def execute():
         "--rollout-max-response-len 8192 "
         "--rollout-temperature 0.8 "
         "--global-batch-size 128 "
+    )
+
+    eval_args = (
+        "--eval-interval 20 "
+        "--eval-prompt-data gsm8k /root/datasets/gsm8k/test.parquet "
+        "--n-samples-per-eval-prompt 1 "
+        "--eval-max-response-len 1024 "
+        "--eval-top-k 1 "
     )
 
     grpo_args = (
@@ -66,6 +74,7 @@ def execute():
         f"{optimizer_args} "
         f"{grpo_args} "
         f"{U.get_default_wandb_args(__file__)} "
+        f"{eval_args} "
         f"{sglang_args} "
         f"{misc_args} "
     )

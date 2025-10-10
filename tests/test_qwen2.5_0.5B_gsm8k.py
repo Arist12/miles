@@ -21,7 +21,7 @@ def execute():
     ckpt_args = f"--hf-checkpoint /root/models/{MODEL_NAME}/ " f"--ref-load /root/{MODEL_NAME}_torch_dist/ "
 
     rollout_args = (
-        "--prompt-data gsm8k/train.parquet "
+        "--prompt-data /root/datasets/gsm8k/train.parquet "
         "--input-key messages "
         "--label-key label "
         "--apply-chat-template "
@@ -39,7 +39,7 @@ def execute():
 
     eval_args = (
         "--eval-interval 20 "
-        "--eval-prompt-data gsm8k gsm8k/test.parquet "
+        "--eval-prompt-data gsm8k /root/datasets/gsm8k/test.parquet "
         "--n-samples-per-eval-prompt 1 "
         "--eval-max-response-len 1024 "
         "--eval-top-k 1 "

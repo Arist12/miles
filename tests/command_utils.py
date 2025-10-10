@@ -29,6 +29,8 @@ def execute_train(
     num_gpus: int,
     model_type: str,
     master_addr: str = "127.0.0.1",
+    train_script: str = "train.py",
+    use_model_args: bool = True,
 ):
     exec_command(
         "pkill -9 sglang; "
@@ -64,14 +66,21 @@ def execute_train(
         }
     )
 
+    source_cmd = (
+        f'source "{repo_base_dir}/scripts/models/{model_type}.sh" && '
+        if use_model_args
+        else ""
+    )
+    model_args_str = "${MODEL_ARGS[@]}" if use_model_args else ""
+
     exec_command(
         f"export PYTHONBUFFERED=16 && "
-        f'source "{repo_base_dir}/scripts/models/{model_type}.sh" && '
+        f"{source_cmd}"
         # TODO should this 127.0.0.1 be `master_addr` instead
         f'ray job submit --address="http://127.0.0.1:8265" '
         f"--runtime-env-json='{runtime_env_json}' "
-        "-- python3 train.py "
-        "${MODEL_ARGS[@]} "
+        f"-- python3 {train_script} "
+        f"{model_args_str} "
         f"{train_args}"
     )
 

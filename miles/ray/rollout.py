@@ -14,6 +14,7 @@ from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 from miles.backends.sglang_utils.sglang_engine import SGLangEngine
 from miles.ray.rollout_data_source import RolloutDataSourceWithBuffer
 from miles.utils.http_utils import find_available_port, get_host_info, init_http_client
+from miles.utils.metric_checker import MetricChecker
 from miles.utils.misc import load_function
 from miles.utils.ray_utils import Box
 from miles.utils.types import Sample
@@ -58,6 +59,9 @@ class RolloutManager:
         self.rollout_engines = self.all_rollout_engines[:: self.nodes_per_engine]
         self.rollout_engine_lock = Lock.options(num_cpus=1, num_gpus=0).remote()
 
+        if args.ci_test:
+            self._metric_checker = MetricChecker(args)
+
         # fault tolerance
         self._health_monitor_thread = None
         self._health_monitor_stop_event = None
@@ -94,7 +98,9 @@ class RolloutManager:
             return
         # TODO: add fault tolerance to eval
         data = self.eval_generate_rollout(self.args, rollout_id, self.data_source, evaluation=True)
-        _log_eval_rollout_data(rollout_id, self.args, data)
+        metrics = _log_eval_rollout_data(rollout_id, self.args, data)
+        if self.args.ci_test:
+            self._metric_checker.on_eval(metrics)
 
     def save(self, rollout_id):
         self.data_source.save(rollout_id)
@@ -474,6 +480,8 @@ def _log_eval_rollout_data(rollout_id, args, data):
                 else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
             ),
         )
+
+    return log_dict
 
 
 def _log_rollout_data(rollout_id, args, samples, rollout_time):

@@ -145,6 +145,7 @@ def _launch_sglang_router():
         host=SGLANG_ROUTER_IP,
         port=SGLANG_ROUTER_PORT,
         balance_abs_threshold=0,
+        log_level="warn",
     )
     proc_router = multiprocessing.Process(
         target=run_router,

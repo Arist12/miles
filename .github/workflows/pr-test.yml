@@ -22,7 +22,7 @@ jobs:
   e2e-test-short:
     if: >
       ${{ github.event_name == 'workflow_dispatch' ||
-        (github.event.pull_request && contains(join(github.event.pull_request.labels.*.name, ','), 'run-ci-short')) }}
+        (github.event.pull_request && contains(github.event.pull_request.labels.*.name, 'run-ci-short')) }}
     runs-on: self-hosted
     container:
       image: slimerl/slime:latest
@@ -63,7 +63,7 @@ jobs:
   e2e-test-long:
     if: >
       ${{ github.event_name == 'workflow_dispatch' ||
-        (github.event.pull_request && contains(join(github.event.pull_request.labels.*.name, ','), 'run-ci-long')) }}
+        (github.event.pull_request && contains(github.event.pull_request.labels.*.name, 'run-ci-long')) }}
     runs-on: self-hosted
     container:
       image: slimerl/slime:latest

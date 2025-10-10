@@ -360,7 +360,7 @@ def _allocate_rollout_engine_addr_and_ports_external(args, rollout_engines):
                 dist_init_addr=None,
                 nccl_port=None,
                 host=host,
-                port=port,
+                port=int(port),
             )
         )
     return addr_and_ports

@@ -65,8 +65,8 @@ def execute():
 
     misc_args = (
         "--actor-num-nodes 1 "
-        f"--actor-num-gpus-per-node {2 if FEW_GPU else 4} "
-        "--colocate "
+        f"--actor-num-gpus-per-node {1 if FEW_GPU else 2} "
+        f"--rollout-num-gpus {1 if FEW_GPU else 2} "
         "--train-backend fsdp "
     )
 
@@ -85,6 +85,7 @@ def execute():
         train_args=train_args,
         num_gpus=2 if FEW_GPU else 4,
         model_type=None,
+        train_script="train_async.py",
     )
 
 

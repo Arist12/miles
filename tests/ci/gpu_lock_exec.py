@@ -11,6 +11,9 @@ SLEEP_BACKOFF = 5.0
 
 
 def main():
+    """
+    Remark: Can use `lslocks` to debug
+    """
     args = _parse_args()
 
     if args.print_only:

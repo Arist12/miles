@@ -23,3 +23,4 @@ class MetricChecker:
 
     def dispose(self):
         assert self._exists_check_success, "[MetricChecker] accuracy check failed"
+        print(f"[MetricChecker] pass dispose check", flush=True)

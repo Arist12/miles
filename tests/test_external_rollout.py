@@ -121,15 +121,18 @@ def execute():
         f"{misc_args} "
     )
 
-    # Here we use infra in miles, but real users will use their own infra
-    _launch_sglang_router()
-    _launch_sglang_engine()
-
     U.execute_train(
         train_args=train_args,
         num_gpus=NUM_GPUS,
         model_type=MODEL_TYPE,
+        before_ray_job_submit=_launch_background(),
     )
+
+
+def _launch_background():
+    # Here we use infra in miles, but real users will use their own infra
+    _launch_sglang_router()
+    _launch_sglang_engine()
 
 
 def _launch_sglang_router():

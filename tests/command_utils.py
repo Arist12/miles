@@ -36,6 +36,7 @@ def execute_train(
     model_type: Optional[str],
     master_addr: str = "127.0.0.1",
     train_script: str = "train.py",
+    before_ray_job_submit=None,
 ):
     exec_command(
         "pkill -9 sglang; "
@@ -59,6 +60,9 @@ def execute_train(
         f"export PYTHONBUFFERED=16 && "
         f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus} --disable-usage-stats"
     )
+
+    if (f := before_ray_job_submit) is not None:
+        f()
 
     runtime_env_json = json.dumps(
         {

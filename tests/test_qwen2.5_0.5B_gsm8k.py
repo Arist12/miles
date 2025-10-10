@@ -1,9 +1,8 @@
-import os
 import command_utils as U
 
 
-FEW_GPU = bool(int(os.environ.get("MILES_TEST_FEW_GPU", "1")))
-TIGHT_DEVICE_MEMORY = bool(int(os.environ.get("MILES_TEST_TIGHT_DEVICE_MEMORY", "1")))
+FEW_GPU = U.get_bool_env_var("MILES_TEST_FEW_GPU", "1")
+TIGHT_DEVICE_MEMORY = U.get_bool_env_var("MILES_TEST_TIGHT_DEVICE_MEMORY", "1")
 
 MODEL_NAME = "Qwen2.5-0.5B-Instruct"
 MODEL_TYPE = "qwen2.5-0.5B"
@@ -27,7 +26,7 @@ def execute():
         "--apply-chat-template "
         "--rollout-shuffle "
         "--rm-type math "
-        "--num-rollout 3000 "
+        f"--num-rollout {3000 if U.get_env_enable_infinite_run() else 250} "
         "--rollout-batch-size 32 "
         "--n-samples-per-prompt 8 "
         "--rollout-max-response-len 1024 "
@@ -80,6 +79,13 @@ def execute():
         "--rollout-num-gpus-per-engine 1 " f"--sglang-mem-fraction-static {0.6 if TIGHT_DEVICE_MEMORY else 0.7} "
     )
 
+    ci_args = (
+        "--ci-test "
+        "--ci-disable-kl-checker "
+        "--ci-metric-checker-key eval/gsm8k "
+        "--ci-metric-checker-threshold 0.55 "  # loose threshold at 250 step
+    )
+
     misc_args = (
         # default dropout in megatron is 0.1
         "--attention-dropout 0.0 "
@@ -103,6 +109,7 @@ def execute():
         f"{perf_args} "
         f"{eval_args} "
         f"{sglang_args} "
+        f"{ci_args} "
         f"{misc_args} "
     )
 

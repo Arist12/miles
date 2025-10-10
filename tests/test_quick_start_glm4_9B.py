@@ -1,9 +1,7 @@
-import os
-
 import command_utils as U
 
-ENABLE_EVAL = bool(int(os.environ.get("MILES_TEST_ENABLE_EVAL", "1")))
-TIGHT_DEVICE_MEMORY = bool(int(os.environ.get("MILES_TEST_TIGHT_DEVICE_MEMORY", "1")))
+ENABLE_EVAL = U.get_bool_env_var("MILES_TEST_ENABLE_EVAL", "1")
+TIGHT_DEVICE_MEMORY = U.get_bool_env_var("MILES_TEST_TIGHT_DEVICE_MEMORY", "1")
 
 MODEL_NAME = "GLM-Z1-9B-0414"
 MODEL_TYPE = "glm4-9B"
@@ -88,6 +86,8 @@ def execute():
 
     sglang_args = "--rollout-num-gpus-per-engine 2 " "--use-miles-router "
 
+    ci_args = "--ci-test "
+
     misc_args = (
         # default dropout in megatron is 0.1
         "--attention-dropout 0.0 "
@@ -97,7 +97,6 @@ def execute():
         "--attention-softmax-in-fp32 "
         # need to comment this when using model with MLA
         "--attention-backend flash "
-        "--ci-test "
         "--actor-num-nodes 1 "
         "--actor-num-gpus-per-node 4 "
         "--rollout-num-gpus 4 "
@@ -112,6 +111,7 @@ def execute():
         f"{perf_args} "
         f"{eval_args} "
         f"{sglang_args} "
+        f"{ci_args} "
         f"{misc_args} "
     )
 

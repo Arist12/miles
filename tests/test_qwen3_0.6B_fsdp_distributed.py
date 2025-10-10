@@ -1,10 +1,9 @@
-import os
 import command_utils as U
 
 MODEL_NAME = "Qwen3-0.6B"
 
 
-FEW_GPU = bool(int(os.environ.get("MILES_TEST_FEW_GPU", "1")))
+FEW_GPU = U.get_bool_env_var("MILES_TEST_FEW_GPU", "1")
 
 
 def prepare():
@@ -23,7 +22,7 @@ def execute():
         "--apply-chat-template "
         "--rollout-shuffle "
         "--rm-type math "
-        "--num-rollout 3000 "
+        f"--num-rollout {3000 if U.get_env_enable_infinite_run() else 60} "
         "--rollout-batch-size 32 "
         "--n-samples-per-prompt 8 "
         "--rollout-max-response-len 1024 "
@@ -65,9 +64,16 @@ def execute():
 
     misc_args = (
         "--actor-num-nodes 1 "
-        f"--actor-num-gpus-per-node {2 if FEW_GPU else 4} "
-        "--colocate "
+        f"--actor-num-gpus-per-node {1 if FEW_GPU else 2} "
+        f"--rollout-num-gpus {1 if FEW_GPU else 2} "
         "--train-backend fsdp "
+    )
+
+    ci_args = (
+        "--ci-test "
+        "--ci-disable-kl-checker "
+        "--ci-metric-checker-key eval/gsm8k "
+        "--ci-metric-checker-threshold 0.71 "  # loose threshold at 60 step
     )
 
     train_args = (
@@ -78,6 +84,7 @@ def execute():
         f"{U.get_default_wandb_args(__file__)} "
         f"{eval_args} "
         f"{sglang_args} "
+        f"{ci_args} "
         f"{misc_args} "
     )
 
@@ -85,6 +92,7 @@ def execute():
         train_args=train_args,
         num_gpus=2 if FEW_GPU else 4,
         model_type=None,
+        train_script="train_async.py",
     )
 
 

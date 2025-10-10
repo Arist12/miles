@@ -86,6 +86,8 @@ class SGLangEngine(RayActor):
         self.router_port = args.sglang_router_port
         self.server_args = _compute_server_args(args, dist_init_addr, nccl_port, port, rank)
         self.node_rank = self.server_args.node_rank
+        self.server_host = self.server_args.host
+        self.server_port = self.server_args.port
         print(f"Launch HttpServerEngineAdapter at: {self.server_host}:{self.server_port}")
         self.process = launch_server_process(self.server_args)
         if self.node_rank == 0 and self.router_ip and self.router_port:

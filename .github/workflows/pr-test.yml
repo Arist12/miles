@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   e2e-test:
-    # TODO may use run-ci label etc
     if: >
       ${{ github.event_name == 'workflow_dispatch' || 
         (github.event.pull_request && contains(join(github.event.pull_request.labels.*.name, ','), matrix.info.required_label)) }}

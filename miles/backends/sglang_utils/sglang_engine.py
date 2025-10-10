@@ -82,47 +82,9 @@ class SGLangEngine(RayActor):
         args = self.args
         rank = self.rank
 
-        nnodes = max(1, args.rollout_num_gpus_per_engine // args.num_gpus_per_node)
-        node_rank = rank % nnodes
-        kwargs = {
-            "model_path": args.hf_checkpoint,
-            "trust_remote_code": True,
-            "random_seed": args.seed + rank,
-            # memory
-            "enable_memory_saver": args.offload,
-            # distributed
-            "host": get_host_info()[1],
-            "port": port,
-            "nccl_port": nccl_port,
-            "nnodes": nnodes,
-            "node_rank": node_rank,
-            "dist_init_addr": dist_init_addr,
-            "gpu_id_step": 1,
-            "base_gpu_id": get_base_gpu_id(args, rank),
-            # parallel
-            "tp_size": args.rollout_num_gpus_per_engine,
-            "dp_size": args.sglang_dp_size,
-            "pp_size": args.sglang_pp_size,
-            "ep_size": args.sglang_ep_size,
-            # always skip warmup to prevent warmup timeout.
-            "skip_server_warmup": True,
-        }
-
-        unused_keys = set(kwargs.keys())
-        for attr in dataclasses.fields(ServerArgs):
-            if hasattr(args, f"sglang_{attr.name}") and attr.name not in kwargs:
-                kwargs[attr.name] = getattr(args, f"sglang_{attr.name}")
-            unused_keys.discard(attr.name)
-
-        # for compatibility with old args
-        if len(unused_keys) > 0:
-            print(f"Warning: The following arguments is not supported in the current sglang: {unused_keys}.")
-            for key in unused_keys:
-                kwargs.pop(key)
-
         self.router_ip = args.sglang_router_ip
         self.router_port = args.sglang_router_port
-        self.server_args = ServerArgs(**kwargs)
+        self.server_args = _compute_server_args(args, dist_init_addr, nccl_port, port, rank)
         self.node_rank = self.server_args.node_rank
         print(f"Launch HttpServerEngineAdapter at: {self.server_args.host}:{self.server_args.port}")
         self.process = launch_server_process(self.server_args)
@@ -319,3 +281,45 @@ class SGLangEngine(RayActor):
 
     def stop_profile(self):
         return requests.post(f"http://{self.server_args.host}:{self.server_args.port}/stop_profile", json={})
+
+
+def _compute_server_args(args, dist_init_addr, nccl_port, port, rank):
+    nnodes = max(1, args.rollout_num_gpus_per_engine // args.num_gpus_per_node)
+    node_rank = rank % nnodes
+    kwargs = {
+        "model_path": args.hf_checkpoint,
+        "trust_remote_code": True,
+        "random_seed": args.seed + rank,
+        # memory
+        "enable_memory_saver": args.offload,
+        # distributed
+        "host": get_host_info()[1],
+        "port": port,
+        "nccl_port": nccl_port,
+        "nnodes": nnodes,
+        "node_rank": node_rank,
+        "dist_init_addr": dist_init_addr,
+        "gpu_id_step": 1,
+        "base_gpu_id": get_base_gpu_id(args, rank),
+        # parallel
+        "tp_size": args.rollout_num_gpus_per_engine,
+        "dp_size": args.sglang_dp_size,
+        "pp_size": args.sglang_pp_size,
+        "ep_size": args.sglang_ep_size,
+        # always skip warmup to prevent warmup timeout.
+        "skip_server_warmup": True,
+    }
+
+    unused_keys = set(kwargs.keys())
+    for attr in dataclasses.fields(ServerArgs):
+        if hasattr(args, f"sglang_{attr.name}") and attr.name not in kwargs:
+            kwargs[attr.name] = getattr(args, f"sglang_{attr.name}")
+        unused_keys.discard(attr.name)
+
+    # for compatibility with old args
+    if len(unused_keys) > 0:
+        print(f"Warning: The following arguments is not supported in the current sglang: {unused_keys}.")
+        for key in unused_keys:
+            kwargs.pop(key)
+
+    return ServerArgs(**kwargs)

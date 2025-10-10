@@ -2,11 +2,12 @@
 import argparse
 import fcntl
 import os
+import random
 import sys
 import time
 from typing import List, Tuple
 
-SLEEP_BACKOFF = 1.0
+SLEEP_BACKOFF = 2.0
 
 
 def main():
@@ -104,7 +105,7 @@ def _try_acquire_specific(devs: List[int], lock_dir: str, pattern: str, timeout:
                 except BlockingIOError:
                     if time.time() - start > timeout:
                         raise TimeoutError(f"Timeout while waiting for GPU {d}")
-                    time.sleep(SLEEP_BACKOFF)
+                    time.sleep(SLEEP_BACKOFF * random.random())
             fds.append(fd_lock)
         return fds
     except Exception as e:
@@ -138,7 +139,7 @@ def _try_acquire_count(count: int, total_gpus: int, lock_dir: str, pattern: str,
                 break
         if time.time() - start > timeout:
             raise TimeoutError(f"Timeout acquiring {count} GPUs (out of {total_gpus})")
-        time.sleep(SLEEP_BACKOFF)
+        time.sleep(SLEEP_BACKOFF * random.random())
 
 class FdLock:
     def __init__(self, lock_dir, pattern, gpu_id: int):

@@ -65,18 +65,18 @@ def _execute_print_only(args):
     free = []
     _ensure_lock_files(path_pattern=args.lock_path_pattern, total_gpus=args.total_gpus)
     for i in range(args.total_gpus):
-        path = _get_lock_path(args.lock_path_pattern, i)
         try:
-            fd = open(path, "a+")
+            fd_lock = FdLock(args.lock_path_pattern, i)
+            fd_lock.open()
             try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                fcntl.flock(fd, fcntl.LOCK_UN)
+                fd_lock.lock()
+                fcntl.flock(fd_lock.fd, fcntl.LOCK_UN)
                 free.append(i)
             except BlockingIOError:
                 pass
-            fd.close()
+            fd_lock.close()
         except Exception as e:
-            print(f"Warning: Error while probing lock {path}: {e}", file=sys.stderr)
+            print(f"Warning: Error while probing lock: {e}", file=sys.stderr)
 
     print("Free GPUs:", ",".join(str(x) for x in free))
 

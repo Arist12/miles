@@ -94,6 +94,7 @@ def execute():
         "--attention-backend flash "
         "--actor-num-nodes 1 "
         f"--actor-num-gpus-per-node 2 "
+        # TODO support non-colocate (e.g. remove rollout engine resource occupation)
         "--colocate "
     )
 

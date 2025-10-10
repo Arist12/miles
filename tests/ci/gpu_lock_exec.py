@@ -5,7 +5,7 @@ import os
 import random
 import sys
 import time
-from typing import List, Tuple
+from typing import List
 
 SLEEP_BACKOFF = 2.0
 
@@ -140,6 +140,7 @@ def _try_acquire_count(count: int, total_gpus: int, path_pattern: str, timeout: 
             raise TimeoutError(f"Timeout acquiring {count} GPUs (out of {total_gpus})")
         time.sleep(SLEEP_BACKOFF * random.random())
 
+
 class FdLock:
     def __init__(self, path_pattern, gpu_id: int):
         self.gpu_id = gpu_id
@@ -161,6 +162,7 @@ class FdLock:
         except Exception as e:
             print(f"Warning: Failed to close file descriptor: {e}", file=sys.stderr)
         self.fd = None
+
 
 def _ensure_lock_files(path_pattern: str, total_gpus: int):
     lock_dir = os.path.dirname(path_pattern)

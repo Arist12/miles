@@ -4,7 +4,9 @@ import command_utils as U
 MODEL_NAME = "Qwen2.5-0.5B-Instruct"
 MODEL_TYPE = "qwen2.5-0.5B"
 NUM_GPUS = 2
+SGLANG_ROUTER_IP = "127.0.0.1"
 SGLANG_ROUTER_PORT = 31000
+SGLANG_ENGINE_IP = "127.0.0.1"
 SGLANG_ENGINE_PORT = 32000
 
 def prepare():
@@ -98,8 +100,8 @@ def execute():
         # isolated-rollout related
         "--rollout-external "
         # TODO test multi-engine
-        f"--rollout-external-engine-addrs 127.0.0.1:{SGLANG_ENGINE_PORT} "
-        "--sglang-router-ip 127.0.0.1 "
+        f"--rollout-external-engine-addrs {SGLANG_ENGINE_IP}:{SGLANG_ENGINE_PORT} "
+        f"--sglang-router-ip {SGLANG_ROUTER_IP} "
         f"--sglang-router-port {SGLANG_ROUTER_PORT} "
     )
 
@@ -116,8 +118,7 @@ def execute():
         f"{misc_args} "
     )
 
-    _launch_sglang_router()
-    _launch_sglang_engine()
+    _launch_sglang_router_and_engine()
 
     U.execute_train(
         train_args=train_args,
@@ -126,11 +127,17 @@ def execute():
     )
 
 
-def _launch_sglang_router():
-    TODO
+def _launch_sglang_router_and_engine():
+    """Here we use infra in miles, but real users will use their own infra"""
 
-def _launch_sglang_engine():
-    TODO
+    import requests
+    from miles.backends.sglang_utils.sglang_engine import launch_server_process
+
+    launch_server_process(server_args)
+
+    requests.post(
+        f"http://{self.router_ip}:{self.router_port}/add_worker?url=http://{self.server_host}:{self.server_port}"
+    )
 
 
 if __name__ == "__main__":

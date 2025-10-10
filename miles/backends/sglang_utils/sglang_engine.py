@@ -102,7 +102,7 @@ class SGLangEngine(RayActor):
             response.raise_for_status()
             return response.json()
 
-        def _sanity_check_server_args(actual_server_args, expect_server_args):
+        def _sanity_check_server_args(actual_server_args, server_args_dict):
             for name, expect_value in server_args_dict.items():
                 if name in _EXTERNAL_ENGINE_SKIP_CHECK_FIELDS:
                     continue

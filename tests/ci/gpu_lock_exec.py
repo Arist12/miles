@@ -7,7 +7,7 @@ import sys
 import time
 from typing import List
 
-SLEEP_BACKOFF = 2.0
+SLEEP_BACKOFF = 5.0
 
 
 def main():
@@ -134,10 +134,10 @@ def _try_acquire_count(count: int, total_gpus: int, path_pattern: str, timeout: 
             except BlockingIOError:
                 for fd_lock in fd_locks:
                     fd_lock.close()
-                fd_locks = []
                 break
         if time.time() - start > timeout:
             raise TimeoutError(f"Timeout acquiring {count} GPUs (out of {total_gpus})")
+        print(f"try_acquire_count failed, sleep and retry (only got: {[x.gpu_id for x in fd_locks]})")
         time.sleep(SLEEP_BACKOFF * random.random())
 
 

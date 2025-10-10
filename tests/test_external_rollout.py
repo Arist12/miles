@@ -167,8 +167,7 @@ def _launch_sglang_engine():
             host=SGLANG_ENGINE_IP,
             port=SGLANG_ENGINE_PORT,
             tp_size=2,
-        ),
-        daemon=True,
+        )
     )
 
     requests.post(

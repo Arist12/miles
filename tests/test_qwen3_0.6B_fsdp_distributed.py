@@ -4,7 +4,7 @@ import command_utils as U
 MODEL_NAME = "Qwen3-0.6B"
 
 
-FEW_GPU = bool(int(os.environ.get("MILES_TEST_FEW_GPU", "1")))
+FEW_GPU = U.get_bool_env_var("MILES_TEST_FEW_GPU", "1")
 
 
 def prepare():

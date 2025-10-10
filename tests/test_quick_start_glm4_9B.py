@@ -2,8 +2,8 @@ import os
 
 import command_utils as U
 
-ENABLE_EVAL = bool(int(os.environ.get("MILES_TEST_ENABLE_EVAL", "1")))
-TIGHT_DEVICE_MEMORY = bool(int(os.environ.get("MILES_TEST_TIGHT_DEVICE_MEMORY", "1")))
+ENABLE_EVAL = U.get_bool_env_var("MILES_TEST_ENABLE_EVAL", "1")
+TIGHT_DEVICE_MEMORY = U.get_bool_env_var("MILES_TEST_TIGHT_DEVICE_MEMORY", "1")
 
 MODEL_NAME = "GLM-Z1-9B-0414"
 MODEL_TYPE = "glm4-9B"

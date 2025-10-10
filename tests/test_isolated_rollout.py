@@ -136,7 +136,7 @@ def _launch_sglang_router_and_engine():
     launch_server_process(server_args)
 
     requests.post(
-        f"http://{self.router_ip}:{self.router_port}/add_worker?url=http://{self.server_host}:{self.server_port}"
+        f"http://{SGLANG_ROUTER_IP}:{SGLANG_ROUTER_PORT}/add_worker?url=http://{SGLANG_ENGINE_IP}:{SGLANG_ENGINE_PORT}"
     )
 
 

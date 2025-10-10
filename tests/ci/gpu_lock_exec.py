@@ -149,13 +149,14 @@ def _try_acquire_count(count: int, total_gpus: int, lock_dir: str, pattern: str,
         time.sleep(SLEEP_BACKOFF)
 
 class FdLock:
-    def __init__(self, gpu_id: int):
+    def __init__(self, lock_dir, pattern, gpu_id: int):
         self.gpu_id = gpu_id
+        self.path = _get_lock_path(lock_dir, pattern, self.gpu_id)
         self.fd = None
 
     def open(self):
-        path = _get_lock_path(lock_dir, pattern, self.gpu_id)
-        self.fd = open(path, "w")
+        assert self.fd is None
+        self.fd = open(self.path, "w")
 
     def lock(self):
         assert self.fd is not None

@@ -96,6 +96,10 @@ def execute():
         f"--actor-num-gpus-per-node 2 "
         # TODO support non-colocate (e.g. remove rollout engine resource occupation)
         "--colocate "
+        
+        # isolated-rollout related
+        "--rollout-external-host 127.0.0.1 "
+        f"--rollout-external-port {TODO} "
     )
 
     train_args = (

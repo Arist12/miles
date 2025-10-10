@@ -45,14 +45,14 @@ def _parse_args():
     p.add_argument(
         "--lock-path-pattern",
         type=str,
-        default="/dev/shm/custom_gpu_lock_{i}.lock",
-        help='Filename pattern with "{i}" placeholder, e.g. "/dev/shm/custom_gpu_lock_{i}.lock"',
+        default="/dev/shm/custom_gpu_lock_{gpu_id}.lock",
+        help='Filename pattern with "{gpu_id}" placeholder',
     )
     p.add_argument("--print-only", action="store_true", help="Probe free devices and print them (does NOT hold locks)")
     p.add_argument("cmd", nargs=argparse.REMAINDER, help="Command to exec after '--' (required unless --print-only)")
     args = p.parse_args()
 
-    if "{i}" not in args.lock_path_pattern:
+    if "{gpu_id}" not in args.lock_path_pattern:
         raise Exception("ERROR: --lock-path-pattern must contain '{i}' placeholder.")
 
     if not args.cmd and not args.print_only:
@@ -65,7 +65,7 @@ def _execute_print_only(args):
     free = []
     _ensure_lock_files(path_pattern=args.lock_path_pattern, total_gpus=args.total_gpus)
     for i in range(args.total_gpus):
-        path = _get_lock_path(path_pattern=args.lock_path_pattern, i=i)
+        path = _get_lock_path(args.lock_path_pattern, i)
         try:
             fd = open(path, "w")
             try:
@@ -174,8 +174,8 @@ def _ensure_lock_files(path_pattern: str, total_gpus: int):
             print(f"Warning: Could not create lock file {p}: {e}", file=sys.stderr)
 
 
-def _get_lock_path(path_pattern: str, i: int) -> str:
-    return path_pattern.format(i=i)
+def _get_lock_path(path_pattern: str, gpu_id: int) -> str:
+    return path_pattern.format(gpu_id=gpu_id)
 
 
 def _parse_devices(s: str) -> List[int]:

@@ -150,6 +150,8 @@ class FdLock:
     def open(self):
         assert self.fd is None
         self.fd = open(self.path, "a+")
+        # try to avoid lock disappear when execvp
+        os.set_inheritable(self.fd.fileno(), True)
 
     def lock(self):
         assert self.fd is not None

@@ -30,7 +30,7 @@ def execute():
 
     grpo_args = (
         "--advantage-estimator grpo "
-        # "--use-kl-loss "
+        #"--use-kl-loss "
         "--kl-loss-coef 0.00 "
         "--kl-loss-type low_var_kl "
         "--kl-coef 0.00 "
@@ -50,7 +50,12 @@ def execute():
 
     sglang_args = "--rollout-num-gpus-per-engine 2 " "--sglang-decode-log-interval 1000 "
 
-    fsdp_args = "--update-weights-bucket-size 536870912 "  # 512 * 1024 * 1024
+    fsdp_args = (
+        # Set to true for FULL_STATE_DICT mode, false for SHARDED_STATE_DICT mode (default)
+        # "--fsdp-full-params "  # Uncomment this line to enable full params mode
+        # Set the bucket size for weight update
+        "--update-weights-bucket-size 536870912 "  # 512MB
+    )
 
     misc_args = "--actor-num-nodes 1 " "--actor-num-gpus-per-node 2 " "--colocate " "--slime-backend fsdp "
 

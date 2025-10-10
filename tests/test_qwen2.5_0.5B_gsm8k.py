@@ -47,6 +47,7 @@ def execute():
         "--context-parallel-size 1 "
         "--expert-model-parallel-size 1 "
         "--expert-tensor-parallel-size 1 "
+        # "--micro-batch-size 1 "
         "--use-dynamic-batch-size "
         "--max-tokens-per-gpu 9216 "
     )
@@ -73,10 +74,13 @@ def execute():
     sglang_args = "--rollout-num-gpus-per-engine 1 " "--sglang-mem-fraction-static 0.7 "
 
     misc_args = (
+        # default dropout in megatron is 0.1
         "--attention-dropout 0.0 "
         "--hidden-dropout 0.0 "
+        # should be good for model performance
         "--accumulate-allreduce-grads-in-fp32 "
         "--attention-softmax-in-fp32 "
+        # need to comment this when using model with MLA
         "--attention-backend flash "
         "--actor-num-nodes 1 "
         "--actor-num-gpus-per-node 4 "

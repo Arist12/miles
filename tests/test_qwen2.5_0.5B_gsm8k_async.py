@@ -87,6 +87,7 @@ def execute():
         "--attention-backend flash "
         "--actor-num-nodes 1 "
         f"--actor-num-gpus-per-node {1 if FEW_GPU else 2} "
+        f"--rollout-num-gpus {1 if FEW_GPU else 2} "
     )
 
     train_args = (

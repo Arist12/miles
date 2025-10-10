@@ -82,15 +82,11 @@ def _execute_print_only(args):
 
 
 def _try_acquire(args):
-    try:
-        if args.devices:
-            devs = _parse_devices(args.devices)
-            return _try_acquire_specific(devs, args.lock_dir, args.lock_pattern, args.timeout)
-        else:
-            return _try_acquire_count(args.count, args.total_gpus, args.lock_dir, args.lock_pattern, args.timeout)
-    except TimeoutError as e:
-        print("ERROR:", e, file=sys.stderr)
-        sys.exit(1)
+    if args.devices:
+        devs = _parse_devices(args.devices)
+        return _try_acquire_specific(devs, args.lock_dir, args.lock_pattern, args.timeout)
+    else:
+        return _try_acquire_count(args.count, args.total_gpus, args.lock_dir, args.lock_pattern, args.timeout)
 
 
 def _try_acquire_specific(devs: List[int], lock_dir: str, pattern: str, timeout: int):

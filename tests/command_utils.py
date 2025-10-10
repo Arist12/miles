@@ -25,6 +25,11 @@ def convert_checkpoint(model_name, model_type, num_gpus: int):
     )
 
 
+def hf_download_dataset(full_name: str):
+    _, partial_name = full_name.split("/")
+    exec_command(f"hf download --repo-type dataset {full_name} --local-dir /root/datasets/{partial_name}")
+
+
 def execute_train(
     train_args: str,
     num_gpus: int,

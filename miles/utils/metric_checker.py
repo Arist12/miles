@@ -2,6 +2,12 @@ from typing import Dict
 
 
 class MetricChecker:
+    @staticmethod
+    def maybe_create(args):
+        if args.ci_test and (args.ci_metric_checker_key is not None):
+            return MetricChecker(args)
+        return None
+
     def __init__(self, args):
         self.args = args
         self._exists_check_success = False

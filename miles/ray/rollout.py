@@ -59,8 +59,7 @@ class RolloutManager:
         self.rollout_engines = self.all_rollout_engines[:: self.nodes_per_engine]
         self.rollout_engine_lock = Lock.options(num_cpus=1, num_gpus=0).remote()
 
-        if args.ci_test:
-            self._metric_checker = MetricChecker(args)
+        self._metric_checker = MetricChecker.maybe_create(args)
 
         # fault tolerance
         self._health_monitor_thread = None
@@ -70,7 +69,7 @@ class RolloutManager:
         self._health_check_first_wait = args.rollout_health_check_first_wait
 
     def dispose(self):
-        if self.args.ci_test:
+        if self._metric_checker is not None:
             self._metric_checker.dispose()
 
     def get_rollout_engines_and_lock(self):
@@ -103,7 +102,7 @@ class RolloutManager:
         # TODO: add fault tolerance to eval
         data = self.eval_generate_rollout(self.args, rollout_id, self.data_source, evaluation=True)
         metrics = _log_eval_rollout_data(rollout_id, self.args, data)
-        if self.args.ci_test:
+        if self._metric_checker is not None:
             self._metric_checker.on_eval(metrics)
 
     def save(self, rollout_id):

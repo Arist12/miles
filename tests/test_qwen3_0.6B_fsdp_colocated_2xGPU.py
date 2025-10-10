@@ -55,7 +55,7 @@ def execute():
         # Set to true for FULL_STATE_DICT mode, false for SHARDED_STATE_DICT mode (default)
         # "--fsdp-full-params "  # Uncomment this line to enable full params mode
         # Set the bucket size for weight update
-        "--update-weights-buffer-size 536870912 "  # 512MB
+        "--update-weight-buffer-size 536870912 "  # 512MB
     )
 
     misc_args = "--actor-num-nodes 1 " "--actor-num-gpus-per-node 2 " "--colocate " "--train-backend fsdp "

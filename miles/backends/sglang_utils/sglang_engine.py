@@ -84,7 +84,7 @@ class SGLangEngine(RayActor):
 
         self.router_ip = args.sglang_router_ip
         self.router_port = args.sglang_router_port
-        self.server_args = _compute_server_args(args, dist_init_addr, nccl_port, port, rank)
+        self.server_args = _compute_server_args(args, rank, dist_init_addr, nccl_port, port)
         self.node_rank = self.server_args.node_rank
         self.server_host = self.server_args.host
         self.server_port = self.server_args.port
@@ -285,7 +285,7 @@ class SGLangEngine(RayActor):
         return requests.post(f"http://{self.server_host}:{self.server_args.port}/stop_profile", json={})
 
 
-def _compute_server_args(args, dist_init_addr, nccl_port, port, rank):
+def _compute_server_args(args, rank, dist_init_addr, nccl_port, port):
     nnodes = max(1, args.rollout_num_gpus_per_engine // args.num_gpus_per_node)
     node_rank = rank % nnodes
     kwargs = {

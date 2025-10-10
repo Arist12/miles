@@ -148,6 +148,23 @@ def _try_acquire_count(count: int, total_gpus: int, lock_dir: str, pattern: str,
             raise TimeoutError(f"Timeout acquiring {count} GPUs (out of {total_gpus})")
         time.sleep(SLEEP_BACKOFF)
 
+class FdLock:
+    def __init__(self, gpu_id: int):
+        self.gpu_id = gpu_id
+        self.fd = None
+
+    def open(self):
+        path = _get_lock_path(lock_dir, pattern, self.gpu_id)
+        self.fd = open(path, "w")
+
+    def lock(self):
+        assert self.fd is not None
+        fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def close(self):
+        assert self.fd is not None
+        self.fd.close()
+        self.fd = None
 
 def _ensure_lock_files(lock_dir: str, pattern: str, total_gpus: int):
     os.makedirs(lock_dir, exist_ok=True)

@@ -13,7 +13,7 @@ NUM_GPUS = 2 if FEW_GPU else 4
 def prepare():
     U.exec_command("mkdir -p /root/models /root/datasets")
     U.exec_command(f"huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct --local-dir /root/models/{MODEL_NAME}")
-    U.exec_command("huggingface-cli download --repo-type dataset zhuzilin/gsm8k --local-dir gsm8k")
+    U.hf_download_dataset("zhuzilin/gsm8k")
     U.convert_checkpoint(model_name=MODEL_NAME, model_type=MODEL_TYPE, num_gpus=NUM_GPUS)
 
 

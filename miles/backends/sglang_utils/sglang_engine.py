@@ -95,7 +95,11 @@ class SGLangEngine(RayActor):
             self._init_normal(server_args_dict)
 
     def _init_external(self, server_args_dict):
-        TODO
+        # sanity check values should agree
+        for name, expect_value in server_args_dict.items():
+            if name in _EXTERNAL_ENGINE_SKIP_CHECK_FIELDS:
+                continue
+            TODO
 
     def _init_normal(self, server_args_dict):
         print(f"Launch HttpServerEngineAdapter at: {self.server_host}:{self.server_port}")
@@ -338,3 +342,12 @@ def _compute_server_args(args, rank, dist_init_addr, nccl_port, host, port):
             kwargs.pop(key)
 
     return kwargs
+
+_EXTERNAL_ENGINE_SKIP_CHECK_FIELDS = [
+    "model_path",
+    "trust_remote_code",
+    "random_seed",
+    "nccl_port",
+    "dist_init_addr",
+    "skip_server_warmup",
+]

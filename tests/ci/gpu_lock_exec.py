@@ -79,9 +79,9 @@ def _execute_print_only(args):
                 pass
             fd_lock.close()
         except Exception as e:
-            print(f"Warning: Error while probing lock: {e}", file=sys.stderr)
+            print(f"Warning: Error while probing lock: {e}", file=sys.stderr, flush=True)
 
-    print("Free GPUs:", ",".join(str(x) for x in free))
+    print("Free GPUs:", ",".join(str(x) for x in free), flush=True)
 
 
 def _try_acquire(args):
@@ -111,7 +111,7 @@ def _try_acquire_specific(devs: List[int], path_pattern: str, timeout: int):
             fd_locks.append(fd_lock)
         return fd_locks
     except Exception as e:
-        print(f"Error during specific GPU acquisition: {e}", file=sys.stderr)
+        print(f"Error during specific GPU acquisition: {e}", file=sys.stderr, flush=True)
         for fd_lock in fd_locks:
             fd_lock.close()
         raise
@@ -143,7 +143,7 @@ def _try_acquire_count(count: int, total_gpus: int, path_pattern: str, timeout: 
         if time.time() - start > timeout:
             raise TimeoutError(f"Timeout acquiring {count} GPUs (out of {total_gpus})")
 
-        print(f"[gpu_lock_exec] try_acquire_count failed, sleep and retry (only got: {gotten_gpu_ids})")
+        print(f"[gpu_lock_exec] try_acquire_count failed, sleep and retry (only got: {gotten_gpu_ids})", flush=True)
         time.sleep(SLEEP_BACKOFF * random.random())
 
 
@@ -168,7 +168,7 @@ class FdLock:
         try:
             self.fd.close()
         except Exception as e:
-            print(f"Warning: Failed to close file descriptor: {e}", file=sys.stderr)
+            print(f"Warning: Failed to close file descriptor: {e}", file=sys.stderr, flush=True)
         self.fd = None
 
 
@@ -181,7 +181,7 @@ def _ensure_lock_files(path_pattern: str, total_gpus: int):
         try:
             open(p, "a").close()
         except Exception as e:
-            print(f"Warning: Could not create lock file {p}: {e}", file=sys.stderr)
+            print(f"Warning: Could not create lock file {p}: {e}", file=sys.stderr, flush=True)
 
 
 def _get_lock_path(path_pattern: str, gpu_id: int) -> str:

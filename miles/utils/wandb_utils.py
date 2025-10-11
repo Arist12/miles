@@ -96,6 +96,17 @@ def init_wandb_secondary(args, wandb_run_id):
             x_update_finish_state=False,
         )
 
+    if args.sglang_enable_metrics:
+        print(f"Forward SGLang metrics to WandB.")
+        settings_kwargs |= dict(
+            x_stats_open_metrics_endpoints={
+                "sgl_engine": f"http://{TODO}/engine_metrics",
+            },
+            x_stats_open_metrics_filters={
+                "sgl_engine.*": {},
+            },
+        )
+
     init_kwargs = {
         "id": wandb_run_id,
         "entity": args.wandb_team,

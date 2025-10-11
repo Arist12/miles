@@ -97,7 +97,7 @@ def init_wandb_secondary(args, wandb_run_id, router_addr=None):
         )
 
     if args.sglang_enable_metrics and router_addr is not None:
-        print(f"Forward SGLang metrics to WandB.")
+        print(f"Forward SGLang metrics at {router_addr} to WandB.")
         settings_kwargs |= dict(
             x_stats_open_metrics_endpoints={
                 "sgl_engine": f"{router_addr}/engine_metrics",

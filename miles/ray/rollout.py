@@ -1,7 +1,6 @@
 import logging
 import multiprocessing
 import random
-import threading
 import time
 from pathlib import Path
 from typing import List, Union
@@ -13,9 +12,9 @@ from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
 from miles.backends.sglang_utils.sglang_engine import SGLangEngine
 from miles.ray.rollout_data_source import RolloutDataSourceWithBuffer
+from miles.utils.health_monitor import RolloutHealthMonitor
 from miles.utils.http_utils import find_available_port, get_host_info, init_http_client
 from miles.utils.metric_checker import MetricChecker
-from miles.utils.health_monitor import RolloutHealthMonitor
 from miles.utils.misc import load_function
 from miles.utils.ray_utils import Box
 from miles.utils.types import Sample

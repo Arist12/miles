@@ -71,7 +71,10 @@ class RolloutHealthMonitor:
             self._kill_engine(rollout_engine_id=rollout_engine_id)
 
     def _kill_engine(self, rollout_engine_id: int):
-        for i in range(rollout_engine_id * self._rollout_manager.nodes_per_engine, (rollout_engine_id + 1) * self._rollout_manager.nodes_per_engine):
+        for i in range(
+            rollout_engine_id * self._rollout_manager.nodes_per_engine,
+            (rollout_engine_id + 1) * self._rollout_manager.nodes_per_engine,
+        ):
             engine = self._rollout_manager.all_rollout_engines[i]
             try:
                 ray.kill(engine)

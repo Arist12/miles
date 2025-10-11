@@ -5,8 +5,10 @@ import ray
 
 
 class RolloutHealthMonitor:
-    def __init__(self, args):
-        # fault tolerance
+    def __init__(self, rollout_manager, args):
+        # TODO may remove this dependency after refactoring
+        self._rollout_manager = rollout_manager
+
         self._thread = None
         self._stop_event = None
         self._check_interval = args.rollout_health_check_interval
@@ -14,7 +16,7 @@ class RolloutHealthMonitor:
         self._check_first_wait = args.rollout_health_check_first_wait
 
     def start(self) -> bool:
-        if not self.rollout_engines:
+        if not self._rollout_manager.rollout_engines:
             return False
 
         assert self._thread is None, "Health monitor thread is already running."
@@ -53,7 +55,7 @@ class RolloutHealthMonitor:
                 break
 
     def _run_health_checks(self) -> None:
-        for rollout_engine_id, engine in enumerate(self.rollout_engines):
+        for rollout_engine_id, engine in enumerate(self._rollout_manager.rollout_engines):
             if self._stop_event is not None and self._stop_event.is_set():
                 break
             self._check_engine_health(rollout_engine_id, engine)
@@ -69,11 +71,11 @@ class RolloutHealthMonitor:
             self._kill_engine(rollout_engine_id=rollout_engine_id)
 
     def _kill_engine(self, rollout_engine_id: int):
-        for i in range(rollout_engine_id * self.nodes_per_engine, (rollout_engine_id + 1) * self.nodes_per_engine):
-            engine = self.all_rollout_engines[i]
+        for i in range(rollout_engine_id * self._rollout_manager.nodes_per_engine, (rollout_engine_id + 1) * self._rollout_manager.nodes_per_engine):
+            engine = self._rollout_manager.all_rollout_engines[i]
             try:
                 ray.kill(engine)
             except Exception:
                 pass
-            self.all_rollout_engines[i] = None
-        self.rollout_engines[rollout_engine_id] = None
+            self._rollout_manager.all_rollout_engines[i] = None
+        self._rollout_manager.rollout_engines[rollout_engine_id] = None

@@ -458,7 +458,7 @@ def _log_rollout_data(rollout_id, args, samples, rollout_time):
     if args.rollout_num_gpus is not None:
         log_dict["perf/tokens_per_gpu_per_sec"] = sum(response_lengths) / rollout_time / args.rollout_num_gpus
     log_dict["perf/longest_sample_tokens_per_sec"] = max(response_lengths) / rollout_time
-    log_dict |= _compute_zero_std_metrics(samples)
+    log_dict |= _compute_zero_std_metrics(args, samples)
     print(f"perf {rollout_id}: {log_dict}")
     step = (
         rollout_id
@@ -475,6 +475,11 @@ def _log_rollout_data(rollout_id, args, samples, rollout_time):
         tb = _TensorboardAdapter(args)
         tb.log(data=log_dict, step=step)
 
-def _compute_zero_std_metrics(samples):
-    sample_groups = group_by(samples, lambda s: s.group_index)
+def _compute_zero_std_metrics(args, all_samples: List[Sample]):
+    def _is_zero_std(samples: List[Sample]):
+        rewards = [sample.get_reward_value(args) for sample in samples]
+        return len(rewards) == 0 or all(rewards[0] == r for r in rewards)
+
+    sample_groups = group_by(all_samples, lambda s: s.group_index)
+    filtered_sample_groups = [g for g in sample_groups if _is_zero_std(g)]
     return TODO

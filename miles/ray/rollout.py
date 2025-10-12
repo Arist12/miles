@@ -14,12 +14,12 @@ from miles.backends.sglang_utils.sglang_engine import SGLangEngine
 from miles.ray.rollout_data_source import RolloutDataSourceWithBuffer
 from miles.utils.health_monitor import RolloutHealthMonitor
 from miles.utils.http_utils import find_available_port, get_host_info, init_http_client
+from miles.utils.iter_utils import group_by
 from miles.utils.metric_checker import MetricChecker
 from miles.utils.misc import load_function
 from miles.utils.ray_utils import Box
 from miles.utils.types import Sample
 from miles.utils.wandb_utils import init_wandb_secondary
-from miles.utils.iter_utils import group_by
 
 from .utils import NOSET_VISIBLE_DEVICES_ENV_VARS_LIST, Lock
 
@@ -475,6 +475,7 @@ def _log_rollout_data(rollout_id, args, samples, rollout_time):
         tb = _TensorboardAdapter(args)
         tb.log(data=log_dict, step=step)
 
+
 def _compute_zero_std_metrics(args, all_samples: List[Sample]):
     def _is_zero_std(samples: List[Sample]):
         rewards = [sample.get_reward_value(args) for sample in samples]
@@ -485,7 +486,4 @@ def _compute_zero_std_metrics(args, all_samples: List[Sample]):
 
     interesting_rewards = [str(round(g[0].get_reward_value(args), 1)) for g in interesting_sample_groups]
 
-    return {
-        f"rollout/zero_std/count_{reward}": len(items)
-        for reward, items in group_by(interesting_rewards).items()
-    }
+    return {f"rollout/zero_std/count_{reward}": len(items) for reward, items in group_by(interesting_rewards).items()}

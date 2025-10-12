@@ -67,9 +67,11 @@ class RolloutDataSource:
             group = []
             for _ in range(self.args.n_samples_per_prompt):
                 sample = copy.deepcopy(prompt_sample)
+                sample.group_index = self.sample_group_index
                 sample.index = self.sample_index
                 self.sample_index += 1
                 group.append(sample)
+            self.sample_group_index += 1
             samples.append(group)
         return samples
 

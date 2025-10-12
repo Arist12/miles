@@ -3,7 +3,7 @@ import base64
 import copy
 import io
 from argparse import Namespace
-from typing import Any, Callable, Union
+from typing import Any, Callable, Union, Optional
 
 from PIL import Image
 from tqdm import tqdm
@@ -393,6 +393,19 @@ def _call_dynamic_filter(fn, *args, **kwargs):
         output = DynamicFilterOutput(keep=output)
 
     return output
+
+
+class _MetricGatherer:
+    def __init__(self):
+        pass
+
+    def on_dynamic_filter(self, reason: Optional[str]):
+        if not reason:
+            return
+        TODO
+
+    def collect(self):
+        return TODO
 
 
 EVAL_PROMPT_DATASET = {}

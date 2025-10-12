@@ -10,7 +10,6 @@ RUN apt install -y nvtop
 
 # TODO: change to pip install sglang-router after it has a new release
 RUN pip install sglang-router --force-reinstall
-RUN pip install git+https://github.com/fzyzcjy/torch_memory_saver.git --no-cache-dir --force-reinstall
 
 RUN TORCH_CUDA_ARCH_LIST="8.0;8.9;9.0;9.0a" pip install git+https://github.com/fanshiqing/grouped_gemm@v1.1.4
 # apex

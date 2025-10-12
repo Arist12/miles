@@ -59,15 +59,7 @@ class RolloutDataSource:
                 prompt_samples += self.dataset.samples[:num_samples]
                 self.sample_offset = num_samples
         else:
-            for _ in range(num_samples):
-                group = []
-                for _ in range(self.args.n_samples_per_prompt):
-                    sample = Sample(
-                        index=self.sample_index,
-                    )
-                    self.sample_index += 1
-                    group.append(sample)
-                samples.append(group)
+            prompt_samples = [Sample() for _ in range(num_samples)]
 
         samples = []
         for prompt_sample in prompt_samples:

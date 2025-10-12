@@ -16,6 +16,7 @@ from miles.utils.http_utils import get, post
 from miles.utils.mask_utils import get_response_lengths
 from miles.utils.misc import SingletonMeta, load_function
 from miles.utils.types import Sample
+from miles.rollout.filter_hub.base_types import DynamicFilterOutput
 
 from .rm_hub import async_rm, batched_async_rm
 
@@ -384,8 +385,8 @@ def _call_dynamic_filter(fn, *args, **kwargs):
     output = fn(*args, **kwargs)
 
     # compatibility for legacy version
-    if not isinstance(output, TODO):
-        output = TODO(metrics=output)
+    if not isinstance(output, DynamicFilterOutput):
+        output = DynamicFilterOutput(keep=output)
 
     return output
 

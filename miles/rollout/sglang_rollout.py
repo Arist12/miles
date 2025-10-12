@@ -409,7 +409,10 @@ class _MetricGatherer:
         self._dynamic_filter_drop_reason_count[reason] += 1
 
     def collect(self):
-        return TODO
+        return {
+            f"rollout/dynamic_filter/drop_{reason}": count
+            for reason, count in self._dynamic_filter_drop_reason_count.items()
+        }
 
 
 EVAL_PROMPT_DATASET = {}

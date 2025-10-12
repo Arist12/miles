@@ -45,7 +45,7 @@ class RolloutDataSource:
             self.dataset = None
 
     def get_samples(self, num_samples):
-        # TODO unify the two branches
+        # TODO further improve code
         if self.dataset is not None:
             if self.sample_offset + num_samples <= len(self.dataset):
                 prompt_samples = self.dataset.samples[self.sample_offset : self.sample_offset + num_samples]

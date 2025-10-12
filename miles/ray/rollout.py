@@ -475,8 +475,12 @@ def _log_rollout_data(rollout_id, args, samples, rollout_time):
         tb.log(data=log_dict, step=step)
 
 
-def _call_rollout_fn(fn, *args, **kwargs):
-    output = fn(*args, **kwargs)
+def _call_rollout_fn(fn, *args, evaluation: bool, **kwargs):
+    output = fn(*args, **kwargs, evaluation=evaluation)
     if not isinstance(output, RolloutFnCallOutput):
-        output = RolloutFnCallOutput(samples=output)
+        output = (
+            RolloutFnCallOutput(metrics=output)
+            if evaluation else
+            RolloutFnCallOutput(samples=output)
+        )
     return output

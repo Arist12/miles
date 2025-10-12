@@ -380,6 +380,16 @@ async def generate_rollout_async(
     return RolloutFnCallOutput(samples=data), aborted_samples
 
 
+def _call_dynamic_filter(fn, *args, **kwargs):
+    output = fn(*args, **kwargs)
+
+    # compatibility for legacy version
+    if not isinstance(output, TODO):
+        output = TODO(metrics=output)
+
+    return output
+
+
 EVAL_PROMPT_DATASET = {}
 
 

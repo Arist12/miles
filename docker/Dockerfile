@@ -1,5 +1,9 @@
+# TDOO blackwell use `v0.5.2rc2-cu128-b200`, is it still needed?
 ARG SGLANG_VERSION=latest
 FROM lmsysorg/sglang:${SGLANG_VERSION} AS sglang
+
+# hopper/blackwell
+ARG TARGET_VARIANT
 
 # we need to write this again after from
 ARG SGLANG_VERSION
@@ -11,7 +15,13 @@ RUN apt install -y nvtop
 # TODO: change to pip install sglang-router after it has a new release
 RUN pip install sglang-router --force-reinstall
 
-RUN TORCH_CUDA_ARCH_LIST="8.0;8.9;9.0;9.0a" pip install git+https://github.com/fanshiqing/grouped_gemm@v1.1.4
+RUN if [ "${TARGET_VARIANT}" = "hopper" ]; then \
+          export TLIST="8.0;8.9;9.0;9.0a"; \
+        else \
+          export TLIST="8.0;8.9;9.0;9.0a;10.0"; \
+        fi && \
+    TORCH_CUDA_ARCH_LIST="$TLIST" pip install git+https://github.com/fanshiqing/grouped_gemm@v1.1.4
+
 # apex
 RUN NVCC_APPEND_FLAGS="--threads 4" \
   pip -v install --disable-pip-version-check --no-cache-dir \

@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
-
-from miles.utils.types import Sample
+from typing import Optional
 
 
 @dataclass

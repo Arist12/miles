@@ -10,13 +10,13 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 from miles.rollout.base_types import RolloutFnCallOutput
+from miles.rollout.filter_hub.base_types import DynamicFilterOutput
 from miles.utils.async_utils import run
 from miles.utils.data import Dataset
 from miles.utils.http_utils import get, post
 from miles.utils.mask_utils import get_response_lengths
 from miles.utils.misc import SingletonMeta, load_function
 from miles.utils.types import Sample
-from miles.rollout.filter_hub.base_types import DynamicFilterOutput
 
 from .rm_hub import async_rm, batched_async_rm
 

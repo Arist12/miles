@@ -101,6 +101,7 @@ class RolloutManager:
             return
         # TODO: add fault tolerance to eval
         data = _call_rollout_fn(self.eval_generate_rollout, self.args, rollout_id, self.data_source, evaluation=True)
+        data = data.metrics
         metrics = _log_eval_rollout_data(rollout_id, self.args, data)
         if self._metric_checker is not None:
             self._metric_checker.on_eval(metrics)
@@ -125,6 +126,7 @@ class RolloutManager:
             data = [Sample.from_dict(sample) for sample in data]
         else:
             data = _call_rollout_fn(self.generate_rollout, self.args, rollout_id, self.data_source, evaluation=False)
+            data = data.samples  # TODO also handle metrics
             # flatten the data if it is a list of lists
             while isinstance(data[0], list):
                 data = sum(data, [])

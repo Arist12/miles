@@ -1,5 +1,7 @@
 accelerate
+blobfile
 datasets
+git+https://github.com/ISEEKYAN/mbridge.git
 httpx[http2]
 mcp[cli]
 pillow
@@ -8,8 +10,6 @@ pyyaml
 ray[default]
 tensorboard
 torch
+torch_memory_saver==0.0.9rc3
 transformers
 wandb
-blobfile
-git+https://github.com/ISEEKYAN/mbridge.git
-torch_memory_saver==0.0.9rc3

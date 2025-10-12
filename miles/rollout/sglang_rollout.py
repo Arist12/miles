@@ -3,6 +3,7 @@ import base64
 import copy
 import io
 from argparse import Namespace
+from collections import defaultdict
 from typing import Any, Callable, Union, Optional
 
 from PIL import Image
@@ -400,12 +401,12 @@ def _call_dynamic_filter(fn, *args, **kwargs):
 
 class _MetricGatherer:
     def __init__(self):
-        pass
+        self._dynamic_filter_drop_reason_count = defaultdict()
 
     def on_dynamic_filter_drop(self, reason: Optional[str]):
         if not reason:
             return
-        TODO
+        self._dynamic_filter_drop_reason_count[reason] += 1
 
     def collect(self):
         return TODO

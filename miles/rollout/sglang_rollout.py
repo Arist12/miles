@@ -15,6 +15,7 @@ from miles.utils.http_utils import get, post
 from miles.utils.mask_utils import get_response_lengths
 from miles.utils.misc import SingletonMeta, load_function
 from miles.utils.types import Sample
+from miles.rollout.base_types import RolloutFnCallOutput
 
 from .rm_hub import async_rm, batched_async_rm
 
@@ -485,7 +486,7 @@ async def eval_rollout_single_dataset(
 # TODO remove this temp function
 def generate_rollout(
     args: Namespace, rollout_id: int, data_buffer: Any, evaluation: bool = False
-) -> list[list[Sample]]:
+) -> RolloutFnCallOutput:
     """An example to implement the generate_rollout function for an rule based rm rollout generation.
 
     Args:

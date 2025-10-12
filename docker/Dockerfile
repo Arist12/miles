@@ -41,7 +41,7 @@ RUN if [ "${TARGET_VARIANT}" = "hopper" ]; then \
     pip -v install --no-build-isolation git+https://github.com/NVIDIA/TransformerEngine.git@${TE_VERSION} \
 
 # flash attn
-# the newest version megatron supports is v2.7.4
+# the newest version megatron supports is v2.7.4.post1
 RUN MAX_JOBS=64 pip -v install flash-attn==2.7.4.post1
 # TODO shall we lock version
 RUN pip install flash-linear-attention

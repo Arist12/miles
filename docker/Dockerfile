@@ -7,6 +7,7 @@ ARG TARGET_VARIANT
 
 # we need to write this again after from
 ARG SGLANG_VERSION
+# TODO shall we lock version
 ARG MEGATRON_COMMIT=main
 
 RUN apt update
@@ -22,17 +23,27 @@ RUN if [ "${TARGET_VARIANT}" = "hopper" ]; then \
         fi && \
     TORCH_CUDA_ARCH_LIST="$TLIST" pip install git+https://github.com/fanshiqing/grouped_gemm@v1.1.4
 
+# TODO shall we lock version
 # apex
 RUN NVCC_APPEND_FLAGS="--threads 4" \
   pip -v install --disable-pip-version-check --no-cache-dir \
   --no-build-isolation \
-  --config-settings "--build-option=--cpp_ext --cuda_ext --parallel 8" git+https://github.com/NVIDIA/apex.git
+  --config-settings "--build-option=--cpp_ext --cuda_ext --parallel 8" git+https://github.com/NVIDIA/apex.git \
+
+# TODO shall we unify the version; also shall we lock version
 # transformer engine, we install with --no-deps to avoid installing torch and torch-extensions
 RUN pip install pybind11
-RUN pip -v install --no-build-isolation git+https://github.com/NVIDIA/TransformerEngine.git@3cd6870
+RUN if [ "${TARGET_VARIANT}" = "hopper" ]; then \
+      export TE_VERSION=3cd6870; \
+    else \
+      export TE_VERSION=stable; \
+    fi && \
+    pip -v install --no-build-isolation git+https://github.com/NVIDIA/TransformerEngine.git@${TE_VERSION} \
+
 # flash attn
 # the newest version megatron supports is v2.7.4
 RUN MAX_JOBS=64 pip -v install flash-attn==2.7.4.post1
+# TODO shall we lock version
 RUN pip install flash-linear-attention
 
 WORKDIR /root/

@@ -353,7 +353,8 @@ async def generate_rollout_async(
                 do_print = False
 
             assert len(group) == args.n_samples_per_prompt
-            if dynamic_filter is not None and not dynamic_filter(args, group):
+            dynamic_filter_output = _call_dynamic_filter(dynamic_filter, args, group)
+            if not dynamic_filter_output.keep:
                 state.remaining_batch_size -= 1
                 continue
 
@@ -382,6 +383,9 @@ async def generate_rollout_async(
 
 
 def _call_dynamic_filter(fn, *args, **kwargs):
+    if fn is None:
+        return DynamicFilterOutput(keep=True)
+
     output = fn(*args, **kwargs)
 
     # compatibility for legacy version

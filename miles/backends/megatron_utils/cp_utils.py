@@ -63,6 +63,8 @@ def get_sum_of_sample_mean(
                 f"sum_of_sample_mean "
                 f"{get_tensor_info(x)=} "
                 f"{get_tensor_info(response_lengths)=} "
+                f"{type(loss_masks)=} "
+                f"{get_tensor_info(loss_masks[0])=} "
             )
             return sum(
                 [
@@ -76,6 +78,8 @@ def get_sum_of_sample_mean(
                 f"sum_of_token "
                 f"{get_tensor_info(x)=} "
                 f"{get_tensor_info(response_lengths)=} "
+                f"{type(loss_masks)=} "
+                f"{get_tensor_info(loss_masks[0])=} "
             )
             return sum(
                 [(x_i * loss_mask_i).sum() for x_i, loss_mask_i in zip(x.split(response_lengths, dim=0), loss_masks)]

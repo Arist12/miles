@@ -299,7 +299,8 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
     )
     print(
         f"policy_loss_function "
-        f"{get_tensor_info(log_probs_and_entropy['log_probs'])=} "
+        f"{type(log_probs_and_entropy['log_probs'])=} "
+        f"{get_tensor_info(log_probs_and_entropy['log_probs'][0])=} "
         f"{type(log_probs_and_entropy['entropy'])=} "
         f"{get_tensor_info(log_probs_and_entropy['entropy'][0])=} "
     )

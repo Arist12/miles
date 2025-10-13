@@ -1,8 +1,8 @@
 MODEL_ARGS=(
    --swiglu
    --num-layers 28
-   --hidden-size 1024
-   --ffn-hidden-size 3072
+   --hidden-size 2048
+   --ffn-hidden-size 6144
    --num-attention-heads 16
    --group-query-attention
    --num-query-groups 8

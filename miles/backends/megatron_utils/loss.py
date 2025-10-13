@@ -94,7 +94,7 @@ def get_log_probs_and_entropy(
         print(
             f"get_log_probs_and_entropy ONE-CHUNK "
             f"{get_tensor_info(logits)=} "
-            f"{get_tensor_info(unconcat_tokens)=} "
+            f"{get_tensor_info(unconcat_tokens[0])=} "
             f"{get_tensor_info(logits_chunk)=} "
             f"{get_tensor_info(tokens_chunk)=} "
             f"{get_tensor_info(log_prob)=} "
@@ -300,7 +300,8 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
     print(
         f"policy_loss_function "
         f"{get_tensor_info(log_probs_and_entropy['log_probs'])=} "
-        f"{get_tensor_info(log_probs_and_entropy['entropy'])=} "
+        f"{type(log_probs_and_entropy['entropy'])=} "
+        f"{get_tensor_info(log_probs_and_entropy['entropy'][0])=} "
     )
 
     log_probs = log_probs_and_entropy["log_probs"]
@@ -370,7 +371,7 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
     entropy_loss = sum_of_sample_mean(entropy)
     print(
         f"policy_loss_function "
-        f"{get_tensor_info(log_probs_and_entropy['entropy'])=} "
+        f"{get_tensor_info(log_probs_and_entropy['entropy'][0])=} "
         f"{get_tensor_info(entropy)=} "
         f"{get_tensor_info(entropy_loss)=} "
     )

@@ -5,6 +5,8 @@ from typing import List, Optional, Tuple
 import torch
 import torch.distributed as dist
 
+from miles.utils.misc import get_tensor_info
+
 
 @torch.compile(dynamic=True)
 def compute_approx_kl(
@@ -45,7 +47,7 @@ def compute_approx_kl(
         raise ValueError(f"Unknown kl_loss_type: {kl_loss_type}")
 
 
-@torch.compile(dynamic=True)
+# @torch.compile(dynamic=True)
 def compute_policy_loss(
     ppo_kl: torch.Tensor,
     advantages: torch.Tensor,
@@ -58,6 +60,17 @@ def compute_policy_loss(
     pg_losses2 = -ratio.clamp(1 - eps_clip, 1 + eps_clip_high) * advantages
     clip_pg_losses1 = torch.maximum(pg_losses1, pg_losses2)
     clipfrac = torch.gt(pg_losses2, pg_losses1).float()
+
+    print(
+        f"compute_policy_loss "
+        f"{get_tensor_info(ppo_kl)=} "
+        f"{get_tensor_info(advantages)=} "
+        f"{get_tensor_info(ratio)=} "
+        f"{get_tensor_info(pg_losses1)=} "
+        f"{get_tensor_info(pg_losses2)=} "
+        f"{get_tensor_info(clip_pg_losses1)=} "
+        f"{get_tensor_info(clipfrac)=} "
+    )
 
     if eps_clip_c is not None:
         assert (
@@ -310,4 +323,12 @@ def calculate_log_probs_and_entropy(logits, tokens, tp_group, with_entropy: bool
             entropy = logits.new_zeros((0,))
     else:
         entropy = None
+
+    print(
+        f"calculate_log_probs_and_entropy "
+        f"{get_tensor_info(logits)=} "
+        f"{get_tensor_info(tokens)=} "
+        f"{get_tensor_info(log_prob)=} "
+        f"{get_tensor_info(entropy)=} "
+    )
     return log_prob, entropy

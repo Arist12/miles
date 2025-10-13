@@ -16,6 +16,7 @@ from miles.utils.ppo_utils import (
 )
 
 from .cp_utils import all_gather_with_cp, get_logits_and_tokens_offset_with_cp, get_sum_of_sample_mean
+from ...utils.misc import get_tensor_info
 
 
 def get_responses(
@@ -89,6 +90,16 @@ def get_log_probs_and_entropy(
 
         log_probs_list.append(log_prob.squeeze(-1))
         entropy_list.append(entropy)
+
+        print(
+            f"get_log_probs_and_entropy ONE-CHUNK "
+            f"{get_tensor_info(logits)=} "
+            f"{get_tensor_info(unconcat_tokens)=} "
+            f"{get_tensor_info(logits_chunk)=} "
+            f"{get_tensor_info(tokens_chunk)=} "
+            f"{get_tensor_info(log_prob)=} "
+            f"{get_tensor_info(entropy)=} "
+        )
 
     res = {
         "log_probs": log_probs_list,
@@ -264,9 +275,19 @@ def compute_advantages_and_returns(args, rollout_data):
 def policy_loss_function(args, batch, logits, sum_of_sample_mean):
     advantages = torch.cat(batch["advantages"], dim=0)
     old_log_probs = batch["log_probs"]
+    print(
+        f"policy_loss_function START "
+        f"{get_tensor_info(advantages)=} "
+        f"{get_tensor_info(old_log_probs)=} "
+    )
 
     response_lengths = batch["response_lengths"]
     total_lengths = batch["total_lengths"]
+    print(
+        f"policy_loss_function "
+        f"{get_tensor_info(response_lengths)=} "
+        f"{get_tensor_info(total_lengths)=} "
+    )
 
     log_probs_and_entropy = get_log_probs_and_entropy(
         logits,
@@ -275,6 +296,11 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
         total_lengths=total_lengths,
         response_lengths=response_lengths,
         with_entropy=True,
+    )
+    print(
+        f"policy_loss_function "
+        f"{get_tensor_info(log_probs_and_entropy['log_probs'])=} "
+        f"{get_tensor_info(log_probs_and_entropy['entropy'])=} "
     )
 
     log_probs = log_probs_and_entropy["log_probs"]
@@ -301,8 +327,19 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
         old_log_probs = torch.cat(batch["log_probs"], dim=0)
         log_probs = torch.cat(log_probs, dim=0)
         ppo_kl = old_log_probs - log_probs
+        print(
+            f"policy_loss_function compute-ppo-kl "
+            f"{get_tensor_info(old_log_probs)=} "
+            f"{get_tensor_info(log_probs)=} "
+            f"{get_tensor_info(ppo_kl)=} "
+        )
 
     pg_loss, pg_clipfrac = compute_policy_loss(ppo_kl, advantages, args.eps_clip, args.eps_clip_high)
+    print(
+        f"policy_loss_function "
+        f"{get_tensor_info(pg_loss)=} "
+        f"{get_tensor_info(pg_clipfrac)=} "
+    )
 
     # Apply TIS off-policy correction using importance sampling if enabled
     if args.use_tis:
@@ -320,11 +357,23 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
     pg_loss = sum_of_sample_mean(pg_loss)
     pg_clipfrac = sum_of_sample_mean(pg_clipfrac)
     ppo_kl = sum_of_sample_mean(ppo_kl)
+    print(
+        f"policy_loss_function AFTER-sum_of_sample_mean "
+        f"{get_tensor_info(pg_loss)=} "
+        f"{get_tensor_info(pg_clipfrac)=} "
+        f"{get_tensor_info(ppo_kl)=} "
+    )
 
     # entropy loss
     entropy = log_probs_and_entropy["entropy"]
     entropy = torch.cat(entropy, dim=0)
     entropy_loss = sum_of_sample_mean(entropy)
+    print(
+        f"policy_loss_function "
+        f"{get_tensor_info(log_probs_and_entropy['entropy'])=} "
+        f"{get_tensor_info(entropy)=} "
+        f"{get_tensor_info(entropy_loss)=} "
+    )
 
     loss = pg_loss - args.entropy_coef * entropy_loss
 
@@ -337,6 +386,13 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
             kl_loss_type=args.kl_loss_type,
         )
         kl_loss = sum_of_sample_mean(kl)
+        print(
+            f"policy_loss_function compute-kl-loss "
+            f"{get_tensor_info(ref_log_probs)=} "
+            f"{get_tensor_info(log_probs)=} "
+            f"{get_tensor_info(kl)=} "
+            f"{get_tensor_info(kl_loss)=} "
+        )
 
         loss = loss + args.kl_loss_coef * kl_loss
 
@@ -360,6 +416,10 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
         reported_loss["ois"] = sum_of_sample_mean(ois).clone().detach()
         reported_loss["tis_clipfrac"] = sum_of_sample_mean(tis_clipfrac).clone().detach()
 
+    print(
+        f"policy_loss_function END "
+        f"{get_tensor_info(loss)=} "
+    )
     return loss, reported_loss
 
 

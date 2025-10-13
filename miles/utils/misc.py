@@ -24,3 +24,12 @@ class SingletonMeta(type):
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
+
+def get_tensor_info(x):
+    import torch
+    if not isinstance(x, torch.Tensor):
+        return f"type={type(x)} value={x}"
+    min = x.float().min() if x.numel() > 0 else None
+    max = x.float().max() if x.numel() > 0 else None
+    mean = x.float().mean() if x.numel() > 0 else None
+    return f"shape={x.shape} dtype={x.dtype} device={x.device} stride={x.stride()} min={min} max={max} mean={mean}"

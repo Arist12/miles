@@ -167,6 +167,16 @@ def compute_advantages_and_returns(args, rollout_data):
         returns = get_grpo_returns(rewards, kl)
         # TODO: is the copy necessary?
         advantages = [r for r in returns]
+        print(
+            f"compute_advantages_and_returns GRPO "
+            f"{get_tensor_info(rewards)=} "
+            f"{type(kl)=} {len(kl)=} {get_tensor_info(kl[0])=} "
+            f"{type(advantages)=} {len(advantages)=} {get_tensor_info(advantages[0])=} "
+            f"{type(returns)=} {len(returns)=} {get_tensor_info(returns[0])=} "
+            f"{kl[0]=} "
+            f"{advantages[0]=} "
+            f"{returns[0]=} "
+        )
 
     elif args.advantage_estimator == "ppo":
         # TODO: optimize this

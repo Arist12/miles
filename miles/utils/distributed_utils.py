@@ -13,6 +13,7 @@ from torch.distributed.distributed_c10d import (
     rendezvous,
 )
 
+from synced_gitignored.miles.miles.utils.misc import get_tensor_info
 
 GLOO_GROUP = None
 
@@ -150,5 +151,15 @@ def distributed_masked_whiten(
 
     if not shift_mean:
         whitened_values += global_mean
+
+    print(
+        f"distributed_masked_whiten "
+        f"{get_tensor_info(values)=} "
+        f"{get_tensor_info(mask)=} "
+        f"{local_sum=} {local_sum_sq=} {local_mask_sum=} "
+        f"{global_sum=} {global_sum_sq=} {global_mask_sum=} "
+        f"{global_mean=} {global_mean_sq=} {global_var=} {bessel_correction=} "
+        f"{get_tensor_info(whitened_values)=} "
+    )
 
     return whitened_values

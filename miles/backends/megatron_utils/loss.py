@@ -278,6 +278,16 @@ def compute_advantages_and_returns(args, rollout_data):
             chunk_lengths = [chunk.size(0) for chunk in advantages]
             advantages = list(torch.split(whitened_advs_flat, chunk_lengths))
 
+            print(
+                f"normalize_advantages "
+                f"{get_tensor_info(all_advs)=} "
+                f"{get_tensor_info(all_masks)=} "
+                f"{get_tensor_info(whitened_advs_flat)=} "
+                f"{all_advs=} "
+                f"{all_masks=} "
+                f"{whitened_advs_flat=} "
+            )
+
     rollout_data["advantages"] = advantages
     rollout_data["returns"] = returns
 

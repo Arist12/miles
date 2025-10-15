@@ -27,9 +27,11 @@ def process_flc(
     val_flc_select_num_rows: int,
 ):
     ds = load_dataset("m-a-p/FineLeanCorpus", split="train")
+    ds = _add_metadata_column(ds, dataset_name="flc")
     ds = ds.shuffle(seed=42)
     ds = ds.select_columns("id", "statement", "lean_code")
-    ds = _add_metadata_column(ds, dataset_name="flc")
+    ds = ds.select(range(train_flc_select_num_rows + val_flc_select_num_rows))
+    ds = ds.train_test_split(test_size=val_flc_select_num_rows, shuffle=False, seed=42)
 
     def _process_prompt(statement, lean_code):
         needle = "theorem "
@@ -54,8 +56,8 @@ def process_flc(
 
 def process_minif2f():
     ds = load_dataset("AI-MO/minif2f_test", split="train")
-    ds = ds.shuffle(seed=42)
     ds = _add_metadata_column(ds, dataset_name="minif2f")
+    ds = ds.shuffle(seed=42)
     ds = ds.remove_columns(["name", "informal_prefix"])
 
     def _process_prompt(x):

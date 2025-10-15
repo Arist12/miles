@@ -6,6 +6,7 @@ import torch
 import typer
 
 from miles.utils.misc import load_function
+from miles.utils.types import Sample
 
 
 def main(
@@ -16,7 +17,8 @@ def main(
         ray.init()
 
     pack = torch.load(rollout_data_path)
-    asyncio.run(_main_async(samples=pack["samples"], custom_rm_path=custom_rm_path))
+    samples = [Sample.from_dict(s) for s in pack["samples"]]
+    asyncio.run(_main_async(samples=samples, custom_rm_path=custom_rm_path))
 
 
 async def _main_async(samples, custom_rm_path):

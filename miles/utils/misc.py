@@ -1,4 +1,5 @@
 import importlib
+import subprocess
 
 
 def load_function(path):
@@ -24,3 +25,10 @@ class SingletonMeta(type):
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
+
+
+def exec_command(cmd: str, capture_output: bool = False):
+    print(f"EXEC: {cmd}", flush=True)
+    result = subprocess.run(["bash", "-c", cmd], shell=False, check=True, capture_output=capture_output)
+    if capture_output:
+        return result.stdout

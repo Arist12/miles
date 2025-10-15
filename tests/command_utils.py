@@ -2,9 +2,11 @@ import datetime
 import json
 import os
 import random
-import subprocess
 from pathlib import Path
 from typing import Optional
+from miles.utils.misc import exec_command
+
+_ = exec_command
 
 repo_base_dir = Path(os.path.abspath(__file__)).resolve().parents[1]
 
@@ -118,13 +120,6 @@ def get_default_wandb_args(test_file: str, run_name_prefix: Optional[str] = None
         f"--wandb-group {run_name} "
         f"--wandb-key ${{WANDB_API_KEY}} "
     )
-
-
-def exec_command(cmd: str, capture_output: bool = False):
-    print(f"EXEC: {cmd}", flush=True)
-    result = subprocess.run(["bash", "-c", cmd], shell=False, check=True, capture_output=capture_output)
-    if capture_output:
-        return result.stdout
 
 
 _warned_bool_env_var_keys = set()

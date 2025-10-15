@@ -1,5 +1,6 @@
 import os
 from typing import List
+from miles.utils.misc import exec_command
 
 import ray
 from kimina_client import AsyncKiminaClient, CheckResponse
@@ -58,8 +59,16 @@ class _KiminaServerActor:
         return TODO
 
 
-def _docker_start():
-    TODO
+def _docker_start(port: int):
+    exec_command(
+        "docker run "
+        "-d "
+        "--name TODO "
+        "--restart unless-stopped "
+        # "--env-file .env "  # do not use env yet
+        f"-p 80:{port} "
+        f"projectnumina/kimina-lean-server:2.0.0"
+    )
 
 
 def _docker_stop_all():

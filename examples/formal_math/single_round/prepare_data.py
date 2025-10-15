@@ -1,4 +1,5 @@
 import datetime
+import pprint
 import random
 import re
 from pathlib import Path
@@ -90,8 +91,8 @@ def process_minif2f(
 
 def _write_file(ds, path):
     ds.to_json(path)
-    print(f"Write to {path}")
-    print("Example data", ds[:3])
+    print(f"Write to {path}, example data:")
+    pprint.pprint([ds[i] for i in range(3)])
 
 
 def _convert_to_by_sorry(s: str):

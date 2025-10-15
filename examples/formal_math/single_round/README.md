@@ -2,7 +2,7 @@
 
 ```shell
 # install dependencies
-apt update && apt install -y docker
+apt update && apt install -y docker-cli
 pip install kimina-client
 
 # prepare data

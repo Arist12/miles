@@ -29,7 +29,7 @@ def execute():
     )
 
     rollout_args = (
-        "--prompt-data /root/datasets/dapo-math-17k/dapo-math-17k.jsonl "
+        "--prompt-data /root/datasets/TODO "
         "--input-key prompt "
         "--label-key label "
         "--apply-chat-template "
@@ -46,7 +46,9 @@ def execute():
 
     eval_args = (
         "--eval-interval 20 "
-        "--eval-prompt-data aime /root/datasets/aime-2024/aime-2024.jsonl "
+        "--eval-prompt-data "
+        "minif2f TODO "
+        "flc TODO "
         "--n-samples-per-eval-prompt 16 "
         "--eval-max-response-len 16384 "
         "--eval-top-p 0.7 "

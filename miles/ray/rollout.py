@@ -151,9 +151,9 @@ class RolloutManager:
             print(f"Save debug rollout data to {path}")
             path.parent.mkdir(parents=True, exist_ok=True)
 
+            # TODO may improve the format
             if evaluation:
                 dump_data = dict(
-                    # TODO may improve the format
                     data={
                         dataset_name: dict(
                             samples=[sample.to_dict() for sample in info["samples"]],

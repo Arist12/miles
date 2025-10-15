@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
+sys.path.append(str(Path(__file__).resolve().parents[3] / "tests"))
 
 import command_utils as U
 

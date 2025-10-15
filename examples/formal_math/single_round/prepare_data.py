@@ -21,15 +21,10 @@ Before producing the Lean 4 code to formally prove the given theorem, provide a 
 The plan should highlight key ideas, intermediate lemmas, and proof structures that will guide the construction of the final formal proof.
 """.strip()
 
-_LEANABELL_ORIGINAL_PREFIX = '''Complete the following Lean 4 code with explanatory comments preceding each line of code:
-
-```lean4
-'''
-
 
 def process_train(select_num_rows: int):
-    ds = load_dataset("stoney0062/Leanabell-Prover-Traindata-SFT", split="train")
-    ds = _add_metadata_column(ds, dataset_name="leanabell_sft")
+    ds = load_dataset("m-a-p/FineLeanCorpus", split="train")
+    ds = _add_metadata_column(ds, dataset_name="flc")
     ds = ds.remove_columns(["output"])
     ds = _maybe_shuffle_and_select(ds, select_num_rows=select_num_rows)
 
@@ -44,7 +39,8 @@ def process_train(select_num_rows: int):
         return {"prompt": [_process_prompt(x) for x in batch["prompt"]]}
 
     ds = ds.map(_process_batch, batched=True, num_proc=16)
-    _write_file(ds, output_partial_name="train")
+    _write_file(ds, "flc_train")
+    _write_file(TODO, "flc_val")
 
 
 def process_val(select_num_rows: int):
@@ -63,11 +59,11 @@ def process_val(select_num_rows: int):
         return {"prompt": [_process_prompt(x) for x in batch["formal_statement"]]}
 
     ds = ds.map(_process_batch, batched=True)
-    _write_file(ds, output_partial_name="minif2f")
+    _write_file(ds, "minif2f")
 
 
-def _write_file(ds, output_partial_name):
-    path = dir_data / f"{output_partial_name}_len{len(ds)}.jsonl"
+def _write_file(ds, stem):
+    path = dir_data / f"{stem}.jsonl"
     ds.to_json(path)
     print(f"Write to {path}")
     print("Example data", ds[:3])

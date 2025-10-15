@@ -31,14 +31,21 @@ def process_flc(
     ds = ds.select_columns("id", "statement", "lean_code")
     ds = _add_metadata_column(ds, dataset_name="flc")
 
-    def _process_prompt(x):
-        x = _convert_to_by_sorry(x)
+    def _process_prompt(statement, lean_code):
+        needle = "theorem "
+        assert lean_code.count(needle) == 1, f"{lean_code=}"
+        x = lean_code.replace(needle, f"/- {statement} -/\n{needle}")
+
         x = _PROMPT_TEMPLATE.format(x)
         x = _to_messages(x)
         return x
 
     def _process_batch(batch):
-        return {"prompt": [_process_prompt(x) for x in batch["prompt"]]}
+        return {"prompt": [
+            _process_prompt(statement, lean_code)
+            for statement, lean_code
+            in zip(batch["statement"], batch["lean_code"], strict=True)
+        ]}
 
     ds = ds.map(_process_batch, batched=True, num_proc=128)
     _write_file(ds, "flc_train")
@@ -72,8 +79,6 @@ def _write_file(ds, stem):
 
 
 def _convert_to_by_sorry(s: str):
-    if "by sorry" in s:
-        return s
     return _ensure_remove_pattern(s, r' *:=\n? *(by)? *\n?$') + " := by\n  sorry"
 
 

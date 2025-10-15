@@ -1,6 +1,7 @@
 import logging
+import re
 import traceback
-from typing import Optional
+from typing import Optional, Tuple
 
 from kimina_wrapper import KiminaServerAndClientCluster
 from kimina_client import SnippetStatus
@@ -39,6 +40,40 @@ class RewardFn:
 def _single(arr):
     assert len(arr) == 1, f"{arr=}"
     return arr[0]
+
+
+def _extract_code(prompt: str, response: str) -> Tuple[Optional[str], Optional[str]]:
+    question_code = _extract_last_full_code_block(prompt)
+    assert question_code is not None
+
+    response_code = _extract_last_full_code_block(response)
+    if response_code is None:
+        return None, "no_code"
+
+    if _canonicalize_question(question_code) != _canonicalize_question(response_code):
+        return None, "question_changed"
+
+    return response_code, None
+
+
+# hacky
+def _canonicalize_question(question_code: str):
+    x = question_code
+    x = x.replace("\n", "").replace(" ", "")
+
+    try:
+        def_symbol_index = x.index(":=")
+    except ValueError:
+        def_symbol_index = len(x)
+
+    x = x[:def_symbol_index]
+    return x
+
+
+def _extract_last_full_code_block(text):
+    pattern = r"```(?:\w+)?\n(.*?)```"
+    matches = re.findall(pattern, text, flags=re.DOTALL)
+    return matches[-1] if matches else None
 
 
 _REWARD_FN: Optional[RewardFn] = None

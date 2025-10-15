@@ -83,7 +83,7 @@ async def reward_fn(*args, **kwargs):
     global _REWARD_FN
     if _REWARD_FN is None:
         _REWARD_FN = RewardFn()
-    return _REWARD_FN(*args, **kwargs)
+    return await _REWARD_FN(*args, **kwargs)
 
 
 if __name__ == "__main__":

@@ -27,9 +27,9 @@ def process_flc(
     val_flc_select_num_rows: int,
 ):
     ds = load_dataset("m-a-p/FineLeanCorpus", split="train")
+    ds = ds.shuffle(seed=42)
     ds = ds.select_columns("id", "statement", "lean_code")
     ds = _add_metadata_column(ds, dataset_name="flc")
-    ds = _maybe_shuffle_and_select(ds, select_num_rows=select_num_rows)
 
     def _process_prompt(x):
         x = _ensure_remove_prefix(x, _LEANABELL_ORIGINAL_PREFIX)
@@ -48,9 +48,9 @@ def process_flc(
 
 def process_minif2f():
     ds = load_dataset("AI-MO/minif2f_test", split="train")
+    ds = ds.shuffle(seed=42)
     ds = _add_metadata_column(ds, dataset_name="minif2f")
     ds = ds.remove_columns(["name", "informal_prefix"])
-    ds = _maybe_shuffle_and_select(ds, select_num_rows=select_num_rows)
 
     def _process_prompt(x):
         x = _convert_to_by_sorry(x)
@@ -89,12 +89,6 @@ def _ensure_remove_pattern(text: str, pattern: str):
 def _to_messages(content):
     return [{"role": "user", "content": content}]
 
-
-def _maybe_shuffle_and_select(ds, select_num_rows):
-    ds = ds.shuffle(seed=42)
-    if select_num_rows is not None:
-        ds = ds.select(range(select_num_rows))
-    return ds
 
 
 def _add_metadata_column(ds, dataset_name: str):

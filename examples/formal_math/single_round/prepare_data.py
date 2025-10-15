@@ -1,0 +1,114 @@
+from typing import Annotated
+
+import typer
+import re
+from pathlib import Path
+
+from datasets import load_dataset
+
+self_stem = Path(__file__).stem
+dir_data = Path(f"/host_home/server_data/{self_stem}")
+
+# https://github.com/deepseek-ai/DeepSeek-Prover-V2
+_PROMPT_TEMPLATE = """
+Complete the following Lean 4 code:
+
+```lean4
+{}
+```
+
+Before producing the Lean 4 code to formally prove the given theorem, provide a detailed proof plan outlining the main proof steps and strategies.
+The plan should highlight key ideas, intermediate lemmas, and proof structures that will guide the construction of the final formal proof.
+""".strip()
+
+_LEANABELL_ORIGINAL_PREFIX = '''Complete the following Lean 4 code with explanatory comments preceding each line of code:
+
+```lean4
+'''
+
+
+def process_train(select_num_rows: int):
+    ds = load_dataset("stoney0062/Leanabell-Prover-Traindata-SFT", split="train")
+    ds = _add_metadata_column(ds, dataset_name="leanabell_sft")
+    ds = ds.remove_columns(["output"])
+    ds = _maybe_shuffle_and_select(ds, select_num_rows=select_num_rows)
+
+    def _process_prompt(x):
+        x = _ensure_remove_prefix(x, _LEANABELL_ORIGINAL_PREFIX)
+        x = _convert_to_by_sorry(x)
+        x = _PROMPT_TEMPLATE.format(x)
+        x = _to_messages(x)
+        return x
+
+    def _process_batch(batch):
+        return {"prompt": [_process_prompt(x) for x in batch["prompt"]]}
+
+    ds = ds.map(_process_batch, batched=True, num_proc=16)
+    _write_file(ds, output_partial_name="train")
+
+
+def process_val(select_num_rows: int):
+    ds = load_dataset("AI-MO/minif2f_test", split="train")
+    ds = _add_metadata_column(ds, dataset_name="minif2f")
+    ds = ds.remove_columns(["name", "informal_prefix"])
+    ds = _maybe_shuffle_and_select(ds, select_num_rows=select_num_rows)
+
+    def _process_prompt(x):
+        x = _convert_to_by_sorry(x)
+        x = _PROMPT_TEMPLATE.format(x)
+        x = _to_messages(x)
+        return x
+
+    def _process_batch(batch):
+        return {"prompt": [_process_prompt(x) for x in batch["formal_statement"]]}
+
+    ds = ds.map(_process_batch, batched=True)
+    _write_file(ds, output_partial_name="minif2f")
+
+
+def _write_file(ds, output_partial_name):
+    path = dir_data / f"{output_partial_name}_len{len(ds)}.jsonl"
+    ds.to_json(path)
+    print(f"Write to {path}")
+    print("Example data", ds[:3])
+
+
+def _ensure_remove_prefix(s: str, prefix: str):
+    assert s.startswith(prefix), f"{prefix=} {s=}"
+    return s.removeprefix(prefix)
+
+
+def _convert_to_by_sorry(s: str):
+    return _ensure_remove_pattern(s, r' *:=\n? *(by)? *\n?$') + " := by\n  sorry"
+
+
+def _ensure_remove_pattern(text: str, pattern: str):
+    assert re.search(pattern, text, flags=re.MULTILINE), f"{pattern=} {text=}"
+    return re.sub(pattern, '', text, flags=re.MULTILINE)
+
+
+def _to_messages(content):
+    return [{"role": "user", "content": content}]
+
+
+def _maybe_shuffle_and_select(ds, select_num_rows):
+    if select_num_rows is not None:
+        ds = ds.shuffle(seed=42)
+        ds = ds.select(range(select_num_rows))
+    return ds
+
+
+def _add_metadata_column(ds, dataset_name: str):
+    return ds.add_column("metadata", [dict(question_id=f"{dataset_name}__{i}") for i in range(len(ds))])
+
+
+def main(
+        train_select_num_rows: Annotated[int, typer.Option()] = None,
+        val_select_num_rows: Annotated[int, typer.Option()] = None,
+):
+    process_train(select_num_rows=train_select_num_rows)
+    process_val(select_num_rows=val_select_num_rows)
+
+
+if __name__ == "__main__":
+    typer.run(main)

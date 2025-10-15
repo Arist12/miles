@@ -9,8 +9,13 @@ class LeanVerifier:
         return TODO
 
 
+class _KiminaServerPack:
+    def __init__(self):
+        TODO
+
+
 # TODO handle docker stop more gracefully
-class _KiminaServerWrapper:
+class _KiminaServer:
     def __init__(self):
         self._docker_start()
 

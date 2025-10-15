@@ -1,5 +1,9 @@
-Install dependencies
+Commands
 
 ```shell
+# install dependencies
 pip install kimina-client
+
+# prepare data
+python examples/formal_math/single_round/prepare_data.py --dir-output-base /root/
 ```

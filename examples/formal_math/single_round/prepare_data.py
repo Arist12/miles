@@ -1,3 +1,5 @@
+import datetime
+import random
 from typing import Annotated
 
 import typer
@@ -22,6 +24,7 @@ The plan should highlight key ideas, intermediate lemmas, and proof structures t
 
 
 def process_flc(
+    dir_output: Path,
     train_flc_select_num_rows: int,
     val_flc_select_num_rows: int,
 ):
@@ -49,11 +52,13 @@ def process_flc(
         ]}
 
     ds = ds.map(_process_batch, batched=True, num_proc=64, remove_columns=["statement", "lean_code"])
-    _write_file(ds["train"], "flc_train")
-    _write_file(ds["test"], "flc_test")
+    _write_file(ds["train"], dir_output / "flc_train.jsonl")
+    _write_file(ds["test"], dir_output / "flc_test.jsonl")
 
 
-def process_minif2f():
+def process_minif2f(
+    dir_output: Path,
+):
     ds = load_dataset("AI-MO/minif2f_test", split="train")
     ds = _add_metadata_column(ds, dataset_name="minif2f")
     ds = ds.shuffle(seed=42)
@@ -69,11 +74,10 @@ def process_minif2f():
         return {"prompt": [_process_prompt(x) for x in batch["formal_statement"]]}
 
     ds = ds.map(_process_batch, batched=True)
-    _write_file(ds, "minif2f")
+    _write_file(ds, dir_output / "minif2f_test.jsonl")
 
 
-def _write_file(ds, stem):
-    path = dir_data / f"{stem}.jsonl"
+def _write_file(ds, path):
     ds.to_json(path)
     print(f"Write to {path}")
     print("Example data", ds[:3])
@@ -98,14 +102,19 @@ def _add_metadata_column(ds, dataset_name: str):
 
 
 def main(
+    dir_output_base: Annotated[str, typer.Option()],
     train_flc_select_num_rows: Annotated[int, typer.Option()] = 20000,
     val_flc_select_num_rows: Annotated[int, typer.Option()] = 100,
 ):
+    dir_output = Path(dir_output_base) / f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000)}"
     process_flc(
+        dir_output=dir_output,
         train_flc_select_num_rows=train_flc_select_num_rows,
         val_flc_select_num_rows=val_flc_select_num_rows,
     )
-    process_minif2f()
+    process_minif2f(
+        dir_output=dir_output,
+    )
 
 
 if __name__ == "__main__":

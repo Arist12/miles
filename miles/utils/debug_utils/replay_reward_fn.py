@@ -1,7 +1,13 @@
+from typing import Annotated
+
+import torch
 import typer
 
 
-def main():
+def main(
+    rollout_data_path: Annotated[str, typer.Option()],
+):
+    data = torch.load(rollout_data_path)
     TODO
 
 

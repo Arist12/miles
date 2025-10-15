@@ -52,7 +52,7 @@ def execute():
         "--eval-prompt-data "
         f"minif2f /root/datasets/formal_math_single_round/{dataset_transform_id}/minif2f_test.jsonl "
         f"flc /root/datasets/formal_math_single_round/{dataset_transform_id}/flc_test.jsonl "
-        "--n-samples-per-eval-prompt 16 "
+        "--n-samples-per-eval-prompt 1 "
         "--eval-max-response-len 16384 "
         "--eval-top-p 0.7 "
     )

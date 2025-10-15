@@ -1,8 +1,9 @@
 import os
-from typing import List, Callable
+from typing import List
 
 from kimina_client import AsyncKiminaClient, CheckResponse
 
+# TODO handle docker stop more gracefully later
 _KILL_PREVIOUS_KIMINA_DOCKER = bool(int(os.environ.get("MILES_KILL_PREVIOUS_KIMINA_DOCKER", "1")))
 
 
@@ -30,7 +31,6 @@ def _create_servers() -> List["_KiminaServer"]:
     return TODO
 
 
-# TODO handle docker stop more gracefully
 class _KiminaServer:
     def __init__(self):
         if _KILL_PREVIOUS_KIMINA_DOCKER:

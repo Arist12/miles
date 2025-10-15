@@ -92,7 +92,7 @@ def _wait_server_ready(base_url: str):
                     break
             except requests.RequestException:
                 pass
-            print(f"Wait kimina server ready...")
+            print(f"Wait kimina server ready ({base_url})...")
             time.sleep(2)
 
 

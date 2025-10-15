@@ -131,4 +131,6 @@ silver + pearls + spices = 1636 := by
     import ray
 
     ray.init()
-    print(asyncio.run(reward_fn(None, SimpleNamespace(prompt=test_prompt, response=test_response))))
+    output = asyncio.run(reward_fn(None, SimpleNamespace(prompt=test_prompt, response=test_response)))
+    print(f"{output=}")
+    assert output['reward_value'] == 1.0

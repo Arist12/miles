@@ -19,11 +19,12 @@ class RewardFn:
             resp = await self._verifier.check(codes=[dict(code=code, custom_id="dummy_id")], timeout=_TIMEOUT)
             result = _single(resp.results)
             analysis = result.analyze()
+            is_valid = analysis.status == SnippetStatus.valid
 
             return dict(
-                reward_value=float(analysis.status == SnippetStatus.valid),
-                error_cat=None if is_valid_no_sorry else "LEAN_VERIFY_FAILED",
-                lean_result=result,
+                reward_value=float(is_valid),
+                error_cat=None if is_valid else analysis.status.value,
+                lean_result=result.model_dump(),
             )
         except Exception as e:
             logger.warning(f"Error in reward_value model: {e=} {sample.prompt=} {sample.response=}")

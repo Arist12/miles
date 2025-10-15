@@ -1,16 +1,15 @@
-import time
-
-import requests
 import datetime
 import os
 import random
+import time
 from typing import List
 
 import ray
+import requests
 from kimina_client import AsyncKiminaClient, CheckResponse
 from ray.util.scheduling_strategies import NodeAffinitySchedulingStrategy
 
-from miles.utils.misc import exec_command, get_current_node_ip, get_free_port
+from miles.utils.misc import exec_command, get_free_port
 
 # TODO handle docker stop more gracefully later
 _KILL_PREVIOUS_KIMINA_DOCKER = bool(int(os.environ.get("MILES_KILL_PREVIOUS_KIMINA_DOCKER", "1")))
@@ -101,8 +100,9 @@ def _docker_stop_all():
     exec_command(
         'ids=$(docker ps -a --filter "name=kimina_lean_server_auto" -q); '
         '[ -n "$ids" ] && docker stop $ids && docker rm $ids; '
-        'true'
+        "true"
     )
+
 
 # TODO move to utils?
 def _get_current_node_host_ip():

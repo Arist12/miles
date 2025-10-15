@@ -20,7 +20,9 @@ def prepare():
 
 
 def execute():
-    load_save_path = f"/root/models/{MODEL_NAME}_ckpt__{Path(__file__).stem}__{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}/"
+    load_save_path = (
+        f"/root/models/{MODEL_NAME}_ckpt__{Path(__file__).stem}__{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}/"
+    )
     ckpt_args = (
         f"--hf-checkpoint /root/models/{MODEL_NAME}/ "
         f"--ref-load /root/{MODEL_NAME}_torch_dist "

@@ -28,7 +28,7 @@ class RewardFn:
 
             return dict(
                 reward_value=float(is_valid),
-                error_cat=None if is_valid else analysis.status.value,
+                error_cat=None if is_valid else f"lean_{analysis.status.value}",
                 lean_result=result.model_dump(),
             )
         except Exception as e:

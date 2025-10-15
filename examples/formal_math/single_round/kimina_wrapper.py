@@ -24,7 +24,7 @@ class KiminaServerAndClientCluster:
 
 class _KiminaClientCluster:
     def __init__(self, servers: List["_KiminaServerActor"]):
-        self._clients = [AsyncKiminaClient(api_url=server.api_url) for server in servers]
+        self._clients = [AsyncKiminaClient(api_url=ray.get(server.get_api_url.remote())) for server in servers]
         self._next_client_index = 0
 
     async def check(self, *args, **kwargs):
@@ -62,8 +62,7 @@ class _KiminaServerActor:
             _docker_stop_all()
         _docker_start(port=self.port)
 
-    @property
-    def api_url(self):
+    def get_api_url(self):
         return f"http://{self.addr}:{self.port}"
 
 

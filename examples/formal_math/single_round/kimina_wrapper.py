@@ -1,6 +1,9 @@
+import os
 from typing import List, Callable
 
 from kimina_client import AsyncKiminaClient, CheckResponse
+
+_KILL_PREVIOUS_KIMINA_DOCKER = bool(int(os.environ.get("MILES_KILL_PREVIOUS_KIMINA_DOCKER")))
 
 
 class KiminaServerAndClientCluster:

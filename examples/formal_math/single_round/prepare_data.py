@@ -49,7 +49,7 @@ def process_flc(
             in zip(batch["statement"], batch["lean_code"], strict=True)
         ]}
 
-    ds = ds.map(_process_batch, batched=True, num_proc=128)
+    ds = ds.map(_process_batch, batched=True, num_proc=64, remove_columns=["statement", "lean_code"])
     _write_file(ds, "flc_train")
     _write_file(TODO, "flc_val")
 

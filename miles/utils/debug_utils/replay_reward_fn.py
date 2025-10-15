@@ -1,6 +1,7 @@
 import asyncio
 from typing import Annotated
 
+import ray
 import torch
 import typer
 
@@ -11,6 +12,9 @@ def main(
     rollout_data_path: Annotated[str, typer.Option()],
     custom_rm_path: Annotated[str, typer.Option()],
 ):
+    if not ray.is_initialized():
+        ray.start()
+
     pack = torch.load(rollout_data_path)
     asyncio.run(_main_async(samples=pack["samples"], custom_rm_path=custom_rm_path))
 

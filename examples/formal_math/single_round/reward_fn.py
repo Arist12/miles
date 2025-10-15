@@ -1,7 +1,3 @@
-import sys
-import os
-sys.path.append(os.path.dirname(__file__))
-
 import asyncio
 import logging
 import re
@@ -9,7 +5,11 @@ from types import SimpleNamespace
 from typing import Optional, Tuple
 
 from kimina_client import SnippetStatus
-from kimina_wrapper import KiminaServerAndClientCluster
+
+try:
+    import kimina_wrapper
+except ImportError:
+    from . import kimina_wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ _TIMEOUT = 60
 
 class RewardFn:
     def __init__(self):
-        self._verifier = KiminaServerAndClientCluster()
+        self._verifier = kimina_wrapper.KiminaServerAndClientCluster()
 
     async def __call__(self, args, sample, **kwargs):
         try:

@@ -88,8 +88,8 @@ def _to_messages(content):
 
 
 def _maybe_shuffle_and_select(ds, select_num_rows):
+    ds = ds.shuffle(seed=42)
     if select_num_rows is not None:
-        ds = ds.shuffle(seed=42)
         ds = ds.select(range(select_num_rows))
     return ds
 

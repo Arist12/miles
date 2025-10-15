@@ -22,7 +22,7 @@ class RewardFn:
 
     async def __call__(self, args, sample, **kwargs):
         try:
-            code, code_error_cat = _extract_code(prompt=sample.prompt, response=sample.response)
+            code, code_error_cat = _assemble_code(prompt=sample.prompt, response=sample.response)
             if code is None:
                 return dict(reward_value=0.0, error_cat=code_error_cat)
 
@@ -46,32 +46,18 @@ def _single(arr):
     return arr[0]
 
 
-def _extract_code(prompt: str, response: str) -> Tuple[Optional[str], Optional[str]]:
-    question_code = _extract_last_full_code_block(prompt)
-    assert question_code is not None
+def _assemble_code(prompt: str, response: str) -> Tuple[Optional[str], Optional[str]]:
+    prompt_code_block = _extract_last_full_code_block(prompt)
+    assert prompt_code_block is not None
 
-    response_code = _extract_last_full_code_block(response)
-    if response_code is None:
+    response_code_block = _extract_last_full_code_block(response)
+    if response_code_block is None:
         return None, "no_code"
 
-    if _canonicalize_question(question_code) != _canonicalize_question(response_code):
-        return None, "question_changed"
+    question_code = prompt_code_block[:prompt_code_block.index(":=")]
+    answer_code = response_code_block[response_code_block.index(":="):]
 
-    return response_code, None
-
-
-# hacky
-def _canonicalize_question(question_code: str):
-    x = question_code
-    x = x.replace("\n", "").replace(" ", "")
-
-    try:
-        def_symbol_index = x.index(":=")
-    except ValueError:
-        def_symbol_index = len(x)
-
-    x = x[:def_symbol_index]
-    return x
+    return question_code + answer_code, None
 
 
 def _extract_last_full_code_block(text):

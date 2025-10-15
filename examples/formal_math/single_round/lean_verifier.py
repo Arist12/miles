@@ -1,3 +1,5 @@
+import kimina_client
+
 class LeanVerifier:
     def __init__(self):
         TODO

@@ -1,3 +1,6 @@
+import time
+
+import requests
 import datetime
 import os
 import random
@@ -60,7 +63,9 @@ class _KiminaServerActor:
 
         if _KILL_PREVIOUS_KIMINA_DOCKER:
             _docker_stop_all()
+
         _docker_start(port=self.port)
+        _wait_server_ready(base_url=self.get_api_url())
 
     def get_api_url(self):
         return f"http://{self.addr}:{self.port}"
@@ -77,6 +82,19 @@ def _docker_start(port: int):
         f"-p {port}:8000 "
         f"projectnumina/kimina-lean-server:2.0.0"
     )
+
+
+def _wait_server_ready(base_url: str):
+    with requests.Session() as session:
+        while True:
+            try:
+                response = session.get(f"{base_url}/health")
+                if response.status_code == 200:
+                    break
+            except requests.RequestException:
+                pass
+            print(f"Wait kimina server ready...")
+            time.sleep(2)
 
 
 def _docker_stop_all():

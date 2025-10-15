@@ -1,5 +1,7 @@
+import asyncio
 import logging
 import re
+from types import SimpleNamespace
 from typing import Optional, Tuple
 
 from kimina_client import SnippetStatus
@@ -82,3 +84,43 @@ async def reward_fn(*args, **kwargs):
     if _REWARD_FN is None:
         _REWARD_FN = RewardFn()
     return _REWARD_FN(*args, **kwargs)
+
+if __name__ == '__main__':
+    # test example from stoney0062/Leanabell-Prover-Traindata-SFT
+    test_prompt = """
+    Hello
+
+```lean4
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+/-- A pirate is counting his loot in base 6. He has $4532_6$ dollars worth of silver, $1254_6$ dollars worth of pearls, and $654_6$ dollars worth of exotic spices. What is the total dollar amount of his loot? Express your answer in base 10. Show that it is 1636.-/
+theorem pirate_loot_total (silver pearls spices : ℕ) (h_silver : silver = 4 * 6 ^ 3 + 5 * 6 ^ 2 + 3 * 6 + 2)
+(h_pears : pearls = 1 * 6 ^ 3 + 2 * 6 ^ 2 + 5 * 6 + 4) (h_spices : spices = 6 * 6 ^ 2 + 5 * 6 + 4) :
+silver + pearls + spices = 1636 := by
+  sorry
+```
+    """
+    test_response = """
+```lean4
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+/-- A pirate is counting his loot in base 6. He has $4532_6$ dollars worth of silver, $1254_6$ dollars worth of pearls, and $654_6$ dollars worth of exotic spices. What is the total dollar amount of his loot? Express your answer in base 10. Show that it is 1636.-/
+theorem pirate_loot_total (silver pearls spices : ℕ) (h_silver : silver = 4 * 6 ^ 3 + 5 * 6 ^ 2 + 3 * 6 + 2)
+(h_pears : pearls = 1 * 6 ^ 3 + 2 * 6 ^ 2 + 5 * 6 + 4) (h_spices : spices = 6 * 6 ^ 2 + 5 * 6 + 4) :
+silver + pearls + spices = 1636 := by
+  rw [h_silver, h_pears, h_spices]
+  norm_num
+  <;> linarith
+```
+    """
+    print(asyncio.run(reward_fn(None, SimpleNamespace(prompt=test_prompt, response=test_response))))

@@ -3,7 +3,7 @@ from typing import List, Callable
 from kimina_client import AsyncKiminaClient, CheckResponse
 
 
-class LeanVerifier:
+class KiminaServerAndClientCluster:
     def __init__(self):
         self._servers = _create_servers()
         self._client_cluster = _KiminaClientCluster(TODO)

@@ -1,8 +1,9 @@
 from typing import Optional
 
-from lean_verifier import LeanVerifier
+from kimina_wrapper import KiminaServerAndClientCluster
 
 _TIMEOUT = 60
+
 
 class RewardFn:
     def __init__(self):
@@ -14,10 +15,9 @@ class RewardFn:
             if code is None:
                 return dict(reward_value=0.0, error_cat=code_error_cat)
 
-            response = await self._lean_verifier.check(codes=[dict(code=code, custom_id="dummy_id")], timeout=_TIMEOUT)
-            assert len(response["results"]) == 1, f"{response=}"
-            raw_result = response["results"][0]
-            parsed_result = parse_client_response(raw_result)
+            resp = await self._lean_verifier.check(codes=[dict(code=code, custom_id="dummy_id")], timeout=_TIMEOUT)
+            raw_result = _single(resp.results)
+            result = raw_result.analyze()
             is_valid_no_sorry = parsed_result["is_valid_no_sorry"]
 
             return dict(
@@ -29,6 +29,11 @@ class RewardFn:
             logger.warning(f"Error in reward_value model: {e=} {sample.prompt=} {sample.response=}")
             traceback.print_exc()
             return dict(reward_value=0.0, error_cat="PYTHON_ERROR", error_details=str(e))
+
+
+def _single(arr):
+    assert len(arr) == 1, f"{arr=}"
+    return arr[0]
 
 
 _REWARD_FN: Optional[RewardFn] = None

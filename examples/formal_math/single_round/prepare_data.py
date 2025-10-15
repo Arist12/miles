@@ -24,8 +24,8 @@ The plan should highlight key ideas, intermediate lemmas, and proof structures t
 
 def process_train(select_num_rows: int):
     ds = load_dataset("m-a-p/FineLeanCorpus", split="train")
+    ds = ds.select_columns("id", "statement", "lean_code")
     ds = _add_metadata_column(ds, dataset_name="flc")
-    ds = ds.remove_columns(["output"])
     ds = _maybe_shuffle_and_select(ds, select_num_rows=select_num_rows)
 
     def _process_prompt(x):

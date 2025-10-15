@@ -1,0 +1,144 @@
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from tests import command_utils as U
+
+MODEL_TYPE = "qwen3-4B"
+NUM_GPUS = 8
+
+
+def execute():
+    ckpt_args = (
+        "--hf-checkpoint /root/Qwen3-4B "
+        "--ref-load /root/Qwen3-4B_torch_dist "
+        "--load /root/Qwen3-4B_miles/ "
+        "--save /root/Qwen3-4B_miles/ "
+        "--save-interval 20 "
+    )
+
+    rollout_args = (
+        "--prompt-data /root/dapo-math-17k/dapo-math-17k.jsonl "
+        "--input-key prompt "
+        "--label-key label "
+        "--apply-chat-template "
+        "--rollout-shuffle "
+        "--rm-type deepscaler "
+        "--num-rollout 3000 "
+        "--rollout-batch-size 32 "
+        "--n-samples-per-prompt 8 "
+        "--rollout-max-response-len 8192 "
+        "--rollout-temperature 0.8 "
+        "--global-batch-size 256 "
+        "--balance-data "
+    )
+
+    eval_args = (
+        "--eval-interval 20 "
+        "--eval-prompt-data aime /root/aime-2024/aime-2024.jsonl "
+        "--n-samples-per-eval-prompt 16 "
+        "--eval-max-response-len 16384 "
+        "--eval-top-p 0.7 "
+    )
+
+    perf_args = (
+        "--tensor-model-parallel-size 2 "
+        "--sequence-parallel "
+        "--pipeline-model-parallel-size 1 "
+        "--context-parallel-size 1 "
+        "--expert-model-parallel-size 1 "
+        "--expert-tensor-parallel-size 1 "
+        "--recompute-granularity full "
+        "--recompute-method uniform "
+        "--recompute-num-layers 1 "
+        "--use-dynamic-batch-size "
+        "--max-tokens-per-gpu 9216 "
+    )
+
+    grpo_args = (
+        "--advantage-estimator grpo "
+        "--use-kl-loss "
+        "--kl-loss-coef 0.00 "
+        "--kl-loss-type low_var_kl "
+        "--entropy-coef 0.00 "
+        "--eps-clip 0.2 "
+        "--eps-clip-high 0.28 "
+    )
+
+    optimizer_args = (
+        "--optimizer adam "
+        "--lr 1e-6 "
+        "--lr-decay-style constant "
+        "--weight-decay 0.1 "
+        "--adam-beta1 0.9 "
+        "--adam-beta2 0.98 "
+    )
+
+    sglang_args = (
+        "--rollout-num-gpus-per-engine 2 "
+        "--sglang-mem-fraction-static 0.7 "
+    )
+
+    misc_args = (
+        "--attention-dropout 0.0 "
+        "--hidden-dropout 0.0 "
+        "--accumulate-allreduce-grads-in-fp32 "
+        "--attention-softmax-in-fp32 "
+        "--attention-backend flash "
+    )
+
+    # Note: WANDB_ARGS are handled by U.get_default_wandb_args
+
+    train_args = (
+        f"{ckpt_args} "
+        f"{rollout_args} "
+        f"{optimizer_args} "
+        f"{grpo_args} "
+        f"{U.get_default_wandb_args(__file__)} "
+        f"{perf_args} "
+        f"{eval_args} "
+        f"{sglang_args} "
+        f"{misc_args} "
+    )
+
+    U.exec_command(
+        "pkill -9 sglang; "
+        "sleep 3; "
+        "ray stop --force; "
+        "pkill -9 ray; "
+        "pkill -9 python; "
+        "sleep 3; "
+        "pkill -9 ray; "
+        "pkill -9 python; "
+    )
+
+    master_addr = "127.0.0.1"
+    U.exec_command(
+        f"export PYTHONBUFFERED=16 && "
+        f"ray start --head --node-ip-address {master_addr} --num-gpus {NUM_GPUS} --disable-usage-stats --dashboard-host=0.0.0.0 --dashboard-port=8265"
+    )
+
+    has_nvlink = U.check_has_nvlink()
+    print(f"HAS_NVLINK: {has_nvlink}")
+
+    runtime_env_json = f'''{{"env_vars": {{"PYTHONPATH": "/root/Megatron-LM/", "CUDA_DEVICE_MAX_CONNECTIONS": "1", "NCCL_NVLS_ENABLE": "{int(has_nvlink)}"}}}}'''
+
+    model_args_script = f'source "{U.repo_base_dir}/scripts/models/{MODEL_TYPE}.sh"'
+
+    U.exec_command(
+        f"export PYTHONBUFFERED=16 && "
+        f"{model_args_script} && "
+        f'ray job submit --address="http://127.0.0.1:8265" ' 
+        f"--runtime-env-json=\"{runtime_env_json}\" "
+        f"-- python3 train.py "
+        f"--actor-num-nodes 1 "
+        f"--actor-num-gpus-per-node {NUM_GPUS} "
+        f"--colocate "
+        f"${{MODEL_ARGS[@]}} "
+        f"{train_args}"
+    )
+
+
+if __name__ == "__main__":
+    execute()

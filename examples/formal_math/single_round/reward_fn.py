@@ -127,4 +127,8 @@ silver + pearls + spices = 1636 := by
   <;> linarith
 ```
     """
+
+    import ray
+
+    ray.init()
     print(asyncio.run(reward_fn(None, SimpleNamespace(prompt=test_prompt, response=test_response))))

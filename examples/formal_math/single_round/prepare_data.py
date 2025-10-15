@@ -1,11 +1,10 @@
 import datetime
 import random
+import re
+from pathlib import Path
 from typing import Annotated
 
 import typer
-import re
-from pathlib import Path
-
 from datasets import load_dataset
 
 self_stem = Path(__file__).stem
@@ -24,6 +23,7 @@ The plan should highlight key ideas, intermediate lemmas, and proof structures t
 
 
 _NEEDLE_THEOREM = "theorem "
+
 
 def process_flc(
     dir_output: Path,
@@ -55,11 +55,12 @@ def process_flc(
         return x
 
     def _process_batch(batch):
-        return {"prompt": [
-            _process_prompt(statement, lean_code)
-            for statement, lean_code
-            in zip(batch["statement"], batch["lean_code"], strict=True)
-        ]}
+        return {
+            "prompt": [
+                _process_prompt(statement, lean_code)
+                for statement, lean_code in zip(batch["statement"], batch["lean_code"], strict=True)
+            ]
+        }
 
     ds = ds.map(_process_batch, batched=True, num_proc=64, remove_columns=["statement", "lean_code"])
     _write_file(ds["train"], dir_output / "flc_train.jsonl")
@@ -94,17 +95,16 @@ def _write_file(ds, path):
 
 
 def _convert_to_by_sorry(s: str):
-    return _ensure_remove_pattern(s, r' *:=\n? *(by)? *\n?$') + " := by\n  sorry"
+    return _ensure_remove_pattern(s, r" *:=\n? *(by)? *\n?$") + " := by\n  sorry"
 
 
 def _ensure_remove_pattern(text: str, pattern: str):
     assert re.search(pattern, text, flags=re.MULTILINE), f"{pattern=} {text=}"
-    return re.sub(pattern, '', text, flags=re.MULTILINE)
+    return re.sub(pattern, "", text, flags=re.MULTILINE)
 
 
 def _to_messages(content):
     return [{"role": "user", "content": content}]
-
 
 
 def _add_metadata_column(ds, dataset_name: str):
@@ -116,7 +116,9 @@ def main(
     train_flc_select_num_rows: Annotated[int, typer.Option()] = 20000,
     val_flc_select_num_rows: Annotated[int, typer.Option()] = 100,
 ):
-    dir_output = Path(dir_output_base) / f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000)}"
+    dir_output = (
+        Path(dir_output_base) / f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000)}"
+    )
     dir_output.mkdir(parents=True, exist_ok=True)
 
     process_flc(

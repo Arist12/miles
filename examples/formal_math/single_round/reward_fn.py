@@ -85,7 +85,8 @@ async def reward_fn(*args, **kwargs):
         _REWARD_FN = RewardFn()
     return _REWARD_FN(*args, **kwargs)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # test example from stoney0062/Leanabell-Prover-Traindata-SFT
     test_prompt = """
     Hello

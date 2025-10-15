@@ -87,7 +87,10 @@ async def reward_fn(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    # test example from stoney0062/Leanabell-Prover-Traindata-SFT
+    # Run this UT with:
+    # python examples/formal_math/single_round/reward_fn.py
+
+    # test example is from stoney0062/Leanabell-Prover-Traindata-SFT
     test_prompt = """
     Hello
 

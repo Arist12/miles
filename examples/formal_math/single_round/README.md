@@ -1,4 +1,4 @@
-Commands
+# Usage
 
 ```shell
 # install dependencies

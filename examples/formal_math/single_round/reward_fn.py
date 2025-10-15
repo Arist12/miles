@@ -4,8 +4,8 @@ import re
 from types import SimpleNamespace
 from typing import Optional, Tuple
 
-from kimina_client import SnippetStatus
-from kimina_wrapper import KiminaServerAndClientCluster
+from .kimina_client import SnippetStatus
+from .kimina_wrapper import KiminaServerAndClientCluster
 
 logger = logging.getLogger(__name__)
 

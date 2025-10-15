@@ -54,7 +54,7 @@ class _KiminaServerActor:
     def __init__(self):
         if _KILL_PREVIOUS_KIMINA_DOCKER:
             _docker_stop_all()
-        _docker_start()
+        _docker_start(port=TODO)
 
     @property
     def api_url(self):

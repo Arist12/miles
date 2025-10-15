@@ -3,6 +3,7 @@ import os
 import random
 from typing import List
 from miles.utils.misc import exec_command
+from miles.utils.misc import get_current_node_ip, get_free_port
 
 import ray
 from kimina_client import AsyncKiminaClient, CheckResponse
@@ -52,13 +53,16 @@ def _create_servers() -> List["_KiminaServerActor"]:
 @ray.remote
 class _KiminaServerActor:
     def __init__(self):
+        self.addr = get_current_node_ip()
+        self.port = get_free_port()
+
         if _KILL_PREVIOUS_KIMINA_DOCKER:
             _docker_stop_all()
-        _docker_start(port=TODO)
+        _docker_start(port=self.port)
 
     @property
     def api_url(self):
-        return TODO
+        return f"http://{self.addr}:{self.port}"
 
 
 def _docker_start(port: int):

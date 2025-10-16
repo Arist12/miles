@@ -26,8 +26,8 @@ def execute():
 
     load_save_path = f"/root/models/{MODEL_NAME}_ckpt__{Path(__file__).stem}_{run_id}/"
     ckpt_args = (
-        f"--hf-checkpoint /root/{MODEL_NAME}/ "
-        f"--ref-load /root/{MODEL_NAME}_torch_dist "
+        f"--hf-checkpoint /root/models/{MODEL_NAME}/ "
+        f"--ref-load /root/models/{MODEL_NAME}_torch_dist "
         f"--load {load_save_path} "
         f"--save {load_save_path} "
         "--save-interval 1000 "

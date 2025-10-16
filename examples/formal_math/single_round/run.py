@@ -121,7 +121,7 @@ def execute():
         "--actor-num-gpus-per-node 8 "
         "--colocate "
         # for debug
-        f"--save-debug-rollout-data /root/miles_debug_rollout_data/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}/{{rollout_id}}.pt "
+        f"--save-debug-rollout-data /root/shared_data/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}/{{rollout_id}}.pt "
     )
 
     train_args = (

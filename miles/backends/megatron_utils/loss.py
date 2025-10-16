@@ -54,7 +54,6 @@ def get_responses(
     assert logits.dtype == torch.float32, f"{logits.dtype}"
 
     logits = logits.squeeze(0)
-    logits = logits.div(args.rollout_temperature)
 
     cp_size = mpu.get_context_parallel_world_size()
     end = 0
@@ -85,6 +84,7 @@ def get_responses(
             logits_chunk = torch.cat([logits_0, logits_1], dim=0)
             tokens_chunk = torch.cat([tokens_0, tokens_1], dim=0)
 
+        logits_chunk = logits_chunk.div(args.rollout_temperature)
         yield logits_chunk, tokens_chunk
 
 

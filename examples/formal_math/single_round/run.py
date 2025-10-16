@@ -12,6 +12,7 @@ import command_utils as U
 # TODO unify "arg" prefix
 enable_dynamic_sampling = bool(int(os.environ.get("ARG_ENABLE_DYNAMIC_SAMPLING", "0")))
 ref_load = os.environ.get("ARG_REF_LOAD")
+eval_max_response_len = os.environ.get("ARG_EVAL_MAX_RESPONSE_LEN")
 
 dataset_transform_id = os.environ["MILES_DATASET_TRANSFORM_ID"]
 mode = os.environ.get("MILES_MODE", "train")
@@ -69,7 +70,10 @@ def execute():
         )
 
     eval_args = (
-        "--eval-interval 20 " "--n-samples-per-eval-prompt 1 " "--eval-max-response-len 16384 " "--eval-top-p 0.7 "
+        "--eval-interval 20 " 
+        "--n-samples-per-eval-prompt 1 " 
+        f"--eval-max-response-len {eval_max_response_len or 16384} " 
+        "--eval-top-p 0.7 "
     )
 
     if mode == "eval_flc":

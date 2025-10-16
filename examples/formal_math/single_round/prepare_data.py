@@ -32,7 +32,7 @@ def process_flc(
     val_flc_select_num_rows: int,
 ):
     ds = load_dataset("m-a-p/FineLeanCorpus", split="train")
-    ds = _add_metadata_column(ds, dataset_name="flc")
+    ds = _add_metadata_column(ds, dataset_name="flc", column_id="id")
 
     def _filter_batch(batch):
         return [
@@ -109,8 +109,12 @@ def _to_messages(content):
     return [{"role": "user", "content": content}]
 
 
-def _add_metadata_column(ds, dataset_name: str):
-    return ds.add_column("metadata", [dict(question_id=f"{dataset_name}__idx{i}") for i in range(len(ds))])
+def _add_metadata_column(ds, dataset_name: str, column_id=None):
+    if column_id is not None:
+        col_metadata = [dict(question_id=f"{dataset_name}__{value}") for value in ds[column_id]]
+    else:
+        col_metadata = [dict(question_id=f"{dataset_name}__idx{i}") for i in range(len(ds))]
+    return ds.add_column("metadata", col_metadata)
 
 
 def main(

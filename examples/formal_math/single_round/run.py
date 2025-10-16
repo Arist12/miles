@@ -59,6 +59,8 @@ def execute():
         eval_args += (
             "--eval-prompt-data "
             f"flc /root/datasets/formal_math_single_round/{dataset_transform_id}/flc_train.jsonl@[{flc_chunk}] "
+            # pass@32 is common for formal math
+            "--n-samples-per-eval-prompt 32 "
         )
     else:
         eval_args += (

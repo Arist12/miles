@@ -98,7 +98,9 @@ class _SolvableByRolloutDumpFilter:
         paths = paths.split(",")
         interesting_question_ids = set()
         with ProcessPoolExecutor(max_workers=64) as executor:
-            for partial_question_ids in executor.map(_SolvableByRolloutDumpFilter._compute_interesting_question_ids_one, paths):
+            for partial_question_ids in executor.map(
+                _SolvableByRolloutDumpFilter._compute_interesting_question_ids_one, paths
+            ):
                 interesting_question_ids |= partial_question_ids
         return interesting_question_ids
 

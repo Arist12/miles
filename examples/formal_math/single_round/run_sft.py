@@ -24,11 +24,12 @@ def prepare():
 def execute():
     run_id = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000)}"
 
+    load_save_path = f"/root/models/{MODEL_NAME}_ckpt__{Path(__file__).stem}_{run_id}/"
     ckpt_args = (
-        "--hf-checkpoint /root/Qwen3-4B-Base/ "
-        "--ref-load /root/Qwen3-4B-Base_torch_dist "
-        "--load /root/Qwen3-4B-Base_miles/ "
-        "--save /root/Qwen3-4B-Base_miles/ "
+        f"--hf-checkpoint /root/{MODEL_NAME}/ "
+        f"--ref-load /root/{MODEL_NAME}_torch_dist "
+        f"--load {load_save_path} "
+        f"--save {load_save_path} "
         "--save-interval 1000 "
     )
 

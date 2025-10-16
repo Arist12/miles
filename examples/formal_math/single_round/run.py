@@ -9,8 +9,9 @@ import command_utils as U
 
 dataset_transform_id = os.environ["MILES_DATASET_TRANSFORM_ID"]
 
-MODEL_NAME = "Qwen3-4B"
-MODEL_TYPE = "qwen3-4B"
+# MODEL_NAME, MODEL_TYPE = "Qwen3-4B", "qwen3-4B"
+MODEL_NAME, MODEL_TYPE = "Qwen3-8B", "qwen3-8B"
+
 NUM_GPUS = 8
 
 

@@ -55,11 +55,9 @@ def execute():
         "--context-parallel-size 1 "
         "--expert-model-parallel-size 1 "
         "--expert-tensor-parallel-size 1 "
-
         "--recompute-granularity full "
         "--recompute-method uniform "
         "--recompute-num-layers 1 "
-
         # --micro-batch-size 1
         "--use-dynamic-batch-size "
         "--max-tokens-per-gpu 9216 "

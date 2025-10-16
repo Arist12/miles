@@ -45,6 +45,8 @@ def generate_rollout(args, rollout_id, data_buffer, evaluation=False):
         sample.loss_mask = loss_mask[-response_length:]
 
         if i == 0:
-            print(f"sft_rollout::generate_rollout example data: {sample}")
+            print(
+                f"sft_rollout::generate_rollout example data: {sample=} (raw){messages=} (raw){token_ids=} (raw){loss_mask=} {response_length=}"
+            )
 
     return samples

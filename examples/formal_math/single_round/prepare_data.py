@@ -41,8 +41,7 @@ def process_flc(
     ds = _add_metadata_column(ds, dataset_name="flc", column_id="id")
 
     if filter_solvable_by_rollout_dumps:
-        df_samples = _SolvableByRolloutDumpFilter.compute_df_samples(filter_solvable_by_rollout_dumps)
-        interesting_question_ids = set(_SolvableByRolloutDumpFilter.compute_interesting_question_ids(df_samples))
+        interesting_question_ids = _SolvableByRolloutDumpFilter.compute_interesting_question_ids(df_samples)
 
     def _filter_row(lean_code, difficulty, metadata):
         return (
@@ -94,7 +93,12 @@ def process_flc(
 
 class _SolvableByRolloutDumpFilter:
     @staticmethod
-    def compute_df_samples(paths: str):
+    def compute_interesting_question_ids(paths):
+        df_samples = _SolvableByRolloutDumpFilter._compute_df_samples(paths)
+        return _SolvableByRolloutDumpFilter._compute_interesting_question_ids_from_df_samples(df_samples)
+
+    @staticmethod
+    def _compute_df_samples(paths: str):
         paths = paths.split(",")
         df_samples = pl.concat(
             [pl.DataFrame(torch.load(p)["samples"]) for p in tqdm(paths, desc="load eval dumps")],
@@ -104,7 +108,7 @@ class _SolvableByRolloutDumpFilter:
         return df_samples
 
     @staticmethod
-    def compute_interesting_question_ids(df_samples: pl.DataFrame):
+    def _compute_interesting_question_ids_from_df_samples(df_samples: pl.DataFrame):
         df = df_samples
 
         df = df.select(
@@ -118,7 +122,7 @@ class _SolvableByRolloutDumpFilter:
         interesting_question_ids = df.filter(pl.col("reward_value") > 0)["question_id"].sort().to_list()
         print(f"{len(interesting_question_ids)=} {interesting_question_ids[:5]=}")
 
-        return interesting_question_ids
+        return set(interesting_question_ids)
 
 
 _LEANABELL_ORIGINAL_PREFIX = """Complete the following Lean 4 code with explanatory comments preceding each line of code:

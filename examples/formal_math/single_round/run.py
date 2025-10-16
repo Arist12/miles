@@ -8,6 +8,10 @@ sys.path.append(str(Path(__file__).resolve().parents[3] / "tests"))
 
 import command_utils as U
 
+
+# TODO unify "arg" prefix
+enable_dynamic_sampling = os.environ["ARG_ENABLE_DYNAMIC_SAMPLING"]
+
 dataset_transform_id = os.environ["MILES_DATASET_TRANSFORM_ID"]
 mode = os.environ.get("MILES_MODE", "train")
 assert mode in {"train", "eval_flc"}
@@ -53,6 +57,12 @@ def execute():
         rollout_args += "--start-rollout-id 0 " "--num-rollout 0 "
     else:
         rollout_args += "--num-rollout 3000 "
+
+    if enable_dynamic_sampling:
+        rollout_args += (
+            "--over-sampling-batch-size 64 "
+            "--dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
+        )
 
     eval_args = (
         "--eval-interval 20 " "--n-samples-per-eval-prompt 1 " "--eval-max-response-len 16384 " "--eval-top-p 0.7 "

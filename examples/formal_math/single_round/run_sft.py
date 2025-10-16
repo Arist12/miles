@@ -101,6 +101,7 @@ def execute():
         train_args=train_args,
         num_gpus=NUM_GPUS,
         model_type=MODEL_TYPE,
+        train_script="train_async.py",
     )
 
 

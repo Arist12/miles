@@ -130,6 +130,7 @@ def main(
     dir_output_base: Annotated[str, typer.Option()],
     train_flc_select_num_rows: Annotated[int, typer.Option()] = 20000,
     val_flc_select_num_rows: Annotated[int, typer.Option()] = 100,
+    filter_difficulty: Annotated[Optional[int], typer.Option()] = None,
 ):
     dir_output = (
         Path(dir_output_base) / f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000)}"
@@ -140,6 +141,7 @@ def main(
         dir_output=dir_output,
         train_flc_select_num_rows=train_flc_select_num_rows,
         val_flc_select_num_rows=val_flc_select_num_rows,
+        filter_difficulty=filter_difficulty,
     )
     process_minif2f(
         dir_output=dir_output,

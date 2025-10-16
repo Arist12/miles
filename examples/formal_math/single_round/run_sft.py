@@ -94,7 +94,7 @@ def execute():
         f"{ckpt_args} "
         f"{sft_args} "
         f"{optimizer_args} "
-        f"{U.get_default_wandb_args(__file__)} "
+        f"{U.get_default_wandb_args(__file__, run_id=run_id)} "
         f"{perf_args} "
         f"{misc_args} "
     )

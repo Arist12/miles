@@ -34,11 +34,6 @@ def execute():
         "--save-interval 20 "
     )
 
-    if mode == "eval_flc":
-        num_rollout = 1
-    else:
-        num_rollout = 3000
-
     rollout_args = (
         f"--prompt-data /root/datasets/formal_math_single_round/{dataset_transform_id}/flc_train.jsonl "
         "--input-key prompt "
@@ -46,7 +41,6 @@ def execute():
         "--rollout-shuffle "
         "--custom-rm-path examples.formal_math.single_round.reward_fn.reward_fn "
         "--reward-key reward_value "
-        f"--num-rollout {num_rollout} "
         "--rollout-batch-size 32 "
         "--n-samples-per-prompt 8 "
         "--rollout-max-response-len 8192 "
@@ -54,6 +48,16 @@ def execute():
         "--global-batch-size 256 "
         "--balance-data "
     )
+
+    if mode == "eval_flc":
+        rollout_args += (
+            "--start-rollout-id 0 "
+            "--num-rollout 1 "
+        )
+    else:
+        rollout_args += (
+            "--num-rollout 3000 "
+        )
 
     eval_args = (
         "--eval-interval 20 " "--n-samples-per-eval-prompt 1 " "--eval-max-response-len 16384 " "--eval-top-p 0.7 "
@@ -130,9 +134,7 @@ def execute():
     )
 
     if mode == "eval_flc":
-        misc_args += (
-            "--debug-rollout-only "
-        )
+        misc_args += "--debug-rollout-only "
 
     train_args = (
         f"{ckpt_args} "

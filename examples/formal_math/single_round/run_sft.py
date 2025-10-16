@@ -74,7 +74,7 @@ def execute():
         "--adam-beta2 0.95 "
     )
 
-    if bool(int(os.environ.get("ARG_CPU_ADAM", "1"))):
+    if bool(int(os.environ.get("ARG_CPU_ADAM", "0"))):
         optimizer_args += (
             # https://docs.nvidia.com/megatron-core/developer-guide/latest/api-guide/optimizer_cpu_offload.html
             "--optimizer-cpu-offload "

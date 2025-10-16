@@ -33,6 +33,7 @@ def process_flc(
     filter_difficulty: Optional[int],
 ):
     ds = load_dataset("m-a-p/FineLeanCorpus", split="train")
+    print(f"Loaded dataset: {len(ds)=}")
     ds = _add_metadata_column(ds, dataset_name="flc", column_id="id")
 
     def _filter_row(lean_code, difficulty):
@@ -50,11 +51,13 @@ def process_flc(
         batched=True,
         num_proc=64,
     )
+    print(f"Filtered dataset: {len(ds)=}")
 
     ds = ds.shuffle(seed=42)
     ds = ds.select_columns(["id", "statement", "lean_code"])
     ds = ds.select(range(train_flc_select_num_rows + val_flc_select_num_rows))
     ds = ds.train_test_split(test_size=val_flc_select_num_rows, shuffle=False, seed=42)
+    print(f"Split dataset: {len(ds['train'])=} {len(ds['test'])=}")
 
     def _process_prompt(statement, lean_code):
         assert lean_code.count(_NEEDLE_THEOREM) == 1, f"{lean_code=}"

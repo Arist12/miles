@@ -1,3 +1,4 @@
+import polars as pl
 import datetime
 import pprint
 import random
@@ -31,22 +32,29 @@ def process_flc(
     train_flc_select_num_rows: int,
     val_flc_select_num_rows: int,
     filter_difficulty: Optional[int],
+    filter_solvable_by_rollout_dumps: str,
 ):
     ds = load_dataset("m-a-p/FineLeanCorpus", split="train")
     print(f"Loaded dataset: {len(ds)=}")
     ds = _add_metadata_column(ds, dataset_name="flc", column_id="id")
 
-    def _filter_row(lean_code, difficulty):
+    if filter_solvable_by_rollout_dumps:
+        df_samples = _SolvableByRolloutDumpFilter.compute_df_samples(filter_solvable_by_rollout_dumps)
+        interesting_question_ids = set(_SolvableByRolloutDumpFilter.compute_interesting_question_ids(df_samples))
+
+    def _filter_row(lean_code, difficulty, metadata):
         return (
             # we remove multi-theorem data currently
             (lean_code.count(_NEEDLE_THEOREM) == 1)
             and ((filter_difficulty is None) or (difficulty == filter_difficulty))
+            and ((not filter_solvable_by_rollout_dumps) or (metadata["question_id"] in interesting_question_ids))
         )
 
     ds = ds.filter(
         lambda batch: [
-            _filter_row(lean_code, difficulty)
-            for lean_code, difficulty in zip(batch["lean_code"], batch["difficulty"], strict=True)
+            _filter_row(lean_code, difficulty, metadata)
+            for lean_code, difficulty, metadata
+            in zip(batch["lean_code"], batch["difficulty"], batch["metadata"], strict=True)
         ],
         batched=True,
         num_proc=64,
@@ -78,6 +86,17 @@ def process_flc(
     ds = ds.map(_process_batch, batched=True, num_proc=64, remove_columns=["statement", "lean_code"])
     _write_file(ds["train"], dir_output / "flc_train.jsonl")
     _write_file(ds["test"], dir_output / "flc_test.jsonl")
+
+
+class _SolvableByRolloutDumpFilter:
+    @staticmethod
+    def compute_df_samples(paths: str):
+        paths = paths.split(",")
+        return TODO
+
+    @staticmethod
+    def compute_interesting_question_ids(df_samples: pl.DataFrame):
+        return TODO
 
 
 def process_minif2f(
@@ -133,6 +152,7 @@ def main(
     train_flc_select_num_rows: Annotated[int, typer.Option()] = 20000,
     val_flc_select_num_rows: Annotated[int, typer.Option()] = 100,
     filter_difficulty: Annotated[Optional[int], typer.Option()] = None,
+    filter_solvable_by_rollout_dumps: Annotated[Optional[str], typer.Option()] = None,
 ):
     dir_output = (
         Path(dir_output_base) / f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000)}"
@@ -145,6 +165,7 @@ def main(
         train_flc_select_num_rows=train_flc_select_num_rows,
         val_flc_select_num_rows=val_flc_select_num_rows,
         filter_difficulty=filter_difficulty,
+        filter_solvable_by_rollout_dumps=filter_solvable_by_rollout_dumps,
     )
     process_minif2f(
         dir_output=dir_output,

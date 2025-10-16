@@ -34,10 +34,10 @@ def read_file(path):
 
 
 def _parse_generalized_path(s: str):
-    if (m := re.match(r'^(?P<real_path>.*)@\[(?P<start>-?\d*):(?P<end>-?\d*)\]$', s)) is not None:
-        path = m.group('real_path')
-        start = int(x) if (x := m.group('start')) != '' else None
-        end = int(x) if (x := m.group('end')) != '' else None
+    if (m := re.match(r"^(?P<real_path>.*)@\[(?P<start>-?\d*):(?P<end>-?\d*)\]$", s)) is not None:
+        path = m.group("real_path")
+        start = int(x) if (x := m.group("start")) != "" else None
+        end = int(x) if (x := m.group("end")) != "" else None
         return path, slice(start, end)
 
     return s, None

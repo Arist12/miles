@@ -39,6 +39,7 @@ def execute_train(
     master_addr: str = "127.0.0.1",
     train_script: str = "train.py",
     before_ray_job_submit=None,
+    extra_env_vars={},
 ):
     exec_command(
         "pkill -9 sglang; "
@@ -73,7 +74,7 @@ def execute_train(
                 "CUDA_DEVICE_MAX_CONNECTIONS": "1",
                 "NCCL_NVLS_ENABLE": str(int(check_has_nvlink())),
                 "no_proxy": f"127.0.0.1,{master_addr}",
-                "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                **extra_env_vars,
             }
         }
     )

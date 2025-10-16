@@ -104,6 +104,9 @@ def execute():
         num_gpus=NUM_GPUS,
         model_type=MODEL_TYPE,
         train_script="train_async.py",
+        extra_env_vars={
+            "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        },
     )
 
 

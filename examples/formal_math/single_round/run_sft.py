@@ -88,6 +88,7 @@ def execute():
 
     train_args = (
         f"{ckpt_args} "
+        f"{sft_args} "
         f"{optimizer_args} "
         f"{U.get_default_wandb_args(__file__)} "
         f"{perf_args} "

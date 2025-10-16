@@ -27,7 +27,7 @@ async def _main_async(samples, custom_rm_path):
 
     # TODO improve output
     for sample, reward in zip(samples, rewards, strict=True):
-        print(f"recomputed_reward={reward} sample={sample}")
+        print(f"recomputed_reward={reward} {sample.index=} {sample.prompt=} {sample.response=}")
 
 
 if __name__ == "__main__":

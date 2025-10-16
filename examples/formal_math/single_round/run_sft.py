@@ -49,7 +49,7 @@ def execute():
     )
 
     perf_args = (
-        "--tensor-model-parallel-size 1 "
+        f"--tensor-model-parallel-size {os.environ.get('ARG_TP_SIZE', '1')} "
         "--sequence-parallel "
         "--pipeline-model-parallel-size 1 "
         "--context-parallel-size 1 "

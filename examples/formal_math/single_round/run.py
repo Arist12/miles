@@ -56,7 +56,7 @@ def execute():
     )
 
     if mode == "eval_flc":
-        rollout_args += "--start-rollout-id 0 " "--num-rollout 0 "
+        rollout_args += "--num-rollout 0 "
     else:
         rollout_args += "--num-rollout 3000 "
 

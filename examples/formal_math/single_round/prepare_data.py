@@ -3,7 +3,7 @@ import pprint
 import random
 import re
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 
 import typer
 from datasets import load_dataset
@@ -30,18 +30,27 @@ def process_flc(
     dir_output: Path,
     train_flc_select_num_rows: int,
     val_flc_select_num_rows: int,
+    filter_difficulty: Optional[int],
 ):
     ds = load_dataset("m-a-p/FineLeanCorpus", split="train")
     ds = _add_metadata_column(ds, dataset_name="flc", column_id="id")
 
-    def _filter_batch(batch):
-        return [
+    def _filter_row(lean_code, difficulty):
+        return (
             # we remove multi-theorem data currently
-            lean_code.count(_NEEDLE_THEOREM) == 1
-            for lean_code in batch["lean_code"]
-        ]
+            (lean_code.count(_NEEDLE_THEOREM) == 1)
+            and ((filter_difficulty is None) or (difficulty == filter_difficulty))
+        )
 
-    ds = ds.filter(_filter_batch, batched=True, num_proc=64)
+    ds = ds.filter(
+        lambda batch: [
+            _filter_row(lean_code, difficulty)
+            for lean_code, difficulty in
+            zip(batch["lean_code"], batch["difficulty"], strict=True)
+        ],
+        batched=True,
+        num_proc=64,
+    )
 
     ds = ds.shuffle(seed=42)
     ds = ds.select_columns(["id", "statement", "lean_code"])

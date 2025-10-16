@@ -135,6 +135,10 @@ def process_leanabell(
 
     def _compute_messages(raw_prompt, raw_output):
         question_lean = _ensure_remove_prefix(raw_prompt, _LEANABELL_ORIGINAL_PREFIX)
+
+        assert question_lean.endswith(":= by")
+        question_lean += " sorry"
+
         return [
             {"role": "user", "content": _PROMPT_TEMPLATE.format(question_lean)},
             {"role": "assistant", "content": f"```lean\n{raw_output}"},

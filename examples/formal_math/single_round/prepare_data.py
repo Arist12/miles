@@ -209,7 +209,7 @@ def _write_file(ds, path):
 
 
 def _convert_to_by_sorry(s: str):
-    return _ensure_remove_pattern(s, r" *:=\n? *(by)? *\n?$") + " := by\n  sorry"
+    return _ensure_remove_pattern(s, r" *:=\s*(?:by\s*)?(?:sorry\s*)?$") + " := by\n  sorry"
 
 
 def _ensure_remove_pattern(text: str, pattern: str):

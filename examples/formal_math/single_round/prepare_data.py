@@ -119,8 +119,22 @@ class _SolvableByRolloutDumpFilter:
         return interesting_question_ids
 
 
-def process_leanabell():
-    TODO
+def process_leanabell(
+    dir_output: Path,
+):
+    ds = load_dataset("stoney0062/Leanabell-Prover-Traindata-SFT", split="train")
+    ds = _add_metadata_column(ds, dataset_name="leanabell")
+    ds = ds.shuffle(seed=42)
+
+    def _compute_messages(prompt, output):
+        return TODO
+
+    def _process_batch(batch):
+        return {"messages": [_compute_messages(prompt, output) for prompt, output in zip(batch["prompt"], batch["output"], strict=True)]}
+
+    ds = ds.map(_process_batch, batched=True)
+    _write_file(ds, dir_output / "leanabell.jsonl")
+
 
 
 def process_minif2f(
@@ -197,7 +211,9 @@ def main(
             dir_output=dir_output,
         )
     elif mode == "sft":
-        TODO
+        process_leanabell(
+            dir_output=dir_output,
+        )
     else:
         raise NotImplementedError(f"{mode=}")
 

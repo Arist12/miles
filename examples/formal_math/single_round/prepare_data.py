@@ -126,7 +126,7 @@ def _add_metadata_column(ds, dataset_name: str, column_id=None):
 
 
 def main(
-    dir_output_base: Annotated[str, typer.Option()],
+    dir_output_base: Annotated[str, typer.Option()] = "/root/datasets/formal_math_single_round/",
     train_flc_select_num_rows: Annotated[int, typer.Option()] = 20000,
     val_flc_select_num_rows: Annotated[int, typer.Option()] = 100,
     filter_difficulty: Annotated[Optional[int], typer.Option()] = None,

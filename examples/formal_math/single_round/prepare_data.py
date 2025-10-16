@@ -102,6 +102,7 @@ class _SolvableByRolloutDumpFilter:
                 _SolvableByRolloutDumpFilter._compute_interesting_question_ids_one, paths
             ):
                 interesting_question_ids |= partial_question_ids
+        print(f"(overall) {len(interesting_question_ids)=} {list(interesting_question_ids)[:5]=}")
         return interesting_question_ids
 
     @staticmethod
@@ -130,7 +131,7 @@ class _SolvableByRolloutDumpFilter:
         df = df.group_by("question_id").agg(pl.col("reward_value").mean())
 
         interesting_question_ids = df.filter(pl.col("reward_value") > 0)["question_id"].sort().to_list()
-        print(f"{len(interesting_question_ids)=} {interesting_question_ids[:5]=}")
+        print(f"(partial) {len(interesting_question_ids)=} {interesting_question_ids[:5]=}")
 
         return set(interesting_question_ids)
 

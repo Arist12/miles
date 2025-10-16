@@ -60,7 +60,12 @@ def _assemble_code(prompt: str, response: str) -> Tuple[Optional[str], Optional[
     return question_code + answer_code, None
 
 def _extract_answer_code_from_response_code_block(response_code_block: str):
-    return response_code_block[response_code_block.index(":=") :]
+    try:
+        idx = response_code_block.index(":=")
+        return response_code_block[idx:]
+    except ValueError:
+        # leanabell prover style: only output the proof code
+        return response_code_block
 
 
 def _extract_last_full_code_block(text):

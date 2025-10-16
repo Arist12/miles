@@ -29,7 +29,9 @@ def prepare():
 
 
 def execute():
-    load_save_path = f"/root/models/{MODEL_NAME}_ckpt__{Path(__file__).stem}/"
+    run_id = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000)}"
+
+    load_save_path = f"/root/models/{MODEL_NAME}_ckpt__{Path(__file__).stem}_{run_id}/"
     ckpt_args = (
         f"--hf-checkpoint /root/models/{MODEL_NAME}/ "
         f"--ref-load /root/{MODEL_NAME}_torch_dist "
@@ -135,7 +137,7 @@ def execute():
         "--actor-num-gpus-per-node 8 "
         "--colocate "
         # for debug
-        f"--save-debug-rollout-data /root/shared_data/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000)}/{{rollout_id}}.pt "
+        f"--save-debug-rollout-data /root/shared_data/{run_id}/{{rollout_id}}.pt "
     )
 
     if mode == "eval_flc":

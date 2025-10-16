@@ -185,10 +185,10 @@ def _write_file(ds, path):
     match path.suffix:
         case ".json":
             ds.to_json(path)
-        case ".pareut":
+        case ".parquet":
             ds.to_parquet(path)
         case _:
-            raise NotImplementedError(f"{path=}")
+            raise NotImplementedError(f"{path=} {path.suffix=}")
 
     print(f"Write to {path}, {len(ds)=}, example data:")
     pprint.pprint([ds[i] for i in range(3)])

@@ -47,7 +47,8 @@ def execute_train(
     exec_command(
         # will prevent ray from buffering stdout/stderr
         f"export PYTHONBUFFERED=16 && "
-        f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus} --disable-usage-stats"
+        # TODO is the `--node-ip-address {master_addr}` necessary?
+        f"ray start --head --num-gpus {num_gpus} --disable-usage-stats"
     )
 
     _start_ray_worker_nodes()

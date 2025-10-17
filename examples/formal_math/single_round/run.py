@@ -20,8 +20,7 @@ assert mode in {"train", "eval_pass_at_k", "eval_flc"}
 # MODEL_NAME, MODEL_TYPE = "Qwen3-4B", "qwen3-4B"
 MODEL_NAME, MODEL_TYPE = "Qwen3-8B", "qwen3-8B"
 
-# TODO may rename related variables (from num_gpus to this)
-NUM_GPUS_PER_NODE = 8
+NUM_GPUS = 8
 
 
 def prepare():
@@ -31,7 +30,7 @@ def prepare():
         U.convert_checkpoint(
             model_name=MODEL_NAME,
             model_type=MODEL_TYPE,
-            num_gpus=NUM_GPUS_PER_NODE,
+            num_gpus=NUM_GPUS,
             # To support multi-node training, for simplicity, we put model into shared folder
             dir_dst="/root/models",
         )
@@ -176,7 +175,7 @@ def execute():
 
     U.execute_train(
         train_args=train_args,
-        num_gpus=NUM_GPUS_PER_NODE,
+        num_gpus=NUM_GPUS,
         model_type=MODEL_TYPE,
     )
 

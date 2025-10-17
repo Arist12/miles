@@ -2,10 +2,9 @@ import datetime
 import json
 import os
 import random
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
-from miles.utils.misc import exec_command, get_current_node_host_ip
+from miles.utils.misc import exec_command
 
 _ = exec_command
 
@@ -42,16 +41,28 @@ def execute_train(
     before_ray_job_submit=None,
     extra_env_vars={},
 ):
-    _cleanup_node()
+    exec_command(
+        "pkill -9 sglang; "
+        "sleep 3; "
+        "ray stop --force; "
+        "pkill -9 ray; "
+        # cannot be run in CI, o/w kill the parent script
+        # TODO: do we really need this kill? (or can we instead kill miles)
+        # "pkill -9 python; "
+        "pkill -9 miles; "
+        "sleep 3; "
+        "pkill -9 ray; "
+        # "pkill -9 python; "
+        "pkill -9 miles; "
+        "pkill -9 redis; "
+        "true; "
+    )
 
     exec_command(
         # will prevent ray from buffering stdout/stderr
         f"export PYTHONBUFFERED=16 && "
-        # TODO is the `--node-ip-address {master_addr}` necessary?
-        f"ray start --head --num-gpus {num_gpus} --disable-usage-stats"
+        f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus} --disable-usage-stats"
     )
-
-    _start_ray_worker_nodes()
 
     if (f := before_ray_job_submit) is not None:
         f()
@@ -61,7 +72,7 @@ def execute_train(
             "env_vars": {
                 "PYTHONPATH": "/root/Megatron-LM/",
                 "CUDA_DEVICE_MAX_CONNECTIONS": "1",
-                "NCCL_NVLS_ENABLE": str(int(_check_has_nvlink())),
+                "NCCL_NVLS_ENABLE": str(int(check_has_nvlink())),
                 "no_proxy": f"127.0.0.1,{master_addr}",
                 **extra_env_vars,
             }
@@ -83,47 +94,7 @@ def execute_train(
     )
 
 
-def _cleanup_node():
-    exec_command(
-        "pkill -9 sglang; "
-        "sleep 3; "
-        "ray stop --force; "
-        "pkill -9 ray; "
-        # cannot be run in CI, o/w kill the parent script
-        # TODO: do we really need this kill? (or can we instead kill miles)
-        # "pkill -9 python; "
-        "pkill -9 miles; "
-        "sleep 3; "
-        "pkill -9 ray; "
-        # "pkill -9 python; "
-        "pkill -9 miles; "
-        "pkill -9 redis; "
-        "true; "
-    )
-
-
-# NOTE: this is just one naive implementation for environment without Slurm or Kubernetes.
-#       we can generalize this later if it is needed (e.g. someone also does not have Slurm/Kubernetes).
-def _start_ray_worker_nodes():
-    worker_node_ips = os.environ.get("MILES_SCRIPT_START_RAY_WORKER_NODE_IPS", "").split(",")
-    if not worker_node_ips:
-        return
-
-    head_node_ip = get_current_node_host_ip()
-
-    def _execute_ssh(node_ip: str, command_inner: str):
-        exec_command(f"ssh {node_ip} 'cd /data/tom/primary_synced/tom_sglang_server/misc && {command_inner}'")
-
-    def _execute_one(node_ip: str):
-        _execute_ssh(node_ip, f"just miles-docker-run-without-exec")
-        _execute_ssh(node_ip, f"just miles-start-ray-worker {head_node_ip}:6379")
-
-    print(f"Start ray worker nodes: {worker_node_ips}", flush=True)
-    with ThreadPoolExecutor(max_workers=100) as executor:
-        list(executor.map(_execute_one, worker_node_ips))
-
-
-def _check_has_nvlink():
+def check_has_nvlink():
     output = exec_command("nvidia-smi topo -m 2>/dev/null | grep -o 'NV[0-9][0-9]*' | wc -l", capture_output=True)
     return int(output) > 0
 

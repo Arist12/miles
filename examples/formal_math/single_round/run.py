@@ -92,9 +92,7 @@ def execute():
             f"flc /root/datasets/formal_math_single_round/{dataset_transform_id}/flc_test.jsonl "
         )
         if mode == "eval_pass_at_k":
-            eval_args += (
-                "--n-samples-per-eval-prompt 32 "
-            )
+            eval_args += "--n-samples-per-eval-prompt 32 "
 
     perf_args = (
         "--tensor-model-parallel-size 2 "

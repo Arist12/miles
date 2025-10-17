@@ -3,13 +3,13 @@ from typing import List
 import numpy as np
 
 
-def compute_pass_rate(rewards: List[float]):
+def compute_pass_rate(flat_rewards: List[float]):
     group_size = args.n_samples_per_prompt
     group_number = args.rollout_batch_size
-    assert len(val) == group_number * group_size
+    assert len(flat_rewards) == group_number * group_size
     pass_rate_name_list = [2**i for i in range(int(math.log2(group_size)) + 1)]
 
-    val = np.array(val).reshape(group_number, group_size)
+    rewards_of_group = np.array(flat_rewards).reshape(group_number, group_size)
 
     def estimate_pass_at_k(num_samples, num_correct, k):
         """
@@ -28,7 +28,7 @@ def compute_pass_rate(rewards: List[float]):
 
     log_dict = {}
     for k in pass_rate_name_list:
-        num_correct = np.sum(val == 1, axis=1)
+        num_correct = np.sum(rewards_of_group == 1, axis=1)
         num_samples = np.full(group_number, group_size)
 
         pass_k_estimates = estimate_pass_at_k(num_samples, num_correct, k)

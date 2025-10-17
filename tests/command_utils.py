@@ -5,7 +5,7 @@ import random
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
-from miles.utils.misc import exec_command
+from miles.utils.misc import exec_command, get_current_node_host_ip
 
 _ = exec_command
 
@@ -109,7 +109,7 @@ def _start_ray_worker_nodes():
     if not worker_node_ips:
         return
 
-    head_node_ip = TODO
+    head_node_ip = get_current_node_host_ip()
 
     def _execute_ssh(node_ip: str, command_inner: str):
         exec_command(f"ssh {node_ip} 'cd /data/tom/primary_synced/tom_sglang_server/misc && {command_inner}'")

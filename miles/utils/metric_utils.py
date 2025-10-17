@@ -9,9 +9,9 @@ def compute_pass_rate(
     group_size: int,
     num_groups: int,
 ):
-    assert len(flat_rewards) == num_groups * group_size
     pass_rate_name_list = [2**i for i in range(int(math.log2(group_size)) + 1)]
 
+    assert len(flat_rewards) == num_groups * group_size
     rewards_of_group = np.array(flat_rewards).reshape(num_groups, group_size)
 
     def estimate_pass_at_k(num_samples, num_correct, k):

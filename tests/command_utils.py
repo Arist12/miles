@@ -109,7 +109,7 @@ def _start_ray_worker_nodes():
         return
 
     def _execute_one(node_ip: str):
-        cmd_ssh = TODO
+        cmd_ssh = f"ssh {TODO} cd /data/tom/primary_synced/tom_sglang_server/misc && "
         exec_command(f"{cmd_ssh} just miles-docker-run-without-exec")
         exec_command(f"{cmd_ssh} just miles-start-ray-worker {head_node_ip}:6379")
 

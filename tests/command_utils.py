@@ -108,10 +108,12 @@ def _start_ray_worker_nodes():
     if not node_ips:
         return
 
+    def _execute_ssh(node_ip: str, command_inner: str):
+        exec_command(f"ssh {TODO} 'cd /data/tom/primary_synced/tom_sglang_server/misc && {command_inner}'")
+
     def _execute_one(node_ip: str):
-        cmd_ssh = f"ssh {TODO} cd /data/tom/primary_synced/tom_sglang_server/misc && "
-        exec_command(f"{cmd_ssh} just miles-docker-run-without-exec")
-        exec_command(f"{cmd_ssh} just miles-start-ray-worker {head_node_ip}:6379")
+        _execute_ssh(node_ip, f"just miles-docker-run-without-exec")
+        _execute_ssh(node_ip, f"just miles-start-ray-worker {head_node_ip}:6379")
 
     print(f"Start ray worker nodes: {node_ips}", flush=True)
     with ThreadPoolExecutor(max_workers=100) as executor:

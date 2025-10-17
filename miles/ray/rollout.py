@@ -21,6 +21,7 @@ from miles.utils.misc import load_function
 from miles.utils.ray_utils import Box
 from miles.utils.types import Sample
 from miles.utils.wandb_utils import init_wandb_secondary
+from miles.utils.metric_utils import dict_add_prefix, compute_pass_rate
 
 from .utils import NOSET_VISIBLE_DEVICES_ENV_VARS_LIST, Lock
 
@@ -438,6 +439,11 @@ def _log_eval_rollout_data(rollout_id, args, data):
         if "truncated" in data[key]:
             truncated = data[key]["truncated"]
             log_dict[f"eval/{key}-truncated_ratio"] = sum(truncated) / len(truncated)
+            log_dict |= dict_add_prefix(compute_pass_rate(
+                flat_rewards=TODO,
+                group_size=TODO,
+                num_groups=TODO,
+            ), "eval/")
 
     print(f"eval {rollout_id}: {log_dict}")
 

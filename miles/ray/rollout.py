@@ -513,4 +513,7 @@ def _compute_reward_cat_metrics(args, all_samples: List[Sample]):
     if reward_cat_key is None:
         return {}
 
-    return TODO
+    return {
+        f"error_cat/{TODO}": TODO
+        for TODO in TODO
+    }

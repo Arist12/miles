@@ -90,9 +90,11 @@ if __name__ == "__main__":
     # Run this UT with:
     # python examples/formal_math/single_round/reward_fn.py
 
-    # test example is from stoney0062/Leanabell-Prover-Traindata-SFT
-    test_prompt = """
-    Hello
+    test_pairs = [
+        # from stoney0062/Leanabell-Prover-Traindata-SFT
+        (
+            """
+Hello
 
 ```lean4
 import Mathlib
@@ -108,8 +110,8 @@ theorem pirate_loot_total (silver pearls spices : ℕ) (h_silver : silver = 4 * 
 silver + pearls + spices = 1636 := by
   sorry
 ```
-    """
-    test_response = """
+    """,
+            """
 ```lean4
 import Mathlib
 import Aesop
@@ -126,11 +128,15 @@ silver + pearls + spices = 1636 := by
   norm_num
   <;> linarith
 ```
-    """
+    """,
+        ),
+    ]
 
     import ray
 
     ray.init()
-    output = asyncio.run(reward_fn(None, SimpleNamespace(prompt=test_prompt, response=test_response)))
-    print(f"{output=}")
-    assert output["reward_value"] == 1.0
+
+    for test_prompt, test_response in test_pairs:
+        output = asyncio.run(reward_fn(None, SimpleNamespace(prompt=test_prompt, response=test_response)))
+        print(f"{output=}")
+        assert output["reward_value"] == 1.0

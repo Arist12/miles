@@ -113,6 +113,7 @@ def _start_ray_worker_nodes():
         exec_command(f"{cmd_ssh} just miles-docker-run-without-exec")
         exec_command(f"{cmd_ssh} docker exec -it tom_miles_adhoc_0 {TODO}")
 
+    print(f"Start ray worker nodes: {node_ips}", flush=True)
     with ThreadPoolExecutor(max_workers=100) as executor:
         list(executor.map(_execute_one, node_ips))
 

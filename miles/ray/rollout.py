@@ -441,7 +441,7 @@ def _log_eval_rollout_data(rollout_id, args, data):
             log_dict[f"eval/{key}-truncated_ratio"] = sum(truncated) / len(truncated)
         if args.log_passrate:
             log_dict |= dict_add_prefix(compute_pass_rate(
-                flat_rewards=TODO,
+                flat_rewards=rewards,
                 group_size=args.n_samples_per_eval_prompt,
             ), f"eval/{key}-")
 

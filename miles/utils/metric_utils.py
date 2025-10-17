@@ -1,5 +1,5 @@
 import math
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import numpy as np
 
@@ -12,8 +12,11 @@ def dict_add_prefix(d: Dict[str, Any], prefix: str) -> Dict[str, Any]:
 def compute_pass_rate(
     flat_rewards: List[float],
     group_size: int,
-    num_groups: int,
+    num_groups: Optional[int] = None,
 ):
+    if num_groups is None:
+        num_groups = len(flat_rewards) // group_size
+
     pass_rate_name_list = [2**i for i in range(int(math.log2(group_size)) + 1)]
 
     assert len(flat_rewards) == num_groups * group_size

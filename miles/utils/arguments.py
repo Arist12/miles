@@ -1107,7 +1107,7 @@ def miles_validate_args(args):
             )
 
     load_ckpt_iter = get_latest_checkpointed_iteration(args.load)
-    if ckpt_iter is None:
+    if load_ckpt_iter is None:
         args.no_load_optim = True
         args.no_load_rng = True
         args.finetune = True
@@ -1116,7 +1116,7 @@ def miles_validate_args(args):
             args.ckpt_step = args.ref_ckpt_step
         args.start_rollout_id = 0
     else:
-        args.start_rollout_id = TODO
+        args.start_rollout_id = load_ckpt_iter + 1
 
     if args.eval_interval is not None:
         assert args.eval_prompt_data is not None, "eval_prompt_data must be set when eval_interval is set"

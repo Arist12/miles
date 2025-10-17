@@ -1,4 +1,3 @@
-import math
 from argparse import Namespace
 from typing import Optional, Sequence, Union
 
@@ -16,8 +15,8 @@ from miles.utils.seqlen_balancing import get_seqlen_balanced_partitions
 from miles.utils.timer import Timer
 from miles.utils.types import RolloutBatch
 
-from .cp_utils import get_sum_of_sample_mean, slice_with_cp
 from ...utils.metric_utils import compute_pass_rate
+from .cp_utils import get_sum_of_sample_mean, slice_with_cp
 
 
 def get_batch(

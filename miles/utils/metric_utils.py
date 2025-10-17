@@ -26,6 +26,7 @@ def compute_pass_rate(
 
     return log_dict
 
+
 def _estimate_pass_at_k(num_samples, num_correct, k):
     """
     Estimates pass@k of each problem and returns them in an array.
@@ -40,4 +41,3 @@ def _estimate_pass_at_k(num_samples, num_correct, k):
         return 1.0 - np.prod(1.0 - k / np.arange(n - c + 1, n + 1))
 
     return np.array([estimator(int(n), int(c), k) for n, c in zip(num_samples, num_correct)])
-

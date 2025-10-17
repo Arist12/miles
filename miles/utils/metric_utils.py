@@ -32,7 +32,7 @@ def compute_pass_rate(
     log_dict = {}
     for k in pass_rate_name_list:
         num_correct = np.sum(rewards_of_group == 1, axis=1)
-        num_samples = np.full(group_number, group_size)
+        num_samples = np.full(num_groups, group_size)
 
         pass_k_estimates = estimate_pass_at_k(num_samples, num_correct, k)
 

@@ -11,11 +11,11 @@ from megatron.core.packed_seq_params import PackedSeqParams
 
 from miles.utils.data import get_minimum_num_micro_batch_size
 from miles.utils.flops_utils import calculate_fwd_flops
+from miles.utils.metric_utils import compute_pass_rate
 from miles.utils.seqlen_balancing import get_seqlen_balanced_partitions
 from miles.utils.timer import Timer
 from miles.utils.types import RolloutBatch
 
-from ...utils.metric_utils import compute_pass_rate
 from .cp_utils import get_sum_of_sample_mean, slice_with_cp
 
 

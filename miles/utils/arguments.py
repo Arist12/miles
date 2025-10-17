@@ -1118,6 +1118,8 @@ def miles_validate_args(args):
         if args.ref_ckpt_step is not None:
             args.ckpt_step = args.ref_ckpt_step
         args.start_rollout_id = 0
+    if TODO:
+        args.start_rollout_id = TODO
 
     if args.eval_interval is not None:
         assert args.eval_prompt_data is not None, "eval_prompt_data must be set when eval_interval is set"

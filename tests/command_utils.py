@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import random
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 from miles.utils.misc import exec_command
@@ -103,16 +104,17 @@ def _cleanup_node():
 # NOTE: this is just one naive implementation for environment without Slurm or Kubernetes.
 #       we can generalize this later if it is needed (e.g. someone also does not have Slurm/Kubernetes).
 def _start_ray_worker_nodes():
-    node_ips = os.environ.get("MILES_SCRIPT_START_RAY_WORKER_NODE_IPS", "")
+    node_ips = os.environ.get("MILES_SCRIPT_START_RAY_WORKER_NODE_IPS", "").split(",")
     if not node_ips:
         return
 
-    cmd_ssh = TODO
+    def _execute_one(node_ip: str):
+        cmd_ssh = TODO
+        exec_command(f"{cmd_ssh} just miles-docker-run-without-exec")
+        exec_command(f"{cmd_ssh} docker exec -it tom_miles_adhoc_0 {TODO}")
 
-    exec_command(f"{cmd_ssh} just miles-docker-run-without-exec")
-    exec_command(f"{cmd_ssh} docker exec -it tom_miles_adhoc_0 {TODO}")
-
-    return TODO
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        list(executor.map(_execute_one, node_ips))
 
 
 def _check_has_nvlink():

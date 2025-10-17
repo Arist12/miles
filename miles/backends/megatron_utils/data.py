@@ -410,7 +410,11 @@ def log_passrate(rollout_id: int, args: Namespace, rollout_data: RolloutBatch) -
             if key != "raw_reward":
                 continue
 
-            log_dict |= compute_pass_rate(rewards=val)
+            log_dict |= compute_pass_rate(
+                flat_rewards=val,
+                group_size=args.n_samples_per_prompt,
+                num_groups=args.rollout_batch_size,
+            )
 
         gather_log_data("passrate", args, rollout_id, log_dict)
 

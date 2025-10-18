@@ -6,6 +6,7 @@ FROM ishandhanani/sglang:gb300-1015 AS sglang
 # we need to write this again after from
 ARG SGLANG_VERSION
 ARG MEGATRON_COMMIT=ca9797e95e88d93623b0f69831529a1b521297ac
+ARG ENABLE_BLACKWELL_BUILD=0
 
 RUN apt update
 RUN apt install -y nvtop
@@ -19,7 +20,13 @@ RUN pip install httpx[http2] wandb pylatexenc blobfile accelerate "mcp[cli]"
 # mbridge
 RUN pip install git+https://github.com/ISEEKYAN/mbridge.git --no-deps
 
-RUN TORCH_CUDA_ARCH_LIST="8.0;8.9;9.0;9.0a" pip install git+https://github.com/fanshiqing/grouped_gemm@v1.1.4
+RUN if [ "${ENABLE_BLACKWELL_BUILD}" = "1" ]; then \
+          export TLIST="8.0;8.9;9.0;9.0a;10.0"; \
+        else \
+          export TLIST="8.0;8.9;9.0;9.0a"; \
+        fi && \
+    TORCH_CUDA_ARCH_LIST="$TLIST" pip install git+https://github.com/fanshiqing/grouped_gemm@v1.1.4
+
 # apex
 RUN NVCC_APPEND_FLAGS="--threads 4" \
   pip -v install --disable-pip-version-check --no-cache-dir \

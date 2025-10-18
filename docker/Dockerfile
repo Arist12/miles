@@ -1,5 +1,7 @@
 ARG SGLANG_VERSION=latest
-FROM lmsysorg/sglang:${SGLANG_VERSION} AS sglang
+# TODO will unify after it is merged into sglang main
+# FROM lmsysorg/sglang:${SGLANG_VERSION} AS sglang
+FROM ishandhanani/sglang:gb300-1015 AS sglang
 
 # we need to write this again after from
 ARG SGLANG_VERSION

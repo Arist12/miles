@@ -11,9 +11,9 @@ _ = exec_command
 repo_base_dir = Path(os.path.abspath(__file__)).resolve().parents[1]
 
 
-def convert_checkpoint(model_name, model_type, num_gpus: int):
+def convert_checkpoint(model_name, model_type, num_gpus: int, dir_dst="/root"):
     # TODO shall we make it in host-mapped folder and thus can cache it to speedup CI
-    path_dst = f"/root/{model_name}_torch_dist"
+    path_dst = f"{dir_dst}/{model_name}_torch_dist"
     if Path(path_dst).exists():
         print(f"convert_checkpoint skip {path_dst} since exists")
         return
@@ -36,33 +36,36 @@ def execute_train(
     train_args: str,
     num_gpus: int,
     model_type: Optional[str],
-    master_addr: str = "127.0.0.1",
     train_script: str = "train.py",
     before_ray_job_submit=None,
     extra_env_vars={},
 ):
+    external_ray = bool(int(os.environ.get("MILES_SCRIPT_EXTERNAL_RAY", "0")))
+    master_addr = os.environ.get("MASTER_ADDR", "127.0.0.1")
+
     exec_command(
         "pkill -9 sglang; "
         "sleep 3; "
-        "ray stop --force; "
-        "pkill -9 ray; "
+        f"{'' if external_ray else 'ray stop --force; '}"
+        f"{'' if external_ray else 'pkill -9 ray; '}"
         # cannot be run in CI, o/w kill the parent script
         # TODO: do we really need this kill? (or can we instead kill miles)
         # "pkill -9 python; "
         "pkill -9 miles; "
         "sleep 3; "
-        "pkill -9 ray; "
+        f"{'' if external_ray else 'pkill -9 ray; '}"
         # "pkill -9 python; "
         "pkill -9 miles; "
         "pkill -9 redis; "
         "true; "
     )
 
-    exec_command(
-        # will prevent ray from buffering stdout/stderr
-        f"export PYTHONBUFFERED=16 && "
-        f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus} --disable-usage-stats"
-    )
+    if not external_ray:
+        exec_command(
+            # will prevent ray from buffering stdout/stderr
+            f"export PYTHONBUFFERED=16 && "
+            f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus} --disable-usage-stats"
+        )
 
     if (f := before_ray_job_submit) is not None:
         f()
@@ -74,6 +77,8 @@ def execute_train(
                 "CUDA_DEVICE_MAX_CONNECTIONS": "1",
                 "NCCL_NVLS_ENABLE": str(int(check_has_nvlink())),
                 "no_proxy": f"127.0.0.1,{master_addr}",
+                # This is needed by megatron / torch distributed in multi-node setup
+                "MASTER_ADDR": master_addr,
                 **extra_env_vars,
             }
         }
@@ -109,7 +114,7 @@ def get_default_wandb_args(test_file: str, run_name_prefix: Optional[str] = None
     if len(test_name) < 6:
         test_name = f"{test_file.parent.name}_{test_name}"
 
-    wandb_run_name = run_id or f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(0, 1000000000)}"
+    wandb_run_name = run_id or create_run_id()
     if (x := os.environ.get("GITHUB_COMMIT_NAME")) is not None:
         wandb_run_name += f"_{x}"
     if (x := run_name_prefix) is not None:
@@ -121,7 +126,12 @@ def get_default_wandb_args(test_file: str, run_name_prefix: Optional[str] = None
         f"--wandb-project miles-ci-{test_name} "
         f"--wandb-group {wandb_run_name} "
         f"--wandb-key ${{WANDB_API_KEY}} "
+        "--disable-wandb-random-suffix "
     )
+
+
+def create_run_id() -> str:
+    return datetime.datetime.now().strftime("%y%m%d-%H%M%S") + f"-{random.Random().randint(0, 999):03d}"
 
 
 _warned_bool_env_var_keys = set()

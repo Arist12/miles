@@ -1,4 +1,3 @@
-import datetime
 import sys
 from pathlib import Path
 
@@ -56,17 +55,18 @@ def execute():
     )
 
     perf_args = (
-        "--tensor-model-parallel-size 2 "
+        "--tensor-model-parallel-size 4 "
         "--sequence-parallel "
         "--pipeline-model-parallel-size 1 "
         "--context-parallel-size 1 "
-        "--expert-model-parallel-size 1 "
+        "--expert-model-parallel-size 8 "
         "--expert-tensor-parallel-size 1 "
         "--recompute-granularity full "
         "--recompute-method uniform "
         "--recompute-num-layers 1 "
+        # "--micro-batch-size 1 "
         "--use-dynamic-batch-size "
-        "--max-tokens-per-gpu 9216 "
+        "--max-tokens-per-gpu 20480 "
     )
 
     grpo_args = (
@@ -86,12 +86,15 @@ def execute():
         "--weight-decay 0.1 "
         "--adam-beta1 0.9 "
         "--adam-beta2 0.98 "
+        "--optimizer-cpu-offload "
+        "--overlap-cpu-optimizer-d2h-h2d "
+        "--use-precision-aware-optimizer "
     )
 
     sglang_args = (
-        # "--rollout-num-gpus-per-engine 2 "
-        f"--rollout-num-gpus-per-engine 8 "  # temp use 1 engine per node to avoid flashinfer err
+        "--rollout-num-gpus-per-engine 8 "
         "--sglang-mem-fraction-static 0.7 "
+        "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
     )
 
     misc_args = (

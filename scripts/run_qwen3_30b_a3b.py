@@ -118,11 +118,21 @@ def execute():
         "--use-precision-aware-optimizer "
     )
 
-    sglang_args = (
-        "--rollout-num-gpus-per-engine 8 "
-        "--sglang-mem-fraction-static 0.7 "
-        "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
-    )
+    match mode:
+        case "8xh100":
+            sglang_args = (
+                "--rollout-num-gpus-per-engine 8 "
+                "--sglang-mem-fraction-static 0.7 "
+                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
+            )
+        case "4xgb300":
+            sglang_args = (
+                "--rollout-num-gpus-per-engine 4 "
+                "--sglang-mem-fraction-static 0.8 "
+                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
+            )
+        case _:
+            raise NotImplementedError(f"{mode=}")
 
     misc_args = (
         # default dropout in megatron is 0.1

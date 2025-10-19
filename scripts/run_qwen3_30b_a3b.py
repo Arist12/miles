@@ -121,13 +121,11 @@ def execute():
                 "--expert-tensor-parallel-size 1 "
             )
             sglang_args = (
-                    "--rollout-num-gpus-per-engine 8 "
-                    "--sglang-mem-fraction-static 0.7 "
-                    "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
+                "--rollout-num-gpus-per-engine 8 "
+                "--sglang-mem-fraction-static 0.7 "
+                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
             )
-            misc_args += (
-                "--actor-num-gpus-per-node 8 "
-            )
+            misc_args += "--actor-num-gpus-per-node 8 "
         case "4xgb300":
             perf_args += (
                 "--tensor-model-parallel-size 4 "
@@ -138,13 +136,11 @@ def execute():
                 "--expert-tensor-parallel-size 1 "
             )
             sglang_args = (
-                    "--rollout-num-gpus-per-engine 4 "
-                    "--sglang-mem-fraction-static 0.8 "
-                    "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
+                "--rollout-num-gpus-per-engine 4 "
+                "--sglang-mem-fraction-static 0.8 "
+                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
             )
-            misc_args += (
-                "--actor-num-gpus-per-node 4 "
-            )
+            misc_args += "--actor-num-gpus-per-node 4 "
         case _:
             raise NotImplementedError(f"{mode=}")
 

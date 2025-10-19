@@ -6,8 +6,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
 
 import command_utils as U
 
-MODEL_NAME = "Qwen3-4B"
-MODEL_TYPE = "qwen3-4B"
+MODEL_NAME = "Qwen3-30B-A3B"
+MODEL_TYPE = "qwen3-30B-A3B"
 NUM_GPUS = 8
 
 

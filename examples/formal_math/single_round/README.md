@@ -10,8 +10,12 @@ pip install kimina-client
 # prepare data
 python examples/formal_math/single_round/prepare_data.py --output-name minimal_demo
 
+# prepare ray, model, test dataset, etc
+# normally just use this script, but here we want to demonstrate run_minimal.py, thus skip ray-submit part
+MILES_SCRIPT_ENABLE_RAY_SUBMIT=0 python examples/formal_math/single_round/run.py
+
 # run
-examples/formal_math/single_round/run_minimal.py
+python examples/formal_math/single_round/run_minimal.py
 ```
 
 The code also support more complicated cases, e.g.:

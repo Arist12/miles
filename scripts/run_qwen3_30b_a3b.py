@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 from pathlib import Path
 
@@ -6,9 +7,18 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
 
 import command_utils as U
 
+mode = os.environ.get("MILES_SCRIPT_MODE", "8xh100")
+
 MODEL_NAME = "Qwen3-30B-A3B"
 MODEL_TYPE = "qwen3-30B-A3B"
-NUM_GPUS = 8
+
+if mode == "8xh100":
+    num_gpus = 8
+elif mode == "4xgb300":
+    num_gpus = 4
+    TODO
+else:
+    raise NotImplementedError(f"{mode=}")
 
 
 def prepare():
@@ -16,7 +26,7 @@ def prepare():
     U.exec_command(f"huggingface-cli download Qwen/{MODEL_NAME} --local-dir /root/models/{MODEL_NAME}")
     U.hf_download_dataset("zhuzilin/dapo-math-17k")
     U.hf_download_dataset("zhuzilin/aime-2024")
-    U.convert_checkpoint(model_name=MODEL_NAME, model_type=MODEL_TYPE, num_gpus=NUM_GPUS)
+    U.convert_checkpoint(model_name=MODEL_NAME, model_type=MODEL_TYPE, num_gpus=num_gpus)
 
 
 def execute():
@@ -126,7 +136,7 @@ def execute():
 
     U.execute_train(
         train_args=train_args,
-        num_gpus=NUM_GPUS,
+        num_gpus=num_gpus,
         model_type=MODEL_TYPE,
     )
 

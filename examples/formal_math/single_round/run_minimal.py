@@ -20,7 +20,7 @@ ckpt_args = (
 )
 
 rollout_args = (
-    f"--prompt-data /root/datasets/formal_math_single_round/minimal_demo/flc_train.jsonl "
+    "--prompt-data /root/datasets/formal_math_single_round/minimal_demo/flc_train.jsonl "
     "--input-key prompt "
     "--apply-chat-template "
     "--rollout-shuffle "
@@ -39,10 +39,10 @@ rollout_args = (
 eval_args = (
     "--eval-interval 20 "
     "--n-samples-per-eval-prompt 1 "
-    f"--eval-max-response-len 16384 "
+    "--eval-max-response-len 16384 "
     "--eval-top-p 0.7 "
     "--eval-prompt-data "
-    f"minif2f /root/datasets/formal_math_single_round/minimal_demo/minif2f_test.jsonl "
+    "minif2f /root/datasets/formal_math_single_round/minimal_demo/minif2f_test.jsonl "
 )
 
 perf_args = (
@@ -79,7 +79,7 @@ optimizer_args = (
 )
 
 sglang_args = (
-    f"--rollout-num-gpus-per-engine 8 "
+    "--rollout-num-gpus-per-engine 8 "
     "--sglang-mem-fraction-static 0.7 "
 )
 

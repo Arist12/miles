@@ -97,7 +97,6 @@ wandb_args = (
     "--wandb-project miles-formal-math-run-minimal "
     "--wandb-group demo "
     "--wandb-key ${WANDB_API_KEY} "
-    "--disable-wandb-random-suffix "
 )
 
 train_args = (

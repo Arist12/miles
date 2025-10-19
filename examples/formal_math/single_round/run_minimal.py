@@ -2,9 +2,8 @@
 Example to demonstrate how to launch training.
 You can also do the same using a .sh or others, and we use Python here just for simplicity.
 """
-
-import os
-
+import json
+import subprocess
 
 MODEL_NAME, MODEL_TYPE = "Qwen3-8B", "qwen3-8B"
 
@@ -112,8 +111,25 @@ train_args = (
     f"{misc_args} "
 )
 
-U.execute_train(
-    train_args=train_args,
-    num_gpus=NUM_GPUS,
-    model_type=MODEL_TYPE,
+runtime_env_json = json.dumps(
+    {
+        "env_vars": {
+            "PYTHONPATH": "/root/Megatron-LM/",
+            "CUDA_DEVICE_MAX_CONNECTIONS": "1",
+            "NCCL_NVLS_ENABLE": "1",
+        }
+    }
 )
+
+cmd = (
+    f"export PYTHONBUFFERED=16 && "
+    f'source "{repo_base_dir}/scripts/models/{MODEL_TYPE}.sh" && '
+    f'ray job submit --address="http://127.0.0.1:8265" '
+    f"--runtime-env-json='{runtime_env_json}' "
+    f"-- python3 train.py "
+    "${MODEL_ARGS[@]} "
+    f"{train_args}"
+)
+
+print(f"EXEC: {cmd}", flush=True)
+subprocess.run(["bash", "-c", cmd], shell=False)

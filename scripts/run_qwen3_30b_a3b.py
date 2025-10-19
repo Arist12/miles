@@ -74,28 +74,6 @@ def execute():
         "--max-tokens-per-gpu 20480 "
     )
 
-    match mode:
-        case "8xh100":
-            perf_args += (
-                "--tensor-model-parallel-size 4 "
-                "--sequence-parallel "
-                "--pipeline-model-parallel-size 1 "
-                "--context-parallel-size 1 "
-                "--expert-model-parallel-size 8 "
-                "--expert-tensor-parallel-size 1 "
-            )
-        case "4xgb300":
-            perf_args += (
-                "--tensor-model-parallel-size 4 "
-                "--sequence-parallel "
-                "--pipeline-model-parallel-size 1 "
-                "--context-parallel-size 1 "
-                "--expert-model-parallel-size 4 "
-                "--expert-tensor-parallel-size 1 "
-            )
-        case _:
-            raise NotImplementedError(f"{mode=}")
-
     grpo_args = (
         "--advantage-estimator grpo "
         "--use-kl-loss "
@@ -118,22 +96,6 @@ def execute():
         "--use-precision-aware-optimizer "
     )
 
-    match mode:
-        case "8xh100":
-            sglang_args = (
-                "--rollout-num-gpus-per-engine 8 "
-                "--sglang-mem-fraction-static 0.7 "
-                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
-            )
-        case "4xgb300":
-            sglang_args = (
-                "--rollout-num-gpus-per-engine 4 "
-                "--sglang-mem-fraction-static 0.8 "
-                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
-            )
-        case _:
-            raise NotImplementedError(f"{mode=}")
-
     misc_args = (
         # default dropout in megatron is 0.1
         "--attention-dropout 0.0 "
@@ -147,6 +109,38 @@ def execute():
         "--actor-num-gpus-per-node 8 "
         "--colocate "
     )
+
+    match mode:
+        case "8xh100":
+            perf_args += (
+                "--tensor-model-parallel-size 4 "
+                "--sequence-parallel "
+                "--pipeline-model-parallel-size 1 "
+                "--context-parallel-size 1 "
+                "--expert-model-parallel-size 8 "
+                "--expert-tensor-parallel-size 1 "
+            )
+            sglang_args = (
+                    "--rollout-num-gpus-per-engine 8 "
+                    "--sglang-mem-fraction-static 0.7 "
+                    "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
+            )
+        case "4xgb300":
+            perf_args += (
+                "--tensor-model-parallel-size 4 "
+                "--sequence-parallel "
+                "--pipeline-model-parallel-size 1 "
+                "--context-parallel-size 1 "
+                "--expert-model-parallel-size 4 "
+                "--expert-tensor-parallel-size 1 "
+            )
+            sglang_args = (
+                    "--rollout-num-gpus-per-engine 4 "
+                    "--sglang-mem-fraction-static 0.8 "
+                    "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
+            )
+        case _:
+            raise NotImplementedError(f"{mode=}")
 
     train_args = (
         f"{ckpt_args} "

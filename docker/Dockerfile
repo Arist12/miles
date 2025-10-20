@@ -87,3 +87,13 @@ RUN cd /sgl-workspace/sglang && \
   rm sglang.patch
 
 RUN rm /root/.tmux.conf
+
+# TODO: this fix will be upstreamed later
+RUN (cd /tmp && git clone -b feat/v350_plus_8045 https://github.com/fzyzcjy/triton.git && cd triton && pip install -r python/requirements.txt && pip install -e .)
+
+# TODO: this fix will be upstreamed later
+RUN sed -i '0,/if torch.cuda.is_available() and has_triton_kernels:/s//if 0:/' /sgl-workspace/sglang/python/sglang/srt/layers/quantization/unquant.py && \
+    cat /sgl-workspace/sglang/python/sglang/srt/layers/quantization/unquant.py \
+
+# TODO: this fix will be upstreamed later
+RUN curl -L https://github.com/NVIDIA/TransformerEngine/pull/2286.patch -o /tmp/te2286.patch && (cd /usr/local/lib/python3.12/dist-packages/transformer_engine && (patch -p2 < /tmp/te2286.patch))

@@ -50,7 +50,7 @@ RUN pip install pybind11
 # flash attn
 # the newest version megatron supports is v2.7.4
 RUN if [ "$ENABLE_TIGHT_BUILD_RES" = "2" ]; then \
-      export MAX_JOBS=8; \
+      export MAX_JOBS=4; \
     elif [ "$ENABLE_TIGHT_BUILD_RES" = "1" ]; then \
       export MAX_JOBS=32; \
     else \

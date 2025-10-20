@@ -11,7 +11,7 @@ ARG ENABLE_BLACKWELL_BUILD=0
 ARG ENABLE_CUDA_13=0
 # Can be 0,1,2, larger value means resource is more limited
 # 0: Large machine
-# 1: Tested on 64 vPU, 432GB RAM
+# 1: Tested on 64 CPU, 432GB RAM
 # 2: Tested on 32 CPU, 64GB RAM
 ARG ENABLE_TIGHT_BUILD_RES=0
 

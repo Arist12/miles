@@ -10,6 +10,9 @@ ARG MEGATRON_COMMIT=ca9797e95e88d93623b0f69831529a1b521297ac
 ARG ENABLE_BLACKWELL_BUILD=0
 ARG ENABLE_CUDA_13=0
 # Can be 0,1,2, larger value means resource is more limited
+# 0: Large machine
+# 1: Tested on 64 vPU, 432GB RAM
+# 2: Tested on 32 CPU, 64GB RAM
 ARG ENABLE_TIGHT_BUILD_RES=0
 
 RUN apt update
@@ -34,14 +37,12 @@ RUN if [ "${ENABLE_BLACKWELL_BUILD}" = "1" ]; then \
 # apex
 RUN if [ "$ENABLE_TIGHT_BUILD_RES" = "2" ]; then \
           export NVCC_APPEND_FLAGS="--threads 1"; \
-          PARALLEL=4; \
         else \
           export NVCC_APPEND_FLAGS="--threads 4"; \
-          PARALLEL=8; \
         fi && \
   pip -v install --disable-pip-version-check --no-cache-dir \
   --no-build-isolation \
-  --config-settings "--build-option=--cpp_ext --cuda_ext --parallel ${PARALLEL}" git+https://github.com/NVIDIA/apex.git
+  --config-settings "--build-option=--cpp_ext --cuda_ext --parallel 8" git+https://github.com/NVIDIA/apex.git
 
 # transformer engine, we install with --no-deps to avoid installing torch and torch-extensions
 RUN pip install pybind11

@@ -128,9 +128,7 @@ def execute():
                 "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
             )
             optimizer_args += (
-                "--optimizer-cpu-offload "
-                "--overlap-cpu-optimizer-d2h-h2d "
-                "--use-precision-aware-optimizer "
+                "--optimizer-cpu-offload " "--overlap-cpu-optimizer-d2h-h2d " "--use-precision-aware-optimizer "
             )
             misc_args += "--actor-num-gpus-per-node 8 " "--actor-num-nodes 1 "
         case "4xgb300":

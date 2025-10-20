@@ -101,10 +101,6 @@ def execute():
         "--weight-decay 0.1 "
         "--adam-beta1 0.9 "
         "--adam-beta2 0.98 "
-        # TODO gb300 may not need this
-        "--optimizer-cpu-offload "
-        "--overlap-cpu-optimizer-d2h-h2d "
-        "--use-precision-aware-optimizer "
     )
 
     misc_args = (
@@ -134,6 +130,11 @@ def execute():
                 "--rollout-num-gpus-per-engine 8 "
                 "--sglang-mem-fraction-static 0.7 "
                 "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
+            )
+            optimizer_args += (
+                "--optimizer-cpu-offload "
+                "--overlap-cpu-optimizer-d2h-h2d "
+                "--use-precision-aware-optimizer "
             )
             misc_args += "--actor-num-gpus-per-node 8 "
         case "4xgb300":

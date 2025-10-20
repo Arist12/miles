@@ -51,7 +51,7 @@ def execute():
         f"--ref-load /root/models/{MODEL_NAME}_torch_dist "
         f"--load {load_save_path} "
         f"--save {load_save_path} "
-        "--save-interval 1 "
+        "--save-interval 20 "
     )
 
     rollout_args = (
@@ -64,7 +64,7 @@ def execute():
         "--num-rollout 3000 "
         "--rollout-batch-size 32 "
         "--n-samples-per-prompt 8 "
-        "--rollout-max-response-len 100 "
+        "--rollout-max-response-len 8192 "
         "--rollout-temperature 0.8 "
         "--global-batch-size 256 "
         "--balance-data "
@@ -74,7 +74,7 @@ def execute():
         "--eval-interval 20 "
         "--eval-prompt-data aime /root/datasets/aime-2024/aime-2024.jsonl "
         "--n-samples-per-eval-prompt 16 "
-        "--eval-max-response-len 100 "
+        "--eval-max-response-len 16384 "
         "--eval-top-p 0.7 "
     )
 

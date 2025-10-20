@@ -152,7 +152,7 @@ def execute():
                 "--sglang-mem-fraction-static 0.7 "
                 "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 513, 8)) + " "
             )
-            misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 1 "
+            misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 1 " "--num-gpus-per-node 4"
         case "8xgb300":
             perf_args += (
                 "--tensor-model-parallel-size 4 "
@@ -168,7 +168,7 @@ def execute():
                 "--sglang-mem-fraction-static 0.7 "
                 "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 513, 8)) + " "
             )
-            misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 2 "
+            misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 2 " "--num-gpus-per-node 4"
         case "32xgb300":
             perf_args += (
                 "--tensor-model-parallel-size 4 "
@@ -184,7 +184,7 @@ def execute():
                 "--sglang-mem-fraction-static 0.7 "
                 "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 513, 8)) + " "
             )
-            misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 8 "
+            misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 8 " "--num-gpus-per-node 4"
         case _:
             raise NotImplementedError(f"{mode=}")
 

@@ -85,8 +85,7 @@ def execute():
         # "--fsdp-full-params "  # Uncomment this line to enable full params mode
         # Set the bucket size for weight update
         "--update-weight-buffer-size 536870912 "  # 512MB
-        # TODO enable this later
-        # "--attn-implementation flash_attention_3 "
+        "--attn-implementation flash_attention_3 "
     )
 
     ci_args = (

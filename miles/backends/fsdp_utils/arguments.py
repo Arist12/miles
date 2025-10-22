@@ -29,6 +29,9 @@ class FSDPArgs:
     # Precision
     gradient_checkpointing: bool = False
 
+    # Others
+    deterministic_mode: bool = False  # This name must be the same as Megatron's
+
     # YAML bookkeeping
     config: str | None = None
 

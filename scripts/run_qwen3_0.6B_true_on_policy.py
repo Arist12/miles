@@ -1,6 +1,15 @@
+import os
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
+
 import command_utils as U
 
 MODEL_NAME = "Qwen3-0.6B"
+
+MODE = os.environ.get("MILES_SCRIPT_MODE", "normal")
+assert MODE in {"normal", "debug_one_sample"}
 
 
 def prepare():
@@ -19,23 +28,26 @@ def execute():
         "--apply-chat-template "
         "--rollout-shuffle "
         "--rm-type math "
-        f"--num-rollout {3000 if U.get_env_enable_infinite_run() else 60} "
-        "--rollout-batch-size 32 "
-        "--n-samples-per-prompt 8 "
+        f"--num-rollout 3000 "
+        f"--rollout-batch-size {1 if MODE == 'debug_one_sample' else 32} "
+        f"--n-samples-per-prompt {1 if MODE == 'debug_one_sample' else 8} "
         "--rollout-max-response-len 1024 "
         "--rollout-temperature 0.8 "
-        "--over-sampling-batch-size 64 "
-        "--dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
-        "--global-batch-size 256 "
+        # temp remove this to make test easier
+        # "--over-sampling-batch-size 64 "
+        # "--dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
+        f"--global-batch-size {1 if MODE == 'debug_one_sample' else 256} "
     )
 
-    eval_args = (
-        "--eval-interval 20 "
-        "--eval-prompt-data gsm8k /root/datasets/gsm8k/test.parquet "
-        "--n-samples-per-eval-prompt 1 "
-        "--eval-max-response-len 1024 "
-        "--eval-top-k 1 "
-    )
+    eval_args = ""
+    if MODE != "debug_one_sample":
+        eval_args = (
+            "--eval-interval 20 "
+            "--eval-prompt-data gsm8k /root/datasets/gsm8k/test.parquet "
+            "--n-samples-per-eval-prompt 1 "
+            "--eval-max-response-len 1024 "
+            "--eval-top-k 1 "
+        )
 
     grpo_args = (
         "--advantage-estimator grpo "
@@ -57,13 +69,20 @@ def execute():
         "--adam-beta2 0.98 "
     )
 
-    sglang_args = "--rollout-num-gpus-per-engine 2 " "--sglang-decode-log-interval 1000 " "--sglang-enable-metrics "
+    sglang_args = (
+        "--rollout-num-gpus-per-engine 1 "
+        "--sglang-decode-log-interval 1000 "
+        "--sglang-enable-metrics "
+        "--sglang-enable-deterministic-inference "
+        "--sglang-attention-backend fa3 "
+    )
 
     fsdp_args = (
         # Set to true for FULL_STATE_DICT mode, false for SHARDED_STATE_DICT mode (default)
         # "--fsdp-full-params "  # Uncomment this line to enable full params mode
         # Set the bucket size for weight update
         "--update-weight-buffer-size 536870912 "  # 512MB
+        "--attn-implementation flash_attention_3 "
     )
 
     ci_args = (
@@ -73,7 +92,13 @@ def execute():
         "--ci-metric-checker-threshold 0.71 "  # loose threshold at 60 step
     )
 
-    misc_args = "--actor-num-nodes 1 " "--actor-num-gpus-per-node 2 " "--colocate " "--train-backend fsdp "
+    misc_args = (
+        "--actor-num-nodes 1 "
+        "--actor-num-gpus-per-node 1 "
+        "--colocate "
+        "--train-backend fsdp "
+        "--deterministic-mode "
+    )
 
     train_args = (
         f"{ckpt_args} "
@@ -90,8 +115,13 @@ def execute():
 
     U.execute_train(
         train_args=train_args,
-        num_gpus=2,
+        num_gpus=1,
         model_type=None,
+        extra_env_vars={
+            "NCCL_ALGO": "Ring",
+            "NVTE_ALLOW_NONDETERMINISTIC_ALGO": "0",
+            "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+        },
     )
 
 

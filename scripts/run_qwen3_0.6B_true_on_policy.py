@@ -78,6 +78,7 @@ def execute():
         "--sglang-enable-deterministic-inference "
         "--sglang-attention-backend fa3 "
         f"--sglang-mem-fraction-static 0.5 "
+        f"{'--sglang-disable-cuda-graph ' if MODE == 'debug_one_sample' else ''}"
     )
 
     fsdp_args = (

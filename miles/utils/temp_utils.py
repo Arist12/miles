@@ -1,7 +1,18 @@
 import dataclasses
+import os
 from typing import List
 
 ENABLE_DEBUG_PRINT = True
+
+# ENABLE_DEBUG_PROFILE = True
+ENABLE_DEBUG_PROFILE = False
+
+if bool(int(os.environ.get("SGLANG_DUMPER_ENABLE", "1"))):
+    print("when dumper is enabled, cannot do profile")
+    ENABLE_DEBUG_PROFILE = False
+
+
+PROFILE_OUTPUT_DIR = "/host_home/temp_sglang_server2local"
 
 
 @dataclasses.dataclass

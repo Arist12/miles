@@ -7,8 +7,9 @@ import pandas as pd
 import ray
 import torch.distributed as dist
 
-from miles.utils.types import Sample
 from miles.utils import temp_utils
+from miles.utils.types import Sample
+
 from .seqlen_balancing import get_seqlen_balanced_partitions
 from .timer import Timer
 

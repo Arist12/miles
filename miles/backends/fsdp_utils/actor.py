@@ -1,3 +1,5 @@
+import os
+import time
 from argparse import Namespace
 from collections.abc import Iterable
 from contextlib import nullcontext
@@ -209,6 +211,17 @@ class FSDPTrainRayActor(TrainRayActor):
             self.model.eval()
             need_restore = True
 
+        if model_tag == "actor" and temp_utils.ENABLE_DEBUG_PROFILE:
+            torch_profiler = torch.profiler.profile(
+                activities=[
+                    torch.profiler.ProfilerActivity.CPU,
+                    torch.profiler.ProfilerActivity.CUDA,
+                ],
+                with_stack=True,
+                record_shapes=True,
+            )
+            torch_profiler.start()
+
         try:
             rollout_data = {f"{store_prefix}log_probs": []}
             with timer(f"{store_prefix}log_probs") and torch.no_grad():
@@ -234,6 +247,13 @@ class FSDPTrainRayActor(TrainRayActor):
                 self.update_gpu_params_dict(self.weights["actor"])
                 self.model.train()
                 torch.cuda.synchronize()
+
+            if model_tag == "actor" and temp_utils.ENABLE_DEBUG_PROFILE:
+                torch_profiler.stop()
+                filename = str(time.time()) + "-actor.trace.json.gz"
+                p = os.path.join(temp_utils.PROFILE_OUTPUT_DIR, filename)
+                print(f"Write to: {p}")
+                torch_profiler.export_chrome_trace(p)
 
     def packed_data(
         self, rollout_data: dict[str, list[torch.Tensor]]

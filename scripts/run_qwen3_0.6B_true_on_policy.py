@@ -77,7 +77,7 @@ def execute():
         "--rollout-num-gpus-per-engine 1 "
         "--sglang-decode-log-interval 1000 "
         "--sglang-enable-metrics "
-        # "--sglang-enable-deterministic-inference "
+        "--sglang-enable-deterministic-inference "
         "--sglang-rl-on-policy-target fsdp "
         "--sglang-attention-backend fa3 "
         f"--sglang-mem-fraction-static 0.4 "

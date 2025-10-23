@@ -11,6 +11,8 @@ MODEL_NAME = "Qwen3-0.6B"
 MODE = os.environ.get("MILES_SCRIPT_MODE", "normal")
 assert MODE in {"normal", "debug_minimal", "debug_one_sample"}
 
+NUM_GPUS = int(os.environ.get("MILES_SCRIPT_NUM_GPUS", "1"))
+
 
 def prepare():
     U.exec_command("mkdir -p /root/models /root/datasets")
@@ -75,7 +77,8 @@ def execute():
         "--rollout-num-gpus-per-engine 1 "
         "--sglang-decode-log-interval 1000 "
         "--sglang-enable-metrics "
-        "--sglang-enable-deterministic-inference "
+        # "--sglang-enable-deterministic-inference "
+        "--sglang-rl-on-policy-target fsdp "
         "--sglang-attention-backend fa3 "
         f"--sglang-mem-fraction-static 0.4 "
         f"{'--sglang-disable-cuda-graph ' if MODE == 'debug_one_sample' else ''}"
@@ -98,7 +101,7 @@ def execute():
 
     misc_args = (
         "--actor-num-nodes 1 "
-        "--actor-num-gpus-per-node 1 "
+        f"--actor-num-gpus-per-node {NUM_GPUS} "
         "--colocate "
         "--train-backend fsdp "
         "--deterministic-mode "
@@ -119,7 +122,7 @@ def execute():
 
     U.execute_train(
         train_args=train_args,
-        num_gpus=1,
+        num_gpus=NUM_GPUS,
         model_type=None,
         extra_env_vars={
             "NCCL_ALGO": "Ring",

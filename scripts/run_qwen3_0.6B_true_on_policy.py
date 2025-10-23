@@ -6,7 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
 
 import command_utils as U
 
-MODEL_NAME = "Qwen3-0.6B"
+MODEL_NAME = os.environ.get("MILES_SCRIPT_MODEL_NAME", "Qwen3-0.6B")
 
 MODE = os.environ.get("MILES_SCRIPT_MODE", "normal")
 assert MODE in {"normal", "debug_minimal", "debug_one_sample"}

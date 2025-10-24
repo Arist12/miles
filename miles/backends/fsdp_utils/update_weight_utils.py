@@ -7,6 +7,8 @@ import torch
 import torch.distributed as dist
 from ray.actor import ActorHandle
 
+from miles.utils.memory_utils import print_memory
+
 try:
     from sglang.srt.utils.patch_torch import monkey_patch_torch_reductions  # type: ignore[import]
 except ImportError:
@@ -206,7 +208,11 @@ class UpdateWeightFromTensor:
             if self.param_info_buckets is None:
                 raise RuntimeError("Parameter info buckets not initialized for sharded mode")
 
+            print_memory("update_weights START", clear_before_print=True)
+
             for param_infos in self.param_info_buckets:
+                print_memory("update_weights one-bucket START", clear_before_print=True)
+
                 # Load only the parameters in this bucket from CPU to GPU
                 named_tensors_batch = []
                 for param_info in param_infos:
@@ -215,6 +221,8 @@ class UpdateWeightFromTensor:
                     named_tensors_batch.append((param_info.name, gpu_param))
 
                 torch.cuda.synchronize()
+
+                print_memory("update_weights one-bucket b", clear_before_print=True)
 
                 # Use flattened bucket approach similar to Megatron and full_params=True
                 if use_flattened_tensor_bucket:
@@ -243,6 +251,8 @@ class UpdateWeightFromTensor:
                     # Fallback to non-flattened approach
                     serialized_tensors = MultiprocessingSerializer.serialize(named_tensors_batch, output_str=True)
 
+                print_memory("update_weights one-bucket c", clear_before_print=True)
+
                 del named_tensors_batch
                 clear_memory()
 
@@ -261,6 +271,8 @@ class UpdateWeightFromTensor:
                 )
                 del serialized_tensors
                 clear_memory()
+
+                print_memory("update_weights one-bucket d", clear_before_print=True)
 
                 if dist.get_rank() == self._ipc_gather_src:
                     if use_flattened_tensor_bucket:
@@ -288,11 +300,14 @@ class UpdateWeightFromTensor:
                     del gathered_serialized_batches, kwargs
                     clear_memory()
 
+                print_memory("update_weights one-bucket e", clear_before_print=True)
+
             if dist.get_rank() == self._ipc_gather_src:
                 ref = self._ipc_engine.flush_cache.remote()
                 ray.get(ref)
                 clear_memory()
 
+            print_memory("update_weights END", clear_before_print=True)
 
 class UpdateWeightFromDistributed:
     """Broadcast weights via a temporary NCCL group to rollout engines."""

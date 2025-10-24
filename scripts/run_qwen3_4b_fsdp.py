@@ -1,4 +1,3 @@
-import datetime
 import sys
 from pathlib import Path
 
@@ -55,10 +54,7 @@ def execute():
         "--eval-top-p 0.7 "
     )
 
-    perf_args = (
-        "--use-dynamic-batch-size "
-        "--max-tokens-per-gpu 4096 "
-    )
+    perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 4096 "
 
     grpo_args = (
         "--advantage-estimator grpo "
@@ -80,10 +76,7 @@ def execute():
         "--adam-beta2 0.98 "
     )
 
-    sglang_args = (
-        "--rollout-num-gpus-per-engine 1 "
-        "--sglang-mem-fraction-static 0.7 "
-    )
+    sglang_args = "--rollout-num-gpus-per-engine 1 " "--sglang-mem-fraction-static 0.7 "
 
     fsdp_args = (
         "--train-backend fsdp "

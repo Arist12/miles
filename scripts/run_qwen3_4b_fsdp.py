@@ -6,7 +6,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
 import command_utils as U
 
 MODEL_NAME = "Qwen3-4B"
-MODEL_TYPE = "qwen3-4B"
 NUM_GPUS = 8
 
 
@@ -15,7 +14,6 @@ def prepare():
     U.exec_command(f"huggingface-cli download Qwen/{MODEL_NAME} --local-dir /root/models/{MODEL_NAME}")
     U.hf_download_dataset("zhuzilin/dapo-math-17k")
     U.hf_download_dataset("zhuzilin/aime-2024")
-    U.convert_checkpoint(model_name=MODEL_NAME, model_type=MODEL_TYPE, num_gpus=NUM_GPUS)
 
 
 def execute():
@@ -86,11 +84,7 @@ def execute():
         # "--fsdp-full-params "
     )
 
-    misc_args = (
-        "--actor-num-nodes 1 "
-        "--actor-num-gpus-per-node 8 "
-        "--colocate "
-    )
+    misc_args = "--actor-num-nodes 1 " "--actor-num-gpus-per-node 8 " "--colocate "
 
     train_args = (
         f"{ckpt_args} "
@@ -108,7 +102,7 @@ def execute():
     U.execute_train(
         train_args=train_args,
         num_gpus=NUM_GPUS,
-        model_type=MODEL_TYPE,
+        model_type=None,
     )
 
 

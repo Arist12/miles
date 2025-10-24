@@ -71,8 +71,12 @@ def get_model_provider_func(
         """
         use_te = args.transformer_impl == "transformer_engine"
 
+        # TODO maybe move this to other parts
         if args.record_memory_history:
-            profile_utils.attach_oom_dump_memory_history()
+            profile_utils.attach_oom_dump_memory_history(
+                memory_snapshot_dir=args.memory_snapshot_dir,
+                memory_snapshot_path=args.memory_snapshot_path,
+            )
 
         # Experimental loading arguments from yaml
         config: TransformerConfig = core_transformer_config_from_args(args)

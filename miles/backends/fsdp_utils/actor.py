@@ -11,6 +11,7 @@ from torch.distributed.tensor import DTensor
 from torch_memory_saver import torch_memory_saver
 from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
+
 # Import FSDP v2 components based on PyTorch version
 if version.parse(torch.__version__) >= version.parse("2.6"):
     from torch.distributed.fsdp import fully_shard as FSDP
@@ -28,6 +29,7 @@ from miles.utils.ppo_utils import compute_approx_kl, compute_policy_loss
 from miles.utils.ray_utils import Box
 from miles.utils.timer import Timer, timer
 from miles.utils.wandb_utils import init_wandb_secondary
+from miles.utils import profile_utils
 
 from .data_packing import pack_sequences, unpack_sequences
 from .fsdp_cpu_adam_wrapper import FSDPCPUAdamWrapper
@@ -59,6 +61,9 @@ class FSDPTrainRayActor(TrainRayActor):
 
         self.args = args
         torch.manual_seed(args.seed)
+
+        if args.record_memory_history:
+            profile_utils.attach_oom_dump_memory_history()
 
         for i in range(dist.get_world_size()):
             if i == dist.get_rank():

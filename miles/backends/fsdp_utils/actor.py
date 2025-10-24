@@ -49,11 +49,10 @@ class FSDPTrainRayActor(TrainRayActor):
     def init(self, args: Namespace, role: str, wandb_run_id: str, with_ref: bool = False) -> int:  # type: ignore[override]
         super().init(args, role, wandb_run_id, with_ref)
 
-        # TODO maybe we should use another flag e.g. "true_on_policy_mode" instead
-        if args.deterministic_mode:
+        if args.true_on_policy_mode:
             from sglang.srt.batch_invariant_ops import enable_batch_invariant_mode
 
-            print("FSDPTrainRayActor call enable_batch_invariant_mode")
+            print("FSDPTrainRayActor call enable_batch_invariant_mode for true-on-policy")
             enable_batch_invariant_mode()
 
         # Update rank and world_size for wandb secondary initialization (using actual distributed values)

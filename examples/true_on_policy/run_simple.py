@@ -111,6 +111,7 @@ def execute():
         "--sglang-attention-backend fa3 "
         "--attn-implementation flash_attention_3 "
         "--deterministic-mode "
+        "--true-on-policy-mode "
     )
     true_on_policy_envs = {
         # TODO note: "Ring" in original RL PR, "allreduce:tree" in SGLang

@@ -78,9 +78,6 @@ def execute():
         "--rollout-num-gpus-per-engine 1 "
         "--sglang-decode-log-interval 1000 "
         "--sglang-enable-metrics "
-        "--sglang-enable-deterministic-inference "
-        "--sglang-rl-on-policy-target fsdp "
-        "--sglang-attention-backend fa3 "
         f"--sglang-mem-fraction-static 0.4 "
         f"{'--sglang-disable-cuda-graph ' if MODE == 'debug_one_sample' else ''}"
     )
@@ -90,7 +87,6 @@ def execute():
         # "--fsdp-full-params "  # Uncomment this line to enable full params mode
         # Set the bucket size for weight update
         "--update-weight-buffer-size 536870912 "  # 512MB
-        "--attn-implementation flash_attention_3 "
     )
 
     ci_args = (
@@ -105,7 +101,6 @@ def execute():
         f"--actor-num-gpus-per-node {NUM_GPUS} "
         "--colocate "
         "--train-backend fsdp "
-        "--deterministic-mode "
     )
 
     if MODEL_NAME == "Qwen3-4B":
@@ -114,6 +109,21 @@ def execute():
             # TODO pick a good value
             "--max-tokens-per-gpu 2048 "
         )
+
+    true_on_policy_args = (
+        "--sglang-enable-deterministic-inference "
+        "--sglang-rl-on-policy-target fsdp "
+        "--sglang-attention-backend fa3 "
+        "--attn-implementation flash_attention_3 "
+        "--deterministic-mode "
+    )
+    true_on_policy_envs = {
+        # TODO note: "Ring" in original RL PR, "allreduce:tree" in SGLang
+        # "NCCL_ALGO": "Ring",
+        "NCCL_ALGO": "allreduce:tree",
+        "NVTE_ALLOW_NONDETERMINISTIC_ALGO": "0",
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+    }
 
     train_args = (
         f"{ckpt_args} "
@@ -126,6 +136,7 @@ def execute():
         f"{fsdp_args} "
         f"{ci_args} "
         f"{misc_args} "
+        f"{true_on_policy_args} "
     )
 
     U.execute_train(
@@ -133,11 +144,7 @@ def execute():
         num_gpus=NUM_GPUS,
         model_type=None,
         extra_env_vars={
-            # TODO note: "Ring" in original RL PR, "allreduce:tree" in SGLang
-            # "NCCL_ALGO": "Ring",
-            "NCCL_ALGO": "allreduce:tree",
-            "NVTE_ALLOW_NONDETERMINISTIC_ALGO": "0",
-            "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+            **true_on_policy_envs,
             "SGLANG_DUMPER_ENABLE": "1" if MODE == "debug_one_sample" else "0",
             "SGLANG_TEMP_UTILS_ENABLE_DEBUG_PRINT": "1" if MODE == "debug_one_sample" else "0",
         },

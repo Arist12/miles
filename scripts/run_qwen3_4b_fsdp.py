@@ -39,11 +39,16 @@ def execute():
         "--n-samples-per-prompt 8 "
         f"--rollout-max-response-len {100 if MODE == 'debug_minimal' else 8192} "
         "--rollout-temperature 0.8 "
-        "--over-sampling-batch-size 64 "
-        "--dynamic-sampling-filter-path slime.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
         "--global-batch-size 256 "
         "--balance-data "
     )
+
+    # when using tiny response len, cannot do dynamic sampling
+    if MODE != "debug_minimal":
+        rollout_args += (
+            "--over-sampling-batch-size 64 "
+            "--dynamic-sampling-filter-path slime.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
+        )
 
     eval_args = ""
     if MODE != "debug_minimal":

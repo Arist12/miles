@@ -1,4 +1,5 @@
 import torch
+from pickle import dump
 
 def attach_oom_dump_memory_history():
     torch.cuda.memory._record_memory_history(
@@ -10,14 +11,9 @@ def attach_oom_dump_memory_history():
     )
 
     def oom_observer(device, alloc, device_alloc, device_free):
-        # snapshot right after an OOM happened
-        print("saving allocated state during OOM")
+        path_dump = f"oom_rank-{torch.distributed.get_rank()}_{args.memory_snapshot_path}"
+        print(f"Observe OOM, will dump snapshot to {path_dump}. ({device=} {alloc=} {device_alloc=} {device_free=})")
         snapshot = torch.cuda.memory._snapshot()
-        from pickle import dump
-
-        dump(
-            snapshot,
-            open(f"oom_rank-{torch.distributed.get_rank()}_{args.memory_snapshot_path}", "wb"),
-        )
+        dump(snapshot, open(path_dump, "wb"))
 
     torch._C._cuda_attach_out_of_memory_observer(oom_observer)

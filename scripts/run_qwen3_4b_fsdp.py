@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -7,6 +8,10 @@ import command_utils as U
 
 MODEL_NAME = "Qwen3-4B"
 NUM_GPUS = 8
+
+
+MODE = os.environ.get("MILES_SCRIPT_MODE", "normal")
+assert MODE in {"normal", "debug_minimal"}
 
 
 def prepare():
@@ -38,22 +43,20 @@ def execute():
         "--num-rollout 3000 "
         "--rollout-batch-size 32 "
         "--n-samples-per-prompt 8 "
-        # TODO temp
-        # "--rollout-max-response-len 8192 "
-        "--rollout-max-response-len 100 "
+        f"--rollout-max-response-len {100 if MODE == 'debug_minimal' else 8192} "
         "--rollout-temperature 0.8 "
         "--global-batch-size 256 "
         "--balance-data "
     )
 
-    eval_args = (
-        # TODO temp
-        # "--eval-interval 20 "
-        "--eval-prompt-data aime /root/datasets/aime-2024/aime-2024.jsonl "
-        "--n-samples-per-eval-prompt 16 "
-        "--eval-max-response-len 16384 "
-        "--eval-top-p 0.7 "
-    )
+    if MODE != "debug_minimal":
+        eval_args = (
+            "--eval-interval 20 "
+            "--eval-prompt-data aime /root/datasets/aime-2024/aime-2024.jsonl "
+            "--n-samples-per-eval-prompt 16 "
+            "--eval-max-response-len 16384 "
+            "--eval-top-p 0.7 "
+        )
 
     perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 4096 "
 

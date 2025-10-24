@@ -103,9 +103,6 @@ def execute():
         train_args=train_args,
         num_gpus=NUM_GPUS,
         model_type=None,
-        extra_env_vars={
-            "SGLANG_DUMPER_ENABLE": "0",
-        }
     )
 
 

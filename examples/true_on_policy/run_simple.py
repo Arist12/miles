@@ -96,12 +96,7 @@ def execute():
         "--ci-metric-checker-threshold 0.71 "  # loose threshold at 60 step
     )
 
-    misc_args = (
-        "--actor-num-nodes 1 "
-        f"--actor-num-gpus-per-node {NUM_GPUS} "
-        "--colocate "
-        "--train-backend fsdp "
-    )
+    misc_args = "--actor-num-nodes 1 " f"--actor-num-gpus-per-node {NUM_GPUS} " "--colocate " "--train-backend fsdp "
 
     if MODEL_NAME == "Qwen3-4B":
         misc_args += (

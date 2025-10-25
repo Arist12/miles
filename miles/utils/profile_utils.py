@@ -15,9 +15,6 @@ def attach_oom_dump_memory_history(memory_snapshot_dir, memory_snapshot_path):
     def oom_observer(device, alloc, device_alloc, device_free):
         path_dump = memory_snapshot_dir / f"oom_rank-{torch.distributed.get_rank()}_{memory_snapshot_path}"
         print(f"Observe OOM, will dump snapshot to {path_dump}. ({device=} {alloc=} {device_alloc=} {device_free=})")
-
-        # TODO use `_dump_snapshot` instead?
-        snapshot = torch.cuda.memory._snapshot()
-        dump(snapshot, open(path_dump, "wb"))
+        torch.cuda.memory._dump_snapshot(path_dump)
 
     torch._C._cuda_attach_out_of_memory_observer(oom_observer)

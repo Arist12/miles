@@ -9,7 +9,7 @@ def attach_oom_dump_memory_history(path_dump):
     print("Attach OOM dump memory history.")
 
     torch.cuda.memory._record_memory_history(
-        max_entries=100000,
+        max_entries=1000000,
         # record stack information for the trace events
         # trace_alloc_record_context=True,
         stacks="all",

@@ -29,4 +29,7 @@ def dump_snapshot_and_stop(path_dump):
 
 
 def get_memory_snapshot_full_path(args):
-    return Path(args.memory_snapshot_dir) / f"memory_snapshot_time{time.time()}_rank{torch.distributed.get_rank()}_{args.memory_snapshot_path}"
+    return (
+        Path(args.memory_snapshot_dir)
+        / f"memory_snapshot_time{time.time()}_rank{torch.distributed.get_rank()}_{args.memory_snapshot_path}"
+    )

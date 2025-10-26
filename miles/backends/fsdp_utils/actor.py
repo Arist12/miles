@@ -169,7 +169,9 @@ class FSDPTrainRayActor(TrainRayActor):
 
                 torch_memory_saver.pause()
             case "move":
-                TODO
+                self.model.cpu()
+                move_torch_optimizer(self.optimizer, "cpu")
+                clear_memory()
             case _:
                 raise NotImplementedError
 
@@ -195,7 +197,8 @@ class FSDPTrainRayActor(TrainRayActor):
 
                 torch_memory_saver.resume()
             case "move":
-                TODO
+                self.model.cuda()
+                move_torch_optimizer(self.optimizer, "cuda")
             case _:
                 raise NotImplementedError
 

@@ -10,7 +10,7 @@ MODEL_NAME = os.environ.get("MILES_SCRIPT_MODEL_NAME", "Qwen3-4B")
 NUM_GPUS = 8
 
 EXTRA_ARGS = os.environ.get("MILES_SCRIPT_EXTRA_ARGS", "")
-MULTI_EVAL = bool(int(os.environ.get("MILES_SCRIPT_MULTI_EVAL", "0")))
+MULTI_EVAL = bool(int(os.environ.get("MILES_SCRIPT_MULTI_EVAL", "1")))
 
 MODE = os.environ.get("MILES_SCRIPT_MODE", "normal")
 assert MODE in {"normal", "debug_minimal"}

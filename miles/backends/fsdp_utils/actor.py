@@ -153,7 +153,7 @@ class FSDPTrainRayActor(TrainRayActor):
         self.micro_step = 0
         return 0
 
-    def sleep(self, tags: str | Iterable[str] | None) -> None:
+    def sleep(self) -> None:
         """Pause CUDA memory for all tracked tensors."""
         if not self.args.offload_train:
             return

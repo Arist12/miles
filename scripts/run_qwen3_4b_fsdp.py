@@ -10,6 +10,7 @@ MODEL_NAME = os.environ.get("MILES_SCRIPT_MODEL_NAME", "Qwen3-4B")
 NUM_GPUS = 8
 
 EXTRA_ARGS = os.environ.get("MILES_SCRIPT_EXTRA_ARGS", "")
+MULTI_EVAL = bool(int(os.environ.get("MILES_SCRIPT_MULTI_EVAL", "0")))
 
 MODE = os.environ.get("MILES_SCRIPT_MODE", "normal")
 assert MODE in {"normal", "debug_minimal"}
@@ -58,11 +59,19 @@ def execute():
     if (MODE != "debug_minimal") and bool(int(os.environ.get("MILES_SCRIPT_ENABLE_EVAL", "1"))):
         eval_args += (
             "--eval-interval 20 "
-            "--eval-prompt-data aime /root/datasets/aime-2024/aime-2024.jsonl "
-            "--n-samples-per-eval-prompt 16 "
-            "--eval-max-response-len 16384 "
-            "--eval-top-p 0.7 "
         )
+        if MULTI_EVAL:
+            eval_config_text = '''
+TODO
+'''
+            eval_args += f"--eval-config {U.save_to_temp_file(eval_config_text)} "
+        else:
+            eval_args += (
+                "--eval-prompt-data aime /root/datasets/aime-2024/aime-2024.jsonl "
+                "--n-samples-per-eval-prompt 16 "
+                "--eval-max-response-len 16384 "
+                "--eval-top-p 0.7 "
+            )
 
     perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 9216 "
 

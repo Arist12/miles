@@ -157,6 +157,8 @@ class FSDPTrainRayActor(TrainRayActor):
         if not self.args.offload_train:
             return
 
+        print_memory("before offload model")
+
         match self.args.offload_train_mode:
             case "tms":
                 # Try to avoid this case:
@@ -176,6 +178,7 @@ class FSDPTrainRayActor(TrainRayActor):
 
         torch.cuda.synchronize()
         dist.barrier(group=get_gloo_group())
+        print_memory("after offload model")
 
     def wake_up(self) -> None:
         """Resume CUDA memory for all tracked tensors."""
@@ -203,6 +206,7 @@ class FSDPTrainRayActor(TrainRayActor):
 
         torch.cuda.synchronize()
         dist.barrier(group=get_gloo_group())
+        print_memory("after wake_up model")
 
     def save_model(self, iteration: int) -> None:
         """Save model state and optimizer state for the given iteration.

@@ -59,11 +59,9 @@ def execute():
     # sometimes disable eval to speed up debugging
     eval_args = ""
     if (MODE != "debug_minimal") and bool(int(os.environ.get("MILES_SCRIPT_ENABLE_EVAL", "1"))):
-        eval_args += (
-            "--eval-interval 20 "
-        )
+        eval_args += "--eval-interval 20 "
         if MULTI_EVAL:
-            eval_config_text = '''
+            eval_config_text = """
 eval:
   defaults:
     max_response_len: 16384
@@ -81,7 +79,7 @@ eval:
       path: /root/datasets/IFBench/IFBench_eval.jsonl
       rm_type: ifbench
       n_samples_per_eval_prompt: 1
-'''.strip()
+""".strip()
             eval_args += f"--eval-config {U.save_to_temp_file(eval_config_text, 'yaml')} "
         else:
             eval_args += (

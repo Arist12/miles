@@ -154,14 +154,7 @@ class FSDPTrainRayActor(TrainRayActor):
         return 0
 
     def sleep(self, tags: str | Iterable[str] | None) -> None:
-        """Pause CUDA memory for all tracked tensors via torch_memory_saver.
-
-        When offloading is enabled, this forwards tags to
-        `torch_memory_saver.pause`. If `tags` is a string, that tag is paused.
-        If `tags` is an iterable of strings, each tag is paused. If `tags` is
-        None, all registered regions are paused. See the torch_memory_saver
-        tagged API for details.
-        """
+        """Pause CUDA memory for all tracked tensors."""
         if not self.args.offload_train:
             return
 
@@ -178,14 +171,7 @@ class FSDPTrainRayActor(TrainRayActor):
         dist.barrier(group=get_gloo_group())
 
     def wake_up(self, tags: str | Iterable[str] | None) -> None:
-        """Resume CUDA memory for all tracked tensors via torch_memory_saver.
-
-        When offloading is enabled, this forwards tags to
-        `torch_memory_saver.resume`. If `tags` is a string, that tag is resumed.
-        If `tags` is an iterable of strings, each tag is resumed. If `tags` is
-        None, all registered regions are resumed. See the torch_memory_saver
-        tagged API for details.
-        """
+        """Resume CUDA memory for all tracked tensors."""
         if not self.args.offload_train:
             return
 

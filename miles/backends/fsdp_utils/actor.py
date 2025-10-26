@@ -760,3 +760,18 @@ def sum_of_sample_mean(x: torch.Tensor, response_lengths: list[int], loss_masks:
             for x_i, loss_mask_i in zip(x.split(response_lengths, dim=0), loss_masks)
         ]
     )
+
+@torch.no_grad()
+def move_torch_optimizer(optimizer, device):
+    """ref: https://github.com/volcengine/verl/blob/main/verl/utils/fsdp_utils.py"""
+    if not optimizer.state:
+        return
+
+    for param_group in optimizer.param_groups:
+        for param in param_group["params"]:
+            state = optimizer.state[param]
+            for key, value in state.items():
+                if isinstance(value, torch.Tensor):
+                    state[key] = value.to(device, non_blocking=True)
+
+    torch.cuda.synchronize()

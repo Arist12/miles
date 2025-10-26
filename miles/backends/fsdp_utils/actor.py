@@ -158,14 +158,20 @@ class FSDPTrainRayActor(TrainRayActor):
         if not self.args.offload_train:
             return
 
-        # Try to avoid this case:
-        # * FSDP contains a lot of cached memory and sleep
-        # * SGLang resumes and allocate some memory
-        # * FSDP resumes but realize there is no enough memory, thus OOM currently, but indeed the cache can be (partially) freed to fulfill requirements
-        # TODO: improve it later
-        clear_memory()
+        match self.args.offload_train_mode:
+            case "tms":
+                # Try to avoid this case:
+                # * FSDP contains a lot of cached memory and sleep
+                # * SGLang resumes and allocate some memory
+                # * FSDP resumes but realize there is no enough memory, thus OOM currently, but indeed the cache can be (partially) freed to fulfill requirements
+                # TODO: improve it later
+                clear_memory()
 
-        torch_memory_saver.pause()
+                torch_memory_saver.pause()
+            case "move":
+                TODO
+            case _:
+                raise NotImplementedError
 
         torch.cuda.synchronize()
         dist.barrier(group=get_gloo_group())
@@ -175,17 +181,23 @@ class FSDPTrainRayActor(TrainRayActor):
         if not self.args.offload_train:
             return
 
-        # TODO this is copy-pasted from megatron side; should unify the two
-        # there are weird times when sglang is not offloaded immediately, so we wait here.
-        mem_fraction_static = self.args.sglang_mem_fraction_static or 0.8
-        for _ in range(60):
-            memory_info = print_memory("before wake_up model")
-            if memory_info["used_GB"] >= mem_fraction_static * memory_info["total_GB"]:
-                time.sleep(1)
-                continue
-            break
+        match self.args.offload_train_mode:
+            case "tms":
+                # TODO this is copy-pasted from megatron side; should unify the two
+                # there are weird times when sglang is not offloaded immediately, so we wait here.
+                mem_fraction_static = self.args.sglang_mem_fraction_static or 0.8
+                for _ in range(60):
+                    memory_info = print_memory("before wake_up model")
+                    if memory_info["used_GB"] >= mem_fraction_static * memory_info["total_GB"]:
+                        time.sleep(1)
+                        continue
+                    break
 
-        torch_memory_saver.resume()
+                torch_memory_saver.resume()
+            case "move":
+                TODO
+            case _:
+                raise NotImplementedError
 
         torch.cuda.synchronize()
         dist.barrier(group=get_gloo_group())

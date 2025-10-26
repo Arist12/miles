@@ -1,6 +1,5 @@
 import time
 from argparse import Namespace
-from collections.abc import Iterable
 from contextlib import nullcontext
 from itertools import accumulate
 
@@ -760,6 +759,7 @@ def sum_of_sample_mean(x: torch.Tensor, response_lengths: list[int], loss_masks:
             for x_i, loss_mask_i in zip(x.split(response_lengths, dim=0), loss_masks)
         ]
     )
+
 
 @torch.no_grad()
 def move_torch_optimizer(optimizer, device):

@@ -338,7 +338,7 @@ class FSDPTrainRayActor(TrainRayActor):
         Timer().end("train_wait")
 
         if self.args.offload_train:
-            self.wake_up(("model"))
+            self.wake_up()
 
         world_size = dist.get_world_size()
         rank = dist.get_rank()

@@ -114,7 +114,7 @@ eval:
     # TODO improve mem-frac
     sglang_args = (
         "--rollout-num-gpus-per-engine 1 "
-        f"--sglang-mem-fraction-static {os.environ.get('MILES_SCRIPT_SGLANG_MEM_FRACTION_STATIC' ,'0.6')} "
+        f"--sglang-mem-fraction-static {os.environ.get('MILES_SCRIPT_SGLANG_MEM_FRACTION_STATIC', '0.6')} "
     )
 
     fsdp_args = (
@@ -124,7 +124,13 @@ eval:
         f"--update-weights-bucket-size {512 * 1024 * 1024} "  # 512MB
     )
 
-    misc_args = "--actor-num-nodes 1 " "--actor-num-gpus-per-node 8 " "--colocate " "--use-fault-tolerance "
+    misc_args = (
+        "--actor-num-nodes 1 "
+        "--actor-num-gpus-per-node 8 "
+        "--colocate "
+        "--offload-train-mode move "
+        "--use-fault-tolerance "
+    )
 
     true_on_policy_args = ""
     true_on_policy_envs = {}

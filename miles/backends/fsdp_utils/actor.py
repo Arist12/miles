@@ -269,7 +269,10 @@ class FSDPTrainRayActor(TrainRayActor):
                             model_args["pixel_values"] = batch["pixel_values"]
                         logits = self.model(**model_args).logits
                     batch[f"{store_prefix}log_probs"] = gather_log_probs_packed(
-                        logits, batch["tokens"], temperature=self.args.rollout_temperature
+                        logits,
+                        batch["tokens"],
+                        allow_compile=not self.args.true_on_policy_mode,
+                        temperature=self.args.rollout_temperature,
                     )
             return rollout_data
 
@@ -426,7 +429,11 @@ class FSDPTrainRayActor(TrainRayActor):
 
             # Handle packed sequences
             log_probs = gather_log_probs_packed(
-                logits, packed_batch["tokens"], packed_batch["cu_seqlens"], temperature=self.args.rollout_temperature
+                logits,
+                packed_batch["tokens"],
+                allow_compile=not self.args.true_on_policy_mode,
+                cu_seqlens=packed_batch["cu_seqlens"],
+                temperature=self.args.rollout_temperature,
             )
             packed_batch["cur_log_probs"] = log_probs
             unpacked_batches = unpack_sequences(packed_batch)
@@ -486,9 +493,9 @@ class FSDPTrainRayActor(TrainRayActor):
             pg_clipfrac = sum_of_sample_mean(pg_clipfrac, response_lengths, loss_masks)
             ppo_kl = sum_of_sample_mean(ppo_kl.abs(), response_lengths, loss_masks)
 
-            train_rollout_logprob_diff = old_log_probs - rollout_log_probs
-            train_rollout_logprob_diff = sum_of_sample_mean(
-                train_rollout_logprob_diff, response_lengths, loss_masks
+            train_rollout_logprob_abs_diff = (old_log_probs - rollout_log_probs).abs()
+            train_rollout_logprob_abs_diff = sum_of_sample_mean(
+                train_rollout_logprob_abs_diff, response_lengths, loss_masks
             ).detach()
 
             loss = pg_loss
@@ -514,7 +521,7 @@ class FSDPTrainRayActor(TrainRayActor):
                 "pg_loss": pg_loss.detach(),
                 "pg_clipfrac": pg_clipfrac.detach(),
                 "ppo_kl": ppo_kl.detach(),
-                "train_rollout_logprob_diff": train_rollout_logprob_diff,
+                "train_rollout_logprob_abs_diff": train_rollout_logprob_abs_diff,
             }
 
             if self.args.use_kl_loss:
@@ -682,9 +689,30 @@ class FSDPTrainRayActor(TrainRayActor):
             self.update_gpu_params_dict(current_weights)
 
 
+def selective_log_softmax_raw(logits: torch.Tensor, input_ids: torch.Tensor) -> torch.Tensor:
+    """Fused version of the common `log_softmax -> gather` operation.
+
+    The fused version of this operation avoids the (potentially large) memory overhead
+    of allocating a new tensor to store the full logprobs.
+
+    Parameters:
+        logits: Tensor of shape [..., V] containing model logits.
+        input_ids: Tensor of shape [...] of token indices whose log-probabilities are gathered.
+
+    Returns:
+        Tensor of shape [...] containing the log-probabilities corresponding to `input_ids`.
+    """
+    logprobs = logits.log_softmax(dim=-1)
+    return torch.gather(logprobs, dim=-1, index=input_ids.unsqueeze(-1)).squeeze(-1)
+
+
+selective_log_softmax_compiled = torch.compile(dynamic=True)(selective_log_softmax_raw)
+
+
 def gather_log_probs_packed(
     logits: torch.Tensor,
     input_ids: torch.Tensor,
+    allow_compile: bool,
     cu_seqlens: torch.Tensor | float | None = None,
     temperature: torch.Tensor | None = None,
 ) -> torch.Tensor:
@@ -709,14 +737,12 @@ def gather_log_probs_packed(
         logits = logits.div(temperature)
 
     # Shift for next-token prediction: logits[:-1] predicts input_ids[1:]
-    log_probs = torch.log_softmax(logits[:-1], dim=-1)
-    targets = input_ids[1:].to(device=log_probs.device)
+    shifted_logits = logits[:-1]
+    targets = input_ids[1:].to(device=shifted_logits.device)
 
     # Gather log probs for targets
-    gathered = log_probs.gather(-1, targets.unsqueeze(-1)).squeeze(-1)
-
-    # Apply mask to exclude first tokens
-    return gathered
+    selective_log_softmax = selective_log_softmax_compiled if allow_compile else selective_log_softmax_raw
+    return selective_log_softmax(shifted_logits, targets)
 
 
 def sum_of_sample_mean(x: torch.Tensor, response_lengths: list[int], loss_masks: list[torch.Tensor]) -> torch.Tensor:

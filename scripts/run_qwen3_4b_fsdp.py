@@ -94,7 +94,8 @@ eval:
                 "--eval-top-p 0.7 "
             )
 
-    perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 9216 "
+    # max-tokens-per-gpu=9216 works well for 8k max gen tok, but OOM for 16k
+    perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 6144 "
 
     grpo_args = (
         "--advantage-estimator grpo "

@@ -5,6 +5,8 @@ from typing import Annotated
 import torch
 import typer
 
+_WHITELIST_KEYS = ["group_index", "index", "prompt", "response", "response_length", "reward", "status", "metadata"]
+
 
 def main(
     # Deliberately make this name consistent with main training arguments
@@ -27,7 +29,7 @@ def main(
             samples = pack["samples"]
 
             for sample in samples:
-                print(json.dumps(sample))
+                print(json.dumps({k: v for k, v in sample.items() if k in _WHITELIST_KEYS}))
 
 
 if __name__ == "__main__":

@@ -19,12 +19,13 @@ def main(
             if not path.exists():
                 continue
 
-            pack = torch.load(path)
-            samples = pack["samples"]
-
             print("-" * 80)
             print(f"{rollout_id=} {path=}")
             print("-" * 80)
+
+            pack = torch.load(path)
+            samples = pack["samples"]
+
             for sample in samples:
                 print(json.dumps(sample))
 

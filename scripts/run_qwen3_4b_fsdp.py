@@ -28,6 +28,8 @@ def prepare():
 
 
 def execute():
+    run_id = U.create_run_id()
+
     ckpt_args = (
         f"--hf-checkpoint /root/models/{MODEL_NAME} "
         # "--ref-load /root/models/{MODEL_NAME} "
@@ -133,6 +135,7 @@ eval:
         "--colocate "
         "--offload-train-mode move "
         "--use-fault-tolerance "
+        f"--save-debug-rollout-data /root/shared_data/{run_id}/{{rollout_id}}.pt "
     )
 
     true_on_policy_args = ""
@@ -159,7 +162,7 @@ eval:
         f"{rollout_args} "
         f"{optimizer_args} "
         f"{grpo_args} "
-        f"{U.get_default_wandb_args(__file__)} "
+        f"{U.get_default_wandb_args(__file__, run_id=run_id)} "
         f"{perf_args} "
         f"{eval_args} "
         f"{sglang_args} "

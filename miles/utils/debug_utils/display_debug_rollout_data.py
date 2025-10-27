@@ -5,7 +5,17 @@ from typing import Annotated
 import torch
 import typer
 
-_WHITELIST_KEYS = ["group_index", "index", "prompt", "response", "response_length", "reward", "status", "metadata"]
+_WHITELIST_KEYS = [
+    "group_index",
+    "index",
+    "prompt",
+    "response",
+    "response_length",
+    "label",
+    "reward",
+    "status",
+    "metadata",
+]
 
 
 def main(

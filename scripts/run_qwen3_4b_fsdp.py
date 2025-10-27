@@ -6,7 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
 
 import command_utils as U
 
-MODEL_NAME = os.environ.get("MILES_SCRIPT_MODEL_NAME", "Qwen3-4B")
+MODEL_NAME = os.environ.get("MILES_SCRIPT_MODEL_NAME", "Qwen3-4B-Instruct-2507")
 NUM_GPUS = 8
 
 EXTRA_ARGS = os.environ.get("MILES_SCRIPT_EXTRA_ARGS", "")
@@ -47,7 +47,7 @@ def execute():
         "--num-rollout 3000 "
         "--rollout-batch-size 32 "
         "--n-samples-per-prompt 8 "
-        f"--rollout-max-response-len {100 if MODE == 'debug_minimal' else 8192} "
+        f"--rollout-max-response-len {100 if MODE == 'debug_minimal' else 32768} "
         "--rollout-temperature 0.8 "
         "--global-batch-size 256 "
         "--balance-data "
@@ -64,12 +64,13 @@ def execute():
     # sometimes disable eval to speed up debugging
     eval_args = ""
     if (MODE != "debug_minimal") and bool(int(os.environ.get("MILES_SCRIPT_ENABLE_EVAL", "1"))):
+        eval_max_response_len = 32768
         eval_args += "--eval-interval 20 "
         if MULTI_EVAL:
-            eval_config_text = """
+            eval_config_text = f"""
 eval:
   defaults:
-    max_response_len: 16384
+    max_response_len: {eval_max_response_len}
     top_p: 0.7
   datasets:
     - name: aime
@@ -90,7 +91,7 @@ eval:
             eval_args += (
                 "--eval-prompt-data aime /root/datasets/aime-2024/aime-2024.jsonl "
                 "--n-samples-per-eval-prompt 16 "
-                "--eval-max-response-len 16384 "
+                f"--eval-max-response-len {eval_max_response_len} "
                 "--eval-top-p 0.7 "
             )
 

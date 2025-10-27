@@ -40,7 +40,8 @@ def execute():
         "--input-key prompt "
         "--label-key label "
         "--apply-chat-template "
-        """--apply-chat-template-kwargs '{"enable_thinking":false}' """
+        # By default it is thinking mode
+        # """--apply-chat-template-kwargs '{"enable_thinking":false}' """
         "--rollout-shuffle "
         "--rm-type deepscaler "
         "--num-rollout 3000 "

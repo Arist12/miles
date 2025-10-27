@@ -49,12 +49,13 @@ def execute():
         "--balance-data "
     )
 
-    # when using tiny response len, cannot do dynamic sampling
-    if MODE != "debug_minimal":
-        rollout_args += (
-            "--over-sampling-batch-size 64 "
-            "--dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
-        )
+    # We disable dynamic sampling currently
+    # # when using tiny response len, cannot do dynamic sampling
+    # if MODE != "debug_minimal":
+    #     rollout_args += (
+    #         "--over-sampling-batch-size 64 "
+    #         "--dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
+    #     )
 
     # sometimes disable eval to speed up debugging
     eval_args = ""

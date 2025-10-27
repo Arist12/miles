@@ -552,7 +552,12 @@ async def eval_rollout_single_dataset(
     for coro in asyncio.as_completed(tasks):
         sample = await coro
         if do_print:
-            print([str(sample.prompt) + sample.response], sample.reward, flush=True)
+            print(
+                "eval_rollout_single_dataset example data:",
+                [str(sample.prompt) + sample.response],
+                sample.reward,
+                flush=True,
+            )
             do_print = False
         if isinstance(sample, list):
             data.extend(sample)

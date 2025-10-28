@@ -696,7 +696,8 @@ class FSDPTrainRayActor(TrainRayActor):
             self.update_gpu_params_dict(current_weights)
 
 
-def selective_log_softmax_raw(logits: torch.Tensor, input_ids: torch.Tensor) -> torch.Tensor:
+@torch.compile(dynamic=True)
+def selective_log_softmax(logits: torch.Tensor, token_ids: torch.Tensor) -> torch.Tensor:
     """Fused version of the common `log_softmax -> gather` operation.
 
     The fused version of this operation avoids the (potentially large) memory overhead
@@ -704,16 +705,13 @@ def selective_log_softmax_raw(logits: torch.Tensor, input_ids: torch.Tensor) -> 
 
     Parameters:
         logits: Tensor of shape [..., V] containing model logits.
-        input_ids: Tensor of shape [...] of token indices whose log-probabilities are gathered.
+        token_ids: Tensor of shape [...] of token indices whose log-probabilities are gathered.
 
     Returns:
-        Tensor of shape [...] containing the log-probabilities corresponding to `input_ids`.
+        Tensor of shape [...] containing the log-probabilities corresponding to `token_ids`.
     """
     logprobs = logits.log_softmax(dim=-1)
-    return torch.gather(logprobs, dim=-1, index=input_ids.unsqueeze(-1)).squeeze(-1)
-
-
-selective_log_softmax_compiled = torch.compile(dynamic=True)(selective_log_softmax_raw)
+    return torch.gather(logprobs, dim=-1, index=token_ids.unsqueeze(-1)).squeeze(-1)
 
 
 def gather_log_probs_packed(
@@ -748,7 +746,6 @@ def gather_log_probs_packed(
     targets = input_ids[1:].to(device=shifted_logits.device)
 
     # Gather log probs for targets
-    selective_log_softmax = selective_log_softmax_compiled if allow_compile else selective_log_softmax_raw
     return selective_log_softmax(shifted_logits, targets)
 
 

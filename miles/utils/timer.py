@@ -74,3 +74,12 @@ def timer(name_or_func):
             return func(*args, **kwargs)
 
     return wrapper
+
+
+@contextmanager
+def inverse_timer(name):
+    Timer().end(name)
+    try:
+        yield
+    finally:
+        Timer().start(name)

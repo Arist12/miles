@@ -22,7 +22,7 @@ from miles.utils.memory_utils import clear_memory, print_memory
 from miles.utils.ray_utils import Box
 from miles.utils.reloadable_process_group import destroy_process_groups, monkey_patch_torch_dist, reload_process_groups
 from miles.utils.routing_replay import RoutingReplay
-from miles.utils.timer import Timer, timer
+from miles.utils.timer import Timer, timer, inverse_timer
 from miles.utils.types import RolloutBatch
 from miles.utils.wandb_utils import init_wandb_secondary
 
@@ -233,10 +233,7 @@ class MegatronTrainRayActor(TrainRayActor):
                 store_prefix=store_prefix,
             )
 
-    @with_defer(lambda: Timer().start("train_wait"))
     def train(self, rollout_id: int, rollout_data_ref: Box) -> None:
-        Timer().end("train_wait")
-
         if self.args.offload_train:
             self.wake_up()
 
@@ -283,7 +280,7 @@ class MegatronTrainRayActor(TrainRayActor):
         # Create data iterator for log_probs and train.
         data_iterator, num_microbatches = get_data_iterator(self.args, self.model, rollout_data)
 
-        with timer("train"):
+        with inverse_timer("train_wait"), timer("train"):
             if self.args.compute_advantages_and_returns:
                 if "ref" in self.weights:
                     if self.args.use_routing_replay:

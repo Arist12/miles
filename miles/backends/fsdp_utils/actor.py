@@ -342,7 +342,6 @@ class FSDPTrainRayActor(TrainRayActor):
 
         return packed_batches, grad_accum
 
-    @with_defer(lambda: Timer().start("train_wait"))
     def train(self, rollout_id: int, rollout_data_ref: Box) -> None:
         """Run one training update over a rollout batch.
 
@@ -354,8 +353,6 @@ class FSDPTrainRayActor(TrainRayActor):
                 `rollout_log_probs`, etc.). It will be fetched and partitioned
                 by `process_rollout_data` based on data-parallel rank/size.
         """
-        Timer().end("train_wait")
-
         if self.args.offload_train:
             self.wake_up()
 

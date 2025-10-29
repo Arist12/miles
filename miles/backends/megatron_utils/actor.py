@@ -15,6 +15,7 @@ from torch_memory_saver import torch_memory_saver
 from transformers import AutoConfig, AutoTokenizer
 
 from miles.ray.train_actor import TrainRayActor
+from miles.utils.context_utils import with_defer
 from miles.utils.data import process_rollout_data
 from miles.utils.distributed_utils import get_gloo_group, init_process_group
 from miles.utils.memory_utils import clear_memory, print_memory
@@ -35,6 +36,7 @@ from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTe
 
 
 class MegatronTrainRayActor(TrainRayActor):
+    @with_defer(lambda: Timer().start("train_wait"))
     def init(
         self,
         args: Namespace,
@@ -59,7 +61,6 @@ class MegatronTrainRayActor(TrainRayActor):
             dist.barrier(group=get_gloo_group())
 
         if self.args.debug_rollout_only:
-            Timer().start("train_wait")
             return 0
 
         if role == "critic":
@@ -75,7 +76,6 @@ class MegatronTrainRayActor(TrainRayActor):
         if role == "critic":
             if self.args.offload_train:
                 self.sleep()
-            Timer().start("train_wait")
             return
 
         start_rollout_id = loaded_rollout_id + 1
@@ -136,7 +136,6 @@ class MegatronTrainRayActor(TrainRayActor):
             )
             self.prof.start()
 
-        Timer().start("train_wait")
         return start_rollout_id
 
     @torch.no_grad()
@@ -234,6 +233,7 @@ class MegatronTrainRayActor(TrainRayActor):
                 store_prefix=store_prefix,
             )
 
+    @with_defer(lambda: Timer().start("train_wait"))
     def train(self, rollout_id: int, rollout_data_ref: Box) -> None:
         Timer().end("train_wait")
 
@@ -244,7 +244,6 @@ class MegatronTrainRayActor(TrainRayActor):
             rollout_data = self._get_rollout_data(rollout_data_ref)
             if self.args.debug_rollout_only:
                 log_rollout_data(rollout_id, self.args, rollout_data)
-                Timer().start("train_wait")
                 return
 
         if self.role == "critic":
@@ -279,7 +278,6 @@ class MegatronTrainRayActor(TrainRayActor):
             data_iterator,
             num_microbatches,
         )
-        Timer().start("train_wait")
 
     def train_actor(self, rollout_id: int, rollout_data: RolloutBatch) -> None:
         # Create data iterator for log_probs and train.
@@ -389,7 +387,6 @@ class MegatronTrainRayActor(TrainRayActor):
                 self.update_cpu_params_dict(self.weights["ref"])
 
         log_perf_data(rollout_id, self.args)
-        Timer().start("train_wait")
 
     def save_model(self, iteration: int) -> None:
         if self.args.debug_rollout_only:

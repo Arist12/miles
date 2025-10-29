@@ -15,6 +15,7 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTo
 
 from miles.ray.train_actor import TrainRayActor
 from miles.utils import profile_utils
+from miles.utils.context_utils import with_defer
 from miles.utils.data import get_minimum_num_micro_batch_size, process_rollout_data
 from miles.utils.distributed_utils import get_gloo_group
 from miles.utils.memory_utils import clear_memory, print_memory
@@ -41,6 +42,7 @@ class FSDPTrainRayActor(TrainRayActor):
       * For small models this is fine; for larger models consider sharded state_dict type.
     """
 
+    @with_defer(lambda: Timer().start("train_wait"))
     def init(self, args: Namespace, role: str, wandb_run_id: str, with_ref: bool = False) -> int:  # type: ignore[override]
         super().init(args, role, wandb_run_id, with_ref)
 
@@ -143,7 +145,6 @@ class FSDPTrainRayActor(TrainRayActor):
         if self.args.offload_train:
             self.sleep()
 
-        Timer().start("train_wait")
         self.global_step = 0
         self.micro_step = 0
         return 0
@@ -339,6 +340,7 @@ class FSDPTrainRayActor(TrainRayActor):
 
         return packed_batches, grad_accum
 
+    @with_defer(lambda: Timer().start("train_wait"))
     def train(self, rollout_id: int, rollout_data_ref: Box) -> None:
         """Run one training update over a rollout batch.
 
@@ -438,9 +440,6 @@ class FSDPTrainRayActor(TrainRayActor):
             and (rollout_id == s - 1)
         ):
             profile_utils.dump_snapshot_and_stop(profile_utils.get_memory_snapshot_full_path(self.args))
-
-        Timer().start("train_wait")
-        return
 
     def _train_step(self, packed_batch, world_size, reported_accum, mbs_id, grad_accum):
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):

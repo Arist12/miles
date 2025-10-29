@@ -10,11 +10,10 @@ import wandb
 from packaging import version
 from torch.distributed.tensor import DTensor
 from torch_memory_saver import torch_memory_saver
-from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
 from miles.ray.train_actor import TrainRayActor
-from miles.utils import profile_utils, train_metric_utils
+from miles.utils import profile_utils
 from miles.utils.context_utils import with_defer
 from miles.utils.data import get_minimum_num_micro_batch_size, process_rollout_data
 from miles.utils.distributed_utils import get_gloo_group
@@ -27,7 +26,6 @@ from miles.utils.wandb_utils import init_wandb_secondary
 from .data_packing import pack_sequences, unpack_sequences
 from .fsdp_cpu_adam_wrapper import FSDPCPUAdamWrapper
 from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTensor
-from ...utils.profile_utils import TrainProfiler
 
 
 class FSDPTrainRayActor(TrainRayActor):

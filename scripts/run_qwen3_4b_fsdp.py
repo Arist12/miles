@@ -133,8 +133,8 @@ eval:
     )
 
     misc_args = (
-        f"--actor-num-nodes {math.ceil(args.num_gpus / 8)} "
-        f"--actor-num-gpus-per-node {min(args.num_gpus, 8)} "
+        f"--actor-num-nodes {math.ceil(args.num_gpus / U.NUM_GPU_OF_HARDWARE[args.hardware])} "
+        f"--actor-num-gpus-per-node {min(args.num_gpus, U.NUM_GPU_OF_HARDWARE[args.hardware])} "
         "--colocate "
         "--offload-train-mode move "
         """--train-env-vars '{"PYTORCH_CUDA_ALLOC_CONF":"expandable_segments:True"}' """

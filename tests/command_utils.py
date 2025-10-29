@@ -176,3 +176,9 @@ def save_to_temp_file(text: str, ext: str):
     path.write_text(text)
     print(f"Write the following content to {path=}: {text=}")
     return str(path)
+
+NUM_GPU_OF_HARDWARE = {
+    "H100": 8,
+    "GB200": 4,
+    "GB300": 4,
+}

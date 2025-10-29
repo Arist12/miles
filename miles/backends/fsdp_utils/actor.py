@@ -24,10 +24,10 @@ from miles.utils.ray_utils import Box
 from miles.utils.timer import Timer, inverse_timer, timer
 from miles.utils.wandb_utils import init_wandb_secondary
 
+from ...utils.profile_utils import TrainProfiler
 from .data_packing import pack_sequences, unpack_sequences
 from .fsdp_cpu_adam_wrapper import FSDPCPUAdamWrapper
 from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTensor
-from ...utils.profile_utils import TrainProfiler
 
 
 class FSDPTrainRayActor(TrainRayActor):

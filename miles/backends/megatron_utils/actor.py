@@ -22,7 +22,7 @@ from miles.utils.memory_utils import clear_memory, print_memory
 from miles.utils.ray_utils import Box
 from miles.utils.reloadable_process_group import destroy_process_groups, monkey_patch_torch_dist, reload_process_groups
 from miles.utils.routing_replay import RoutingReplay
-from miles.utils.timer import Timer, timer, inverse_timer
+from miles.utils.timer import Timer, inverse_timer, timer
 from miles.utils.types import RolloutBatch
 from miles.utils.wandb_utils import init_wandb_secondary
 

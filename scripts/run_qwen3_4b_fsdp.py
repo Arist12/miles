@@ -1,3 +1,4 @@
+import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -132,7 +133,7 @@ eval:
     )
 
     misc_args = (
-        "--actor-num-nodes 1 "
+        f"--actor-num-nodes {math.ceil(args.num_gpus / 8)} "
         f"--actor-num-gpus-per-node {min(args.num_gpus, 8)} "
         "--colocate "
         "--offload-train-mode move "

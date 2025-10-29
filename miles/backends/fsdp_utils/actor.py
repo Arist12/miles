@@ -27,6 +27,7 @@ from miles.utils.wandb_utils import init_wandb_secondary
 from .data_packing import pack_sequences, unpack_sequences
 from .fsdp_cpu_adam_wrapper import FSDPCPUAdamWrapper
 from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTensor
+from ...utils.profile_utils import TrainProfiler
 
 
 class FSDPTrainRayActor(TrainRayActor):
@@ -144,6 +145,8 @@ class FSDPTrainRayActor(TrainRayActor):
 
         if self.args.offload_train:
             self.sleep()
+
+        self.prof = TrainProfiler(args)
 
         self.global_step = 0
         self.micro_step = 0
@@ -428,6 +431,8 @@ class FSDPTrainRayActor(TrainRayActor):
                 )
                 wandb.log(log_dict)
 
+        self.prof.before_actor_train_step()
+
         with timer("actor_train"):
             reported_accum: dict[str, list[torch.Tensor]] = {}
             self.optimizer.zero_grad(set_to_none=True)
@@ -441,6 +446,8 @@ class FSDPTrainRayActor(TrainRayActor):
                     mbs_id=mbs_id,
                     grad_accum=grad_accum,
                 )
+
+        self.prof.after_actor_train_step(rollout_id=rollout_id)
 
         self.update_cpu_params_dict(self.weights["actor"])
 

@@ -149,6 +149,7 @@ class FSDPTrainRayActor(TrainRayActor):
         self.micro_step = 0
         return 0
 
+    @timer
     def sleep(self) -> None:
         """Pause CUDA memory for all tracked tensors."""
         if not self.args.offload_train:
@@ -177,6 +178,7 @@ class FSDPTrainRayActor(TrainRayActor):
         dist.barrier(group=get_gloo_group())
         print_memory("after offload model")
 
+    @timer
     def wake_up(self) -> None:
         """Resume CUDA memory for all tracked tensors."""
         if not self.args.offload_train:
@@ -607,6 +609,7 @@ class FSDPTrainRayActor(TrainRayActor):
                     wandb.log(log_dict)
             self.global_step += 1
 
+    @timer
     def update_weights(self) -> None:  # type: ignore[override]
         """Synchronize actor weights to rollout engines.
 

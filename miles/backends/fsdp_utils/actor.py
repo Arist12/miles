@@ -10,6 +10,7 @@ import wandb
 from packaging import version
 from torch.distributed.tensor import DTensor
 from torch_memory_saver import torch_memory_saver
+from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
 from miles.ray.train_actor import TrainRayActor
@@ -410,7 +411,7 @@ class FSDPTrainRayActor(TrainRayActor):
 
         reported_accum: dict[str, list[torch.Tensor]] = {}
         self.optimizer.zero_grad(set_to_none=True)
-        for mbs_id, packed_batch in enumerate(packed_batches):
+        for mbs_id, packed_batch in enumerate(tqdm(packed_batches, desc="train")):
             self._train_step(
                 packed_batch=packed_batch,
                 world_size=world_size,

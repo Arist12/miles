@@ -31,10 +31,7 @@ class Timer(metaclass=SingletonMeta):
             del self.timers[name]
 
     def add(self, name, elapsed_time):
-        if name not in self.timers:
-            self.timers[name] = elapsed_time
-        else:
-            self.timers[name] += elapsed_time
+        self.timers[name] = self.timers.get(name, 0) + elapsed_time
 
     def log_dict(self):
         return self.timers

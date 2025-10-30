@@ -431,8 +431,6 @@ class FSDPTrainRayActor(TrainRayActor):
                 )
                 wandb.log(log_dict)
 
-        self.prof.before_actor_train_step()
-
         with timer("actor_train"):
             reported_accum: dict[str, list[torch.Tensor]] = {}
             self.optimizer.zero_grad(set_to_none=True)
@@ -447,7 +445,7 @@ class FSDPTrainRayActor(TrainRayActor):
                     grad_accum=grad_accum,
                 )
 
-        self.prof.after_actor_train_step(rollout_id=rollout_id)
+        self.prof.step()
 
         train_dump_utils.save_debug_train_data(self.args, rollout_id=rollout_id, rollout_data=rollout_data)
 

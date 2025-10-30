@@ -59,17 +59,8 @@ class TrainProfiler:
             )
             self._prof.start()
 
-    def before_actor_train_step(self):
+    def step(self):
         if self._prof is None:
             return
 
-        # We follow Megatron semantics which calls `step` before real training step and `stop` after it
         self._prof.step()
-
-    def after_actor_train_step(self, rollout_id):
-        if self._prof is None:
-            return
-
-        if rollout_id == self.args.profile_step_end:
-            self._prof.stop()
-            self._prof = None

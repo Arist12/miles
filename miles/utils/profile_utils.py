@@ -39,7 +39,7 @@ class TrainProfiler:
     def __init__(self, args):
         self.args = args
         self._prof = None
-        if args.use_pytorch_profiler and torch.distributed.get_rank() == 0:
+        if args.use_pytorch_profiler:
             self._prof = torch.profiler.profile(
                 schedule=torch.profiler.schedule(
                     wait=max(args.profile_step_start - 1, 0),
@@ -47,7 +47,11 @@ class TrainProfiler:
                     active=args.profile_step_end - args.profile_step_start,
                     repeat=1,
                 ),
-                on_trace_ready=torch.profiler.tensorboard_trace_handler(args.tensorboard_dir, use_gzip=True),
+                on_trace_ready=torch.profiler.tensorboard_trace_handler(
+                    args.tensorboard_dir,
+                    worker_name=f"rank_{torch.distributed.get_rank()}",
+                    use_gzip=True,
+                ),
                 record_shapes=True,
                 with_stack=True,
                 profile_memory=True,

@@ -256,7 +256,9 @@ class FSDPTrainRayActor(TrainRayActor):
         try:
             rollout_data = {f"{store_prefix}log_probs": []}
             with timer(f"{store_prefix}log_probs"), torch.no_grad():
-                for batch in tqdm(packed_batches, desc=f"{store_prefix}log_probs", disable=dist.get_rank() != 0):
+                for batch in self.prof.iterate_train_log_probs(
+                    tqdm(packed_batches, desc=f"{store_prefix}log_probs", disable=dist.get_rank() != 0)
+                ):
                     with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                         model_args = {
                             "input_ids": batch["tokens"].unsqueeze(0),
@@ -434,8 +436,8 @@ class FSDPTrainRayActor(TrainRayActor):
         with timer("actor_train"):
             reported_accum: dict[str, list[torch.Tensor]] = {}
             self.optimizer.zero_grad(set_to_none=True)
-            for mbs_id, packed_batch in enumerate(
-                tqdm(packed_batches, desc="actor_train", disable=dist.get_rank() != 0)
+            for mbs_id, packed_batch in self.prof.iterate_train_actor(
+                enumerate(tqdm(packed_batches, desc="actor_train", disable=dist.get_rank() != 0))
             ):
                 self._train_step(
                     packed_batch=packed_batch,

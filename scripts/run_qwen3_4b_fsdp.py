@@ -49,7 +49,7 @@ def execute(args: ScriptArgs):
         # By default it is thinking mode
         # """--apply-chat-template-kwargs '{"enable_thinking":false}' """
         "--rollout-shuffle "
-        "--rm-type deepscaler "
+        "--rm-type math "
         "--num-rollout 3000 "
         "--rollout-batch-size 64 "
         "--n-samples-per-prompt 16 "
@@ -79,7 +79,7 @@ eval:
   datasets:
     - name: aime
       path: /root/datasets/aime-2024/aime-2024.jsonl
-      rm_type: deepscaler
+      rm_type: math
       n_samples_per_eval_prompt: 16
     - name: gpqa
       path: /root/datasets/gpqa_diamond/gpqa_eval.jsonl

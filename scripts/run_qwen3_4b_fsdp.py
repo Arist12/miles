@@ -139,7 +139,7 @@ eval:
         "--offload-train-mode move "
         """--train-env-vars '{"PYTORCH_CUDA_ALLOC_CONF":"expandable_segments:True"}' """
         "--use-fault-tolerance "
-        f"--save-debug-rollout-data /root/shared_data/{run_id}/{{rollout_id}}.pt "
+        f"--dump-details /root/shared_data/{run_id}/dump_details "
     )
 
     true_on_policy_args = ""

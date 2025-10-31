@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import List, Union
 
+import numpy as np
 import ray
 import torch
 import wandb
@@ -17,7 +18,7 @@ from miles.utils.health_monitor import RolloutHealthMonitor
 from miles.utils.http_utils import find_available_port, get_host_info, init_http_client
 from miles.utils.iter_utils import group_by
 from miles.utils.metric_checker import MetricChecker
-from miles.utils.metric_utils import compute_pass_rate, compute_statistics, dict_add_prefix
+from miles.utils.metric_utils import compute_pass_rate, compute_statistics, dict_add_prefix, has_repetition
 from miles.utils.misc import load_function
 from miles.utils.ray_utils import Box
 from miles.utils.types import Sample
@@ -493,6 +494,7 @@ def _log_rollout_data(rollout_id, args, samples, rollout_extra_metrics, rollout_
     log_dict |= dict_add_prefix(compute_statistics(response_lengths), f"rollout/response_len/")
     log_dict |= _compute_zero_std_metrics(args, samples)
     log_dict |= dict_add_prefix(_compute_reward_cat_metrics(args, samples), f"rollout/")
+    log_dict["rollout/repetition_frac"] = np.mean([int(has_repetition(s.response)) for s in samples]).item()
     print(f"perf {rollout_id}: {log_dict}")
     step = (
         rollout_id

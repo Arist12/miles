@@ -139,10 +139,28 @@ eval:
                 "--attn-implementation flash_attention_2 "
                 "--gradient-checkpointing "
                 f"--update-weights-bucket-size {512 * 1024 * 1024} "  # 512MB
+                "--offload-train-mode move "
+                """--train-env-vars '{"PYTORCH_CUDA_ALLOC_CONF":"expandable_segments:True"}' """
             )
         case "megatron":
             train_backend_args = (
-                TODO
+                "--tensor-model-parallel-size 2 "
+                "--sequence-parallel "
+                "--pipeline-model-parallel-size 1 "
+                "--context-parallel-size 1 "
+                "--expert-model-parallel-size 1 "
+                "--expert-tensor-parallel-size 1 "
+                "--recompute-granularity full "
+                "--recompute-method uniform "
+                "--recompute-num-layers 1 "
+                # default dropout in megatron is 0.1
+                "--attention-dropout 0.0 "
+                "--hidden-dropout 0.0 "
+                # should be good for model performance
+                "--accumulate-allreduce-grads-in-fp32 "
+                "--attention-softmax-in-fp32 "
+                # need to comment this when using model with MLA
+                "--attention-backend flash "
             )
         case _:
             raise NotImplementedError
@@ -151,8 +169,6 @@ eval:
         f"--actor-num-nodes {args.num_nodes} "
         f"--actor-num-gpus-per-node {args.num_gpus_per_node} "
         "--colocate "
-        "--offload-train-mode move "
-        """--train-env-vars '{"PYTORCH_CUDA_ALLOC_CONF":"expandable_segments:True"}' """
         "--use-fault-tolerance "
         f"--dump-details /root/shared_data/{run_id}/dump_details "
     )

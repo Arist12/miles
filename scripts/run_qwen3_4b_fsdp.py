@@ -127,8 +127,6 @@ eval:
                 "--eval-top-p 0.7 "
             )
 
-    perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 32768 "
-
     grpo_args = (
         "--advantage-estimator grpo "
         # "--use-kl-loss "
@@ -163,12 +161,14 @@ eval:
                 "--offload-train-mode move "
                 """--train-env-vars '{"PYTORCH_CUDA_ALLOC_CONF":"expandable_segments:True"}' """
             )
+            perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 32768 "
+
         case "megatron":
             train_backend_args = (
                 "--tensor-model-parallel-size 2 "
                 "--sequence-parallel "
                 "--pipeline-model-parallel-size 1 "
-                "--context-parallel-size 1 "
+                "--context-parallel-size 2 "
                 "--expert-model-parallel-size 1 "
                 "--expert-tensor-parallel-size 1 "
                 "--recompute-granularity full "
@@ -183,6 +183,8 @@ eval:
                 # need to comment this when using model with MLA
                 "--attention-backend flash "
             )
+            perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 16384 "
+
         case _:
             raise NotImplementedError
 

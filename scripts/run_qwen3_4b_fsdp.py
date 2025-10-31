@@ -44,7 +44,11 @@ def prepare(args: ScriptArgs):
     U.hf_download_dataset("zyzshishui0627/IFBench")
     if args.train_backend == "megatron":
         U.convert_checkpoint(
-            model_name=args.model_name, model_type=args.megatron_model_type, num_gpus=args.num_gpus_per_node
+            model_name=args.model_name,
+            model_type=args.megatron_model_type,
+            num_gpus=args.num_gpus_per_node,
+            # TODO unify
+            dir_dst="/root/models",
         )
 
 

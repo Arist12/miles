@@ -12,7 +12,7 @@ import command_utils as U
 
 
 @dataclass
-class ScriptArgs:
+class ScriptArgs(U.ExecuteTrainConfig):
     mode: Literal["normal", "debug_minimal"] = "normal"
     model_name: str = "Qwen3-4B-Instruct-2507"
     megatron_model_type: Optional[str] = None

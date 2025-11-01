@@ -9,6 +9,7 @@ pkill -9 python
 sleep 3
 pkill -9 ray
 pkill -9 python
+pkill -9 redis
 
 set -ex
 
@@ -24,60 +25,60 @@ fi
 echo "HAS_NVLINK: $HAS_NVLINK (detected $NVLINK_COUNT NVLink references)"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-source "${SCRIPT_DIR}/models/deepseek-v3.sh"
+source "${SCRIPT_DIR}/models/moonlight.sh"
 
 CKPT_ARGS=(
-   --hf-checkpoint $BASE_DIR/DeepSeek-R1/
-   #--hf-checkpoint $BASE_DIR/DeepSeek-R1-bf16/
-   --ref-load $BASE_DIR/DeepSeek-R1_torch_dist/
-   --load $BASE_DIR/DeepSeek-R1_miles/
-   --save $BASE_DIR/DeepSeek-R1_miles/
+   --hf-checkpoint /root/Moonlight-16B-A3B
+   --ref-load /root/Moonlight-16B-A3B_torch_dist
+   --load /root/Moonlight-16B-A3B_miles/
+   --save /root/Moonlight-16B-A3B_miles/
    --save-interval 20
 )
 
 ROLLOUT_ARGS=(
-   --prompt-data $BASE_DIR/dapo-math-17k/dapo-math-17k.jsonl
+   --prompt-data /root/dapo-math-17k/dapo-math-17k.jsonl
    --input-key prompt
    --label-key label
    --apply-chat-template
    --rollout-shuffle
-   --rm-type deepscaler
+   --rm-type math
    --num-rollout 3000
    --rollout-batch-size 128
    --n-samples-per-prompt 8
-   --rollout-max-response-len 32768
+   --rollout-max-response-len 4096
    --rollout-temperature 0.8
 
    --over-sampling-batch-size 256
    --dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std
 
    --num-steps-per-rollout 4
-   --balance-data
+   # --global-batch-size 256
+   --balance-data   
 )
 
 EVAL_ARGS=(
    --eval-interval 20
-   --eval-prompt-data aime $BASE_DIR/rl_data/aime-2024.jsonl
+   --eval-prompt-data aime /root/aime-2024/aime-2024.jsonl
    --n-samples-per-eval-prompt 8
-   --eval-max-response-len 32768
+   --eval-max-response-len 4096
    --eval-top-p 0.7
 )
 
 PERF_ARGS=(
-   --tensor-model-parallel-size 8
+   --tensor-model-parallel-size 4
    --sequence-parallel
-   --pipeline-model-parallel-size 4
-   --context-parallel-size 4
-   --expert-model-parallel-size 32
+   --pipeline-model-parallel-size 1
+   --context-parallel-size 1
+   --expert-model-parallel-size 8
    --expert-tensor-parallel-size 1
-   --decoder-last-pipeline-num-layers 13
 
    --recompute-granularity full
    --recompute-method uniform
    --recompute-num-layers 1
 
+   # --micro-batch-size 1
    --use-dynamic-batch-size
-   --max-tokens-per-gpu 16384
+   --max-tokens-per-gpu 8192
 )
 
 GRPO_ARGS=(
@@ -106,28 +107,14 @@ OPTIMIZER_ARGS=(
 WANDB_ARGS=(
    # --use-wandb
    # --wandb-project miles-dev
-   # --wandb-group deepseek-r1-test
+   # --wandb-group moomlight-16B-A3B-test
    # --wandb-key ${WANDB_KEY}
 )
 
 SGLANG_ARGS=(
-   --rollout-num-gpus-per-engine 64
+   --rollout-num-gpus-per-engine 8
    --sglang-mem-fraction-static 0.7
-   --sglang-enable-ep-moe
-
-   # dp attention
-   --sglang-enable-dp-attention
-   --sglang-dp-size 8
-   --sglang-moe-dense-tp-size 1
-   --sglang-enable-dp-lm-head
-   --sglang-disable-radix-cache
-
-   # enable deepep for sglang
-   --sglang-enable-deepep-moe
-   --sglang-deepep-mode auto
-
-   # make every dp rank has 128 concurrency
-   --sglang-server-concurrency 1024
+   --sglang-cuda-graph-bs 1 2 4 8 $(seq 16 8 256)
 )
 
 MISC_ARGS=(
@@ -137,7 +124,8 @@ MISC_ARGS=(
    # should be good for model performance
    --accumulate-allreduce-grads-in-fp32
    --attention-softmax-in-fp32
-   --attention-backend flash
+   # need to comment this when using model with MLA
+   # --attention-backend flash
 
    # use deepep for megatron
    --moe-enable-deepep
@@ -145,22 +133,22 @@ MISC_ARGS=(
 )
 
 # launch the master node of ray in container
-export no_proxy="127.0.0.1,${MASTER_ADDR}"
+export MASTER_ADDR=${MASTER_ADDR:-"127.0.0.1"}
 ray start --head --node-ip-address ${MASTER_ADDR} --num-gpus 8 --disable-usage-stats --dashboard-host=0.0.0.0 --dashboard-port=8265
 
+# Build the runtime environment JSON with proper variable substitution
+RUNTIME_ENV_JSON="{
+  \"env_vars\": {
+    \"PYTHONPATH\": \"/root/Megatron-LM/\",
+    \"CUDA_DEVICE_MAX_CONNECTIONS\": \"1\",
+    \"NCCL_NVLS_ENABLE\": \"${HAS_NVLINK}\"
+  }
+}"
 
 ray job submit --address="http://127.0.0.1:8265" \
-   --runtime-env-json='{
-     "env_vars": {
-        "no_proxy": "localhost,127.0.0.1,0.0.0.0,${MASTER_ADDR}",
-        "MASTER_ADDR": "${MASTER_ADDR}",
-        "PYTHONPATH": "/root/Megatron-LM/",
-        "CUDA_DEVICE_MAX_CONNECTIONS": "1",
-        "LD_LIBRARY_PATH": "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/sgl-workspace/nvshmem/install/lib/"
-     }
-   }' \
+   --runtime-env-json="${RUNTIME_ENV_JSON}" \
    -- python3 train.py \
-   --actor-num-nodes 16 \
+   --actor-num-nodes 1 \
    --actor-num-gpus-per-node 8 \
    --colocate \
    ${MODEL_ARGS[@]} \

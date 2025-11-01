@@ -98,6 +98,8 @@ class RolloutManager:
             if monitor_started:
                 self._health_monitor.stop()
                 self.num_new_engines = init_rollout_engines(self.args, self.pg, self.all_rollout_engines)
+            else:
+                self.num_new_engines = 0
 
     def eval(self, rollout_id):
         if self.args.debug_train_only:
@@ -119,10 +121,10 @@ class RolloutManager:
         self.data_source.load(rollout_id)
 
     def offload(self):
-        return [engine.release_memory_occupation.remote() for engine in self.rollout_engines]
+        return ray.get([engine.release_memory_occupation.remote() for engine in self.rollout_engines])
 
     def onload(self, tags: List[str] = None):
-        return [engine.resume_memory_occupation.remote(tags=tags) for engine in self.rollout_engines]
+        return ray.get([engine.resume_memory_occupation.remote(tags=tags) for engine in self.rollout_engines])
 
     def _get_rollout_data(self, rollout_id):
         if self.args.load_debug_rollout_data:
@@ -486,7 +488,7 @@ def _log_rollout_data(rollout_id, args, samples, rollout_extra_metrics, rollout_
     log_dict = {**(rollout_extra_metrics or {})}
     response_lengths = [sample.effective_response_length for sample in samples]
     log_dict["perf/rollout_time"] = rollout_time
-    if args.rollout_num_gpus is not None:
+    if args.rollout_num_gpus:
         log_dict["perf/tokens_per_gpu_per_sec"] = sum(response_lengths) / rollout_time / args.rollout_num_gpus
     log_dict["perf/longest_sample_tokens_per_sec"] = max(response_lengths) / rollout_time
     log_dict |= dict_add_prefix(_compute_metrics_from_samples(args, samples), f"rollout/")
@@ -513,6 +515,7 @@ def _compute_metrics_from_samples(args, samples):
     log_dict = {}
     log_dict |= dict_add_prefix(compute_statistics(response_lengths), f"response_len/")
     log_dict |= _compute_zero_std_metrics(args, samples)
+    log_dict |= _compute_spec_metrics(args, samples)
     log_dict |= _compute_reward_cat_metrics(args, samples)
     log_dict["repetition_frac"] = np.mean([int(has_repetition(s.response)) for s in samples]).item()
     log_dict["truncated_ratio"] = np.mean([int(s.status == Sample.Status.TRUNCATED) for s in samples]).item()
@@ -534,6 +537,20 @@ def _compute_zero_std_metrics(args, all_samples: List[Sample]):
     interesting_rewards = [str(round(g[0].get_reward_value(args), 1)) for g in interesting_sample_groups]
 
     return {f"zero_std/count_{reward}": len(items) for reward, items in group_by(interesting_rewards).items()}
+
+
+def _compute_spec_metrics(args, all_samples: List[Sample]):
+    if args.sglang_speculative_algorithm is None:
+        return {}
+    num_samples = len(all_samples)
+    metrics = {}
+    metrics["rollout/spec_accept_rate"] = (
+        sum(sample.spec_info.spec_accept_rate for sample in all_samples) / num_samples
+    )
+    metrics["rollout/spec_accept_length"] = (
+        sum(sample.spec_info.spec_accept_length for sample in all_samples) / num_samples
+    )
+    return metrics
 
 
 def _compute_reward_cat_metrics(args, all_samples: List[Sample]):

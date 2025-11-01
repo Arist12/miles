@@ -41,7 +41,7 @@ def main(
             args = SimpleNamespace(
                 advantage_estimator="grpo",
                 reward_key=None,
-                log_reward_category=False,
+                log_reward_category=None,
             )
             sample_objects = [Sample.from_dict(s) for s in sample_dicts]
             # TODO make the function public

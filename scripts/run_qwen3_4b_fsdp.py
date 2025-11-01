@@ -181,6 +181,7 @@ eval:
                 "--attention-softmax-in-fp32 "
                 # need to comment this when using model with MLA
                 "--attention-backend flash "
+                "--train-memory-margin-bytes 3221225472 "
             )
             # TODO improve
             sglang_args += f"--sglang-mem-fraction-static 0.7 "

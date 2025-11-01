@@ -260,7 +260,6 @@ def reload_process_groups():
     ReloadableProcessGroup.reload_process_groups()
 
 
-@contextmanager
 def _wrap_low_level_call(f):
     try:
         return f()

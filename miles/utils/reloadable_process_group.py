@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import torch
 import torch.distributed as dist
 
-from miles.utils.memory_utils import print_memory, clear_memory
+from miles.utils.memory_utils import print_memory
 
 old_new_group_dict = {}
 
@@ -48,7 +48,8 @@ def monkey_patch_torch_dist():
         def new_function(*args, **kwargs):
             args = tuple([arg.group if isinstance(arg, ReloadableProcessGroup) else arg for arg in args])
             kwargs = {k: (v.group if isinstance(v, ReloadableProcessGroup) else v) for k, v in kwargs.items()}
-            return _wrap_low_level_call(lambda: func(*args, **kwargs))
+            with _wrap_low_level_call():
+                return func(*args, **kwargs)
 
         return new_function
 
@@ -167,7 +168,8 @@ class ReloadableProcessGroup(torch.distributed.ProcessGroup):
         inner = self.group
         if inner is None:
             raise RuntimeError("ReloadableProcessGroup: inner PG is None, call reload() first.")
-        return _wrap_low_level_call(lambda: getattr(inner, method)(*args, **kwargs))
+        with _wrap_low_level_call():
+            return getattr(inner, method)(*args, **kwargs)
 
     def barrier(self, *a, **kw):
         return self._fwd("barrier", *a, **kw)
@@ -260,9 +262,10 @@ def reload_process_groups():
     ReloadableProcessGroup.reload_process_groups()
 
 
-def _wrap_low_level_call(f):
+@contextmanager
+def _wrap_low_level_call():
     try:
-        return f()
+        yield
     except Exception as e:
         mem_info = print_memory("after torch distributed error")
         e.add_note(f"{mem_info=}")

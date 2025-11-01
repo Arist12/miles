@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import torch
 import torch.distributed as dist
 
-from miles.utils.memory_utils import print_memory
+from miles.utils.memory_utils import print_memory, clear_memory
 
 old_new_group_dict = {}
 
@@ -265,6 +265,16 @@ def _wrap_low_level_call(f):
     try:
         return f()
     except Exception as e:
-        mem_info = print_memory("after torch distributed error")
-        e.add_note(f"{mem_info=}")
-        raise
+        # TODO temp hack!!!
+        print(f"_wrap_low_level_call see {e=}")
+        import traceback
+        traceback.print_stack()
+        print_memory("after torch distributed error")
+        print("temp hack: clear mem and retry the inner func!!!", flush=True)
+        clear_memory()
+        print_memory("after hack clear memory (and before real call)")
+        return f()
+
+        # mem_info = print_memory("after torch distributed error")
+        # e.add_note(f"{mem_info=}")
+        # raise

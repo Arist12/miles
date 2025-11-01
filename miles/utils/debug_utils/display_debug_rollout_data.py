@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Annotated, List, Literal
+from typing import Annotated, List
 
 import torch
 import typer

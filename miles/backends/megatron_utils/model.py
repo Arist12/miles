@@ -464,7 +464,7 @@ def train_one_step(
                 labels=None,
                 packed_seq_params=batch["packed_seq_params"],
                 loss_mask=loss_mask,
-                **(dict(mtp_kwargs=mtp_kwargs) if mtp_kwargs is not None elese {}),
+                **(dict(mtp_kwargs=mtp_kwargs) if mtp_kwargs is not None else {}),
             )
 
         if os.environ.get("ENABLE_ROUTING_REPLAY", "0") == "1":

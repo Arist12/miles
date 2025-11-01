@@ -1,10 +1,10 @@
 import os
 from contextlib import contextmanager
-from miles.utils.memory_utils import print_memory
 
 import torch
 import torch.distributed as dist
 
+from miles.utils.memory_utils import print_memory
 
 old_new_group_dict = {}
 

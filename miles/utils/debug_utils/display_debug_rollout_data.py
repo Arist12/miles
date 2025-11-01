@@ -7,6 +7,7 @@ import torch
 import typer
 
 from miles.ray.rollout import _compute_metrics_from_samples
+from miles.utils.types import Sample
 
 _WHITELIST_KEYS = [
     "group_index",
@@ -33,7 +34,7 @@ def main(
         print("-" * 80)
 
         pack = torch.load(path)
-        samples = pack["samples"]
+        sample_dicts = pack["samples"]
 
         if show_metrics:
             # TODO read these configs from dumps
@@ -42,12 +43,13 @@ def main(
                 reward_key=None,
                 log_reward_category=False,
             )
+            sample_objects = [Sample.from_dict(s) for s in sample_dicts]
             # TODO make the function public
-            metrics = _compute_metrics_from_samples(args, samples)
+            metrics = _compute_metrics_from_samples(args, sample_objects)
             print("metrics", metrics)
 
         if show_samples:
-            for sample in samples:
+            for sample in sample_dicts:
                 print(json.dumps({k: v for k, v in sample.items() if k in _WHITELIST_KEYS}))
 
 

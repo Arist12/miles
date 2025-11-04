@@ -1,5 +1,6 @@
 ARG SGLANG_VERSION=latest
-FROM lmsysorg/sglang:${SGLANG_VERSION} AS sglang
+ARG SGLANG_IMAGE_TAG
+FROM lmsysorg/sglang:${SGLANG_IMAGE_TAG:-${SGLANG_VERSION}} AS sglang
 
 # we need to write this again after from
 ARG SGLANG_VERSION

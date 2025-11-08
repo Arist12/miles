@@ -107,3 +107,7 @@ RUN (cd /root && git clone -b feat/v350_plus_8045 https://github.com/fzyzcjy/tri
 
 # This patch is merged into main, but we are using stable version, thus still need it
 RUN curl -L https://github.com/NVIDIA/TransformerEngine/pull/2286.patch -o /root/te2286.patch && (cd /usr/local/lib/python3.12/dist-packages/transformer_engine && (patch -p2 < /root/te2286.patch))
+
+# temporarily hack fix issue in GB300 base image
+RUN SGL_KERNEL_VERSION=0.3.16.post4 && \
+    python3 -m pip install https://github.com/sgl-project/whl/releases/download/v${SGL_KERNEL_VERSION}/sgl_kernel-${SGL_KERNEL_VERSION}+cu130-cp310-abi3-manylinux2014_$(uname -m).whl --force-reinstall --no-deps

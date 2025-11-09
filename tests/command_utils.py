@@ -200,3 +200,7 @@ def save_to_temp_file(text: str, ext: str):
     path.write_text(text)
     print(f"Write the following content to {path=}: {text=}")
     return str(path)
+
+
+def slurm_get_node_ips():
+    exec_command('scontrol show hostnames "$SLURM_JOB_NODELIST"', capture_output=True)

@@ -190,6 +190,8 @@ def train(args: ScriptArgs):
         "--use-precision-aware-optimizer "
     )
 
+    sglang_num_gpus = args.num_gpus_per_node * args.num_nodes
+    sglang_decode_max_bs = 256
     sglang_args = (
         "--rollout-num-gpus-per-engine 64 "
         "--sglang-mem-fraction-static 0.7 "
@@ -206,7 +208,12 @@ def train(args: ScriptArgs):
         "--sglang-deepep-mode low_latency "
         # make every dp rank has 128 concurrency
         "--sglang-server-concurrency 1024 "
+        f"--sglang-max-running-requests {sglang_num_gpus * sglang_decode_max_bs} "
+        f"--sglang-cuda-graph-max-bs {sglang_decode_max_bs} "
     )
+    sglang_extra_env_vars = {
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": f"{sglang_decode_max_bs}",
+    }
 
     misc_args = (
         # default dropout in megatron is 0.1
@@ -247,7 +254,7 @@ def train(args: ScriptArgs):
         # TODO may get it from `config`
         num_gpus=args.num_gpus_per_node,
         model_type=args.megatron_model_type,
-        extra_env_vars={**json.loads(args.extra_env_vars)},
+        extra_env_vars={**sglang_extra_env_vars, **json.loads(args.extra_env_vars)},
     )
 
 

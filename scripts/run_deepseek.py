@@ -149,31 +149,6 @@ def execute(args: ScriptArgs):
         f"--dump-details /root/shared_data/{run_id}/dump_details "
     )
 
-    misc_env_vars = {}
-
-    if args.model_name == "Qwen3-4B-Base":
-        misc_args += "--sglang-context-length 36000 "
-        misc_env_vars |= {
-            "SGLANG_ALLOW_OVERWRITE_LONGER_CONTEXT_LEN": "1",
-        }
-
-    true_on_policy_args = ""
-    true_on_policy_envs = {}
-    if args.true_on_policy:
-        true_on_policy_args = (
-            "--sglang-enable-deterministic-inference "
-            "--sglang-rl-on-policy-target fsdp "
-            "--sglang-attention-backend fa3 "
-            "--attn-implementation flash_attention_3 "
-            "--deterministic-mode "
-            "--true-on-policy-mode "
-        )
-        true_on_policy_envs = {
-            "NCCL_ALGO": "allreduce:tree",
-            "NVTE_ALLOW_NONDETERMINISTIC_ALGO": "0",
-            "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
-        }
-
     train_args = (
         f"{ckpt_args} "
         f"{rollout_args} "
@@ -183,9 +158,7 @@ def execute(args: ScriptArgs):
         f"{perf_args} "
         f"{eval_args} "
         f"{sglang_args} "
-        f"{train_backend_args} "
         f"{misc_args} "
-        f"{true_on_policy_args} "
         f"{args.extra_args} "
     )
 
@@ -195,11 +168,7 @@ def execute(args: ScriptArgs):
         # TODO may get it from `config`
         num_gpus=args.num_gpus_per_node,
         model_type=args.megatron_model_type,
-        extra_env_vars={
-            **misc_env_vars,
-            **true_on_policy_envs,
-            **json.loads(args.extra_env_vars),
-        },
+        extra_env_vars={**json.loads(args.extra_env_vars)},
     )
 
 

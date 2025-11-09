@@ -68,7 +68,7 @@ def _convert_to_megatron_ckpt(args: ScriptArgs):
         "PYTHONPATH=/root/Megatron-LM/ torchrun "
         f"--nproc-per-node {args.num_gpus_per_node} "
         f"--master-addr {master_addr} "
-        "--master-port 12345 "
+        "--master-port 23456 "
         f"--nnodes={args.num_nodes} "
         f"--node-rank {node_rank} "
         "tools/convert_hf_to_torch_dist.py "

@@ -15,6 +15,7 @@ class ScriptArgs(U.ExecuteTrainConfig):
     model_name: str = "DeepSeek-V3"
     megatron_model_type: str = "deepseek-v3"
     num_gpus_per_node: int = 4
+    enable_eval: bool = True
 
 
 def prepare(args: ScriptArgs):

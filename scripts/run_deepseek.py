@@ -96,7 +96,7 @@ def _cp_model_to_local(args: ScriptArgs):
     if Path(path_dst).exists():
         return
 
-    U.exec_command(f"mkdir -p {path_dst} && cp -r {path_src}/* {path_dst}")
+    U.exec_command(f"mkdir -p {path_dst} && rsync -a --info=progress2 {path_src}/ {path_dst}")
 
 
 @app.command()

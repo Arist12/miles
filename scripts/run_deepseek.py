@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,6 +45,7 @@ def prepare_head(args: ScriptArgs):
 def prepare_spmd(args: ScriptArgs):
     path_dst = f"/root/models/{args.model_name}_torch_dist"
     if not Path(path_dst).exists():
+        print(f"{os.environ.get('MASTER_ADDR')=} {os.environ.get('SLURM_NODEID')=}")
         U.exec_command(
             "source scripts/models/deepseek-v3.sh && "
             "PYTHONPATH=/root/Megatron-LM/ torchrun "
@@ -51,7 +53,7 @@ def prepare_spmd(args: ScriptArgs):
             "--master-addr ${MASTER_ADDR} "
             "--master-port 12345 "
             f"--nnodes={args.num_nodes} "
-            "--node-rank TODO "
+            "--node-rank ${SLURM_NODEID} "
             "tools/convert_hf_to_torch_dist.py "
             "${MODEL_ARGS[@]} "
             "--tensor-model-parallel-size 1 "

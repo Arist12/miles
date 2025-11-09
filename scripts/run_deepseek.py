@@ -44,31 +44,36 @@ def prepare_single(args: ScriptArgs):
 @app.command()
 @U.dataclass_cli
 def prepare_spmd(args: ScriptArgs):
+    _convert_to_megatron_ckpt(args)
+
+def _convert_to_megatron_ckpt(args: ScriptArgs):
     """This script needs to be executed once per node."""
     path_dst = f"/root/models/{args.model_name}_torch_dist"
-    if not Path(path_dst).exists():
-        print(f"{os.environ.get('SLURM_JOB_NODELIST')=} {os.environ.get('SLURM_NODEID')=}")
-        master_addr = U.slurm_get_node_hosts()[0]
-        node_rank = int(os.environ.get("SLURM_NODEID"))
-        U.exec_command(
-            "source scripts/models/deepseek-v3.sh && "
-            "PYTHONPATH=/root/Megatron-LM/ torchrun "
-            f"--nproc-per-node {args.num_gpus_per_node} "
-            f"--master-addr {master_addr} "
-            "--master-port 12345 "
-            f"--nnodes={args.num_nodes} "
-            f"--node-rank {node_rank} "
-            "tools/convert_hf_to_torch_dist.py "
-            "${MODEL_ARGS[@]} "
-            "--tensor-model-parallel-size 1 "
-            "--pipeline-model-parallel-size 8 "
-            "--expert-tensor-parallel-size 1 "
-            "--expert-model-parallel-size 4 "
-            "--decoder-first-pipeline-num-layers 7 "
-            "--decoder-last-pipeline-num-layers 6 "
-            "--hf-checkpoint /root/models/DeepSeek-R1-bf16/ "
-            f"--save {path_dst} "
-        )
+    if Path(path_dst).exists():
+        return
+
+    print(f"{os.environ.get('SLURM_JOB_NODELIST')=} {os.environ.get('SLURM_NODEID')=}")
+    master_addr = U.slurm_get_node_hosts()[0]
+    node_rank = int(os.environ.get("SLURM_NODEID"))
+    U.exec_command(
+        "source scripts/models/deepseek-v3.sh && "
+        "PYTHONPATH=/root/Megatron-LM/ torchrun "
+        f"--nproc-per-node {args.num_gpus_per_node} "
+        f"--master-addr {master_addr} "
+        "--master-port 12345 "
+        f"--nnodes={args.num_nodes} "
+        f"--node-rank {node_rank} "
+        "tools/convert_hf_to_torch_dist.py "
+        "${MODEL_ARGS[@]} "
+        "--tensor-model-parallel-size 1 "
+        "--pipeline-model-parallel-size 8 "
+        "--expert-tensor-parallel-size 1 "
+        "--expert-model-parallel-size 4 "
+        "--decoder-first-pipeline-num-layers 7 "
+        "--decoder-last-pipeline-num-layers 6 "
+        "--hf-checkpoint /root/models/DeepSeek-R1-bf16/ "
+        f"--save {path_dst} "
+    )
 
 
 @app.command()

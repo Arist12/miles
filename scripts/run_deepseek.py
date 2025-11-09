@@ -31,14 +31,18 @@ def prepare_single(args: ScriptArgs):
     )
     U.hf_download_dataset("zhuzilin/dapo-math-17k")
     U.hf_download_dataset("zhuzilin/aime-2024")
+    _fp8_cast_bf16(args)
 
+def _fp8_cast_bf16(args: ScriptArgs):
     path_bf16_hf = f"/root/models/{args.model_name}-bf16/"
-    if not Path(path_bf16_hf).exists():
-        U.exec_command(
-            "python tools/fp8_cast_bf16.py "
-            f"--input-fp8-hf-path /root/models/{args.model_name} "
-            f"--output-bf16-hf-path {path_bf16_hf}"
-        )
+    if Path(path_bf16_hf).exists():
+        return
+
+    U.exec_command(
+        "python tools/fp8_cast_bf16.py "
+        f"--input-fp8-hf-path /root/models/{args.model_name} "
+        f"--output-bf16-hf-path {path_bf16_hf}"
+    )
 
 
 @app.command()
@@ -71,7 +75,7 @@ def _convert_to_megatron_ckpt(args: ScriptArgs):
         "--expert-model-parallel-size 4 "
         "--decoder-first-pipeline-num-layers 7 "
         "--decoder-last-pipeline-num-layers 6 "
-        "--hf-checkpoint /root/models/DeepSeek-R1-bf16/ "
+        f"--hf-checkpoint /root/models/{args.model_name}-bf16/ "
         f"--save {path_dst} "
     )
 

@@ -71,6 +71,23 @@ def execute(args: ScriptArgs):
             "--eval-top-p 0.7 "
         )
 
+    perf_args = (
+        "--tensor-model-parallel-size 8 "
+        "--sequence-parallel "
+        "--pipeline-model-parallel-size 4 "
+        "--context-parallel-size 4 "
+        "--expert-model-parallel-size 32 "
+        "--expert-tensor-parallel-size 1 "
+        "--decoder-last-pipeline-num-layers 13 "
+        # ------------
+        "--recompute-granularity full "
+        "--recompute-method uniform "
+        "--recompute-num-layers 1 "
+        # ------------
+        "--use-dynamic-batch-size "
+        "--max-tokens-per-gpu 16384 "
+    )
+
     grpo_args = (
         "--advantage-estimator grpo "
         # TODO run-deepseek-r1.sh enables use-kl-loss but w/ coef 0. can we just disable it like this?
@@ -84,12 +101,15 @@ def execute(args: ScriptArgs):
 
     optimizer_args = (
         "--optimizer adam "
-        # "--optimizer deepspeed_cpu_adam "
         "--lr 1e-6 "
         "--lr-decay-style constant "
         "--weight-decay 0.1 "
         "--adam-beta1 0.9 "
         "--adam-beta2 0.98 "
+        # ------------
+        "--optimizer-cpu-offload "
+        "--overlap-cpu-optimizer-d2h-h2d "
+        "--use-precision-aware-optimizer "
     )
 
     sglang_args = f"--rollout-num-gpus-per-engine 1 " "--sglang-chunked-prefill-size 4096 "

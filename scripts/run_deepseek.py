@@ -15,6 +15,7 @@ app = typer.Typer()
 
 @dataclass
 class ScriptArgs(U.ExecuteTrainConfig):
+    mode: Literal["normal", "debug_minimal"] = "normal"
     model_name: str = "DeepSeek-V3"
     megatron_model_type: str = "deepseek-v3"
     num_gpus_per_node: int = 4

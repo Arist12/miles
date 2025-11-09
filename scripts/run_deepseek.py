@@ -43,6 +43,7 @@ def prepare_head(args: ScriptArgs):
 @app.command()
 @U.dataclass_cli
 def prepare_spmd(args: ScriptArgs):
+    """This SPMD script needs to be executed once per node."""
     path_dst = f"/root/models/{args.model_name}_torch_dist"
     if not Path(path_dst).exists():
         print(f"{os.environ.get('MASTER_ADDR')=} {os.environ.get('SLURM_NODEID')=}")

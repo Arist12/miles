@@ -44,19 +44,10 @@ class ScriptArgs(U.ExecuteTrainConfig):
 
 def prepare(args: ScriptArgs):
     U.exec_command("mkdir -p /root/models /root/datasets")
-    U.exec_command(f"huggingface-cli download Qwen/{args.model_name} --local-dir /root/models/{args.model_name}")
+    U.exec_command(f"huggingface-cli download deepseek-ai/{args.model_name} --local-dir /root/models/{args.model_name}")
     U.hf_download_dataset("zhuzilin/dapo-math-17k")
     U.hf_download_dataset("zhuzilin/aime-2024")
-    U.hf_download_dataset("zyzshishui0627/gpqa_diamond")
-    U.hf_download_dataset("zyzshishui0627/IFBench")
-    if args.train_backend == "megatron":
-        U.convert_checkpoint(
-            model_name=args.model_name,
-            model_type=args.megatron_model_type,
-            num_gpus=args.num_gpus_per_node,
-            # TODO unify
-            dir_dst="/root/models",
-        )
+    TODO_convert_ckpt
 
 
 def execute(args: ScriptArgs):

@@ -23,7 +23,8 @@ class ScriptArgs(U.ExecuteTrainConfig):
 
 @app.command()
 @U.dataclass_cli
-def prepare_head(args: ScriptArgs):
+def prepare_single(args: ScriptArgs):
+    """This script only needs to be executed on one node."""
     U.exec_command("mkdir -p /root/models /root/datasets")
     U.exec_command(
         f"huggingface-cli download deepseek-ai/{args.model_name} --local-dir /root/models/{args.model_name}"
@@ -43,7 +44,7 @@ def prepare_head(args: ScriptArgs):
 @app.command()
 @U.dataclass_cli
 def prepare_spmd(args: ScriptArgs):
-    """This SPMD script needs to be executed once per node."""
+    """This script needs to be executed once per node."""
     path_dst = f"/root/models/{args.model_name}_torch_dist"
     if not Path(path_dst).exists():
         print(f"{os.environ.get('SLURM_JOB_NODELIST')=} {os.environ.get('SLURM_NODEID')=}")

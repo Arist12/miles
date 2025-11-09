@@ -9,6 +9,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
 
 import command_utils as U
 
+app = typer.Typer()
+
 
 @dataclass
 class ScriptArgs(U.ExecuteTrainConfig):
@@ -18,7 +20,9 @@ class ScriptArgs(U.ExecuteTrainConfig):
     enable_eval: bool = True
 
 
-def prepare(args: ScriptArgs):
+@app.command()
+@U.dataclass_cli
+def prepare_head(args: ScriptArgs):
     U.exec_command("mkdir -p /root/models /root/datasets")
     U.exec_command(
         f"huggingface-cli download deepseek-ai/{args.model_name} --local-dir /root/models/{args.model_name}"
@@ -34,9 +38,15 @@ def prepare(args: ScriptArgs):
             f"--output-bf16-hf-path {path_bf16_hf}"
         )
 
+
+@app.command()
+@U.dataclass_cli
+def prepare_spmd(args: ScriptArgs):
     TODO_convert_ckpt
 
 
+@app.command()
+@U.dataclass_cli
 def execute(args: ScriptArgs):
     run_id = U.create_run_id()
 
@@ -181,11 +191,5 @@ def execute(args: ScriptArgs):
     )
 
 
-@U.dataclass_cli
-def main(args: ScriptArgs):
-    prepare(args)
-    execute(args)
-
-
 if __name__ == "__main__":
-    typer.run(main)
+    app()

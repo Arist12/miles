@@ -101,7 +101,7 @@ def train(args: ScriptArgs):
     load_save_path = f"/root/shared_data/{run_id}/checkpoints"
     ckpt_args = (
         f"--hf-checkpoint /root/models/{args.model_name} "
-        f"--ref-load /root/models/{args.model_name}_torch_dist "
+        f"--ref-load /root/local_data/{args.model_name}_torch_dist "
         f"--load {load_save_path} "
         f"--save {load_save_path} "
         "--save-interval 20 "

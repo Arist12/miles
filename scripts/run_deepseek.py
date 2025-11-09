@@ -73,6 +73,7 @@ def execute(args: ScriptArgs):
 
     grpo_args = (
         "--advantage-estimator grpo "
+        # TODO run-deepseek-r1.sh enables use-kl-loss but w/ coef 0. can we just disable it like this?
         # "--use-kl-loss "
         "--kl-loss-coef 0.00 "
         "--kl-loss-type low_var_kl "

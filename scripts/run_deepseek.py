@@ -112,48 +112,25 @@ def execute(args: ScriptArgs):
         "--use-precision-aware-optimizer "
     )
 
-    sglang_args = f"--rollout-num-gpus-per-engine 1 " "--sglang-chunked-prefill-size 4096 "
+    sglang_args = (
+        "--rollout-num-gpus-per-engine 64 "
+        "--sglang-mem-fraction-static 0.7 "
+        "--sglang-enable-ep-moe "
 
-    match args.train_backend:
-        case "fsdp":
-            train_backend_args = (
-                "--train-backend fsdp "
-                "--attn-implementation flash_attention_2 "
-                "--gradient-checkpointing "
-                f"--update-weights-bucket-size {512 * 1024 * 1024} "  # 512MB
-                "--offload-train-mode move "
-                """--train-env-vars '{"PYTORCH_CUDA_ALLOC_CONF":"expandable_segments:True"}' """
-            )
-            sglang_args += f"--sglang-mem-fraction-static 0.75 "
-            perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 32768 "
+        # dp attention
+        "--sglang-enable-dp-attention "
+        "--sglang-dp-size 8 "
+        "--sglang-moe-dense-tp-size 1 "
+        "--sglang-enable-dp-lm-head "
+        "--sglang-disable-radix-cache "
 
-        case "megatron":
-            train_backend_args = (
-                f"--tensor-model-parallel-size {2 if args.num_gpus_per_node == 8 else 1} "
-                "--sequence-parallel "
-                "--pipeline-model-parallel-size 1 "
-                f"--context-parallel-size {4 if args.num_gpus_per_node == 8 else 1} "
-                "--expert-model-parallel-size 1 "
-                "--expert-tensor-parallel-size 1 "
-                "--recompute-granularity full "
-                "--recompute-method uniform "
-                "--recompute-num-layers 1 "
-                # default dropout in megatron is 0.1
-                "--attention-dropout 0.0 "
-                "--hidden-dropout 0.0 "
-                # should be good for model performance
-                "--accumulate-allreduce-grads-in-fp32 "
-                "--attention-softmax-in-fp32 "
-                # need to comment this when using model with MLA
-                "--attention-backend flash "
-                "--train-memory-margin-bytes 3221225472 "
-            )
-            # TODO improve
-            sglang_args += f"--sglang-mem-fraction-static 0.7 "
-            perf_args = "--use-dynamic-batch-size " "--max-tokens-per-gpu 9216 "
+        # enable deepep for sglang
+        "--sglang-enable-deepep-moe "
+        "--sglang-deepep-mode auto "
 
-        case _:
-            raise NotImplementedError
+        # make every dp rank has 128 concurrency
+        "--sglang-server-concurrency 1024 "
+    )
 
     misc_args = (
         f"--actor-num-nodes {args.num_nodes} "

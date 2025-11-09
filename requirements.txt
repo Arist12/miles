@@ -9,3 +9,4 @@ ray[default]
 tensorboard
 transformers
 wandb
+numpy<2

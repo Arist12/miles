@@ -45,7 +45,21 @@ def prepare_spmd(args: ScriptArgs):
     path_dst = f"/root/models/{args.model_name}_torch_dist"
     if not Path(path_dst).exists():
         U.exec_command(
-            ""
+            "source scripts/models/deepseek-v3.sh && "
+            "PYTHONPATH=/root/Megatron-LM/ torchrun "
+            "--nproc-per-node 8 "
+            "--master-addr ${MASTER_ADDR} --master-port 12345 "
+            "--nnodes=4 --node-rank ${NODE_RANK} "
+            "tools/convert_hf_to_torch_dist.py "
+            "${MODEL_ARGS[@]} "
+            "--tensor-model-parallel-size 1 "
+            "--pipeline-model-parallel-size 8 "
+            "--expert-tensor-parallel-size 1 "
+            "--expert-model-parallel-size 4 "
+            "--decoder-first-pipeline-num-layers 7 "
+            "--decoder-last-pipeline-num-layers 6 "
+            "--hf-checkpoint $BASE_DIR/DeepSeek-R1-bf16/ "
+            "--save $BASE_DIR/DeepSeek-R1_torch_dist/ "
         )
 
 

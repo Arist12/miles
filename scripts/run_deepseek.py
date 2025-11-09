@@ -26,12 +26,12 @@ def prepare(args: ScriptArgs):
     U.hf_download_dataset("zhuzilin/dapo-math-17k")
     U.hf_download_dataset("zhuzilin/aime-2024")
 
-    bf16_hf_path = f"/root/models/{args.model_name}-bf16/"
-    if not Path(bf16_hf_path).exists():
+    path_bf16_hf = f"/root/models/{args.model_name}-bf16/"
+    if not Path(path_bf16_hf).exists():
         U.exec_command(
             "python tools/fp8_cast_bf16.py "
             f"--input-fp8-hf-path /root/models/{args.model_name} "
-            f"--output-bf16-hf-path {bf16_hf_path}"
+            f"--output-bf16-hf-path {path_bf16_hf}"
         )
 
     TODO_convert_ckpt

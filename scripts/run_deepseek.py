@@ -52,7 +52,7 @@ def _fp8_cast_bf16(args: ScriptArgs):
     U.exec_command(
         "python tools/fp8_cast_bf16.py "
         f"--input-fp8-hf-path /root/models/{args.model_name} "
-        f"--output-bf16-hf-path {path_bf16_hf}"
+        f"--output-bf16-hf-path {path_bf16_hf} "
         f"{'--max-loaded-files 10000 ' if args.model_name == 'DeepSeek-V3-5layer' else ''}"
     )
 

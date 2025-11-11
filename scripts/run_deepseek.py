@@ -155,15 +155,27 @@ def train(args: ScriptArgs):
             "--eval-top-p 0.7 "
         )
 
-    perf_args = (
-        # TODO choose a good config (currently randomly change to suit 64gpu)
-        "--tensor-model-parallel-size 4 "
-        "--sequence-parallel "
-        "--pipeline-model-parallel-size 4 "
-        "--context-parallel-size 4 "
-        "--expert-model-parallel-size 16 "
-        "--expert-tensor-parallel-size 1 "
-        "--decoder-last-pipeline-num-layers 13 "
+    # TODO choose a good config (currently randomly change to suit 64gpu)
+    if args.num_nodes == 1:
+        perf_args = (
+            "--tensor-model-parallel-size 1 "
+            "--sequence-parallel "
+            "--pipeline-model-parallel-size 1 "
+            "--context-parallel-size 4 "
+            "--expert-model-parallel-size 4 "
+            "--expert-tensor-parallel-size 1 "
+        )
+    else:
+        perf_args = (
+            "--tensor-model-parallel-size 4 "
+            "--sequence-parallel "
+            "--pipeline-model-parallel-size 4 "
+            "--context-parallel-size 4 "
+            "--expert-model-parallel-size 16 "
+            "--expert-tensor-parallel-size 1 "
+            "--decoder-last-pipeline-num-layers 13 "
+        )
+    perf_args += (
         # ------------
         "--recompute-granularity full "
         "--recompute-method uniform "
@@ -199,8 +211,8 @@ def train(args: ScriptArgs):
 
     sglang_num_gpus = args.num_gpus_per_node * args.num_nodes
     sglang_decode_max_bs = 256
-    sglang_world_size = 64
-    sglang_attn_dp_size = 8
+    sglang_world_size = 4 if args.num_nodes == 1 else 64
+    sglang_attn_dp_size = 1 if args.num_nodes == 1 else 8
     sglang_attn_tp_size = sglang_world_size // sglang_attn_dp_size
     sglang_args = (
         f"--rollout-num-gpus-per-engine {sglang_world_size} "

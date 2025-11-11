@@ -170,7 +170,7 @@ def train(args: ScriptArgs):
             "--eval-top-p 0.7 "
         )
 
-    if args.num_nodes == 1:
+    if args.num_nodes <= 2:
         perf_args = (
             "--tensor-model-parallel-size 1 "
             "--sequence-parallel "
@@ -226,8 +226,8 @@ def train(args: ScriptArgs):
 
     sglang_num_gpus = args.num_gpus_per_node * args.num_nodes
     sglang_decode_max_bs = 256
-    sglang_world_size = 4 if args.num_nodes == 1 else 64
-    sglang_attn_dp_size = 1 if args.num_nodes == 1 else 8
+    sglang_world_size = 4 if args.num_nodes <= 2 else 64
+    sglang_attn_dp_size = 1 if args.num_nodes <= 2 else 8
     sglang_attn_tp_size = sglang_world_size // sglang_attn_dp_size
     sglang_args = (
         f"--rollout-num-gpus-per-engine {sglang_world_size} "

@@ -172,16 +172,4 @@ def convert_to_hf(args, model_name, name, param, quantization_config=None):
     if not quantization_config:
         return converted_named_tensors
 
-    def get_tensor_info(x):
-        if not isinstance(x, torch.Tensor):
-            return f"type={type(x)} value={x}"
-        min = x.float().min() if x.numel() > 0 else None
-        max = x.float().max() if x.numel() > 0 else None
-        mean = x.float().mean() if x.numel() > 0 else None
-        return f"shape={x.shape} dtype={x.dtype} device={x.device} stride={x.stride()} req_grad={x.requires_grad} min={min} max={max} mean={mean}"
-
-    ans = quantize_params(args, name, converted_named_tensors, quantization_config)
-    print(
-        f"hi convert_to_hf {name=} {get_tensor_info(param)=} {quantization_config=} {[(name, get_tensor_info(w)) for name, w in ans]=}"
-    )
-    return ans
+    return quantize_params(args, name, converted_named_tensors, quantization_config)

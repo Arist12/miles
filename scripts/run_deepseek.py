@@ -18,7 +18,7 @@ app = typer.Typer()
 class ScriptArgs(U.ExecuteTrainConfig):
     mode: Literal["normal", "debug_minimal"] = "normal"
     model_org: str = "deepseek-ai"
-    model_name: str = "DeepSeek-V3"
+    model_name: str = "DeepSeek-V3-0324"
     megatron_model_type: str = "deepseek-v3"
     num_gpus_per_node: int = 4
     enable_eval: bool = True
@@ -26,9 +26,9 @@ class ScriptArgs(U.ExecuteTrainConfig):
     extra_env_vars: str = "{}"
 
     def __post_init__(self):
-        if self.model_name == "DeepSeek-V3-5layer":
-            self.model_org = "chwan"
-            self.megatron_model_type = "deepseek-v3-5layer"
+        if self.model_name == "DeepSeek-V3-0324-5layer":
+            self.model_org = "fzyzcjy"
+            self.megatron_model_type = "deepseek-v3-0324-5layer"
 
 
 @app.command()

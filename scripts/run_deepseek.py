@@ -72,7 +72,8 @@ def _convert_to_megatron_ckpt(args: ScriptArgs):
     print(f"{os.environ.get('SLURM_JOB_HOSTNAMES')=} {os.environ.get('SLURM_NODEID')=}")
     master_addr = os.environ["SLURM_JOB_HOSTNAMES"].split("\n")[0]
     node_rank = int(os.environ["SLURM_NODEID"])
-    U.exec_command(
+
+    cmd = (
         f"source scripts/models/{args.megatron_model_type}.sh && "
         "PYTHONPATH=/root/Megatron-LM/ torchrun "
         f"--nproc-per-node {args.num_gpus_per_node} "
@@ -82,15 +83,27 @@ def _convert_to_megatron_ckpt(args: ScriptArgs):
         f"--node-rank {node_rank} "
         "tools/convert_hf_to_torch_dist.py "
         "${MODEL_ARGS[@]} "
-        "--tensor-model-parallel-size 1 "
-        "--pipeline-model-parallel-size 8 "
-        "--expert-tensor-parallel-size 1 "
-        "--expert-model-parallel-size 4 "
-        "--decoder-first-pipeline-num-layers 7 "
-        "--decoder-last-pipeline-num-layers 6 "
         f"--hf-checkpoint /root/models/{args.model_name}-bf16/ "
         f"--save {path_dst} "
     )
+    if args.num_nodes == 1 and args.model_name == "DeepSeek-V3-5layer":
+        cmd += (
+            "--tensor-model-parallel-size 1 "
+            "--pipeline-model-parallel-size 1 "
+            "--expert-tensor-parallel-size 1 "
+            "--expert-model-parallel-size 1 "
+        )
+    else:
+        cmd += (
+            "--tensor-model-parallel-size 1 "
+            "--pipeline-model-parallel-size 8 "
+            "--expert-tensor-parallel-size 1 "
+            "--expert-model-parallel-size 4 "
+            "--decoder-first-pipeline-num-layers 7 "
+            "--decoder-last-pipeline-num-layers 6 "
+        )
+
+    U.exec_command(cmd)
 
 
 # TODO improve these commadns

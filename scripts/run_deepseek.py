@@ -28,7 +28,7 @@ class ScriptArgs(U.ExecuteTrainConfig):
     def __post_init__(self):
         if self.model_name == "DeepSeek-V3-0324-5layer":
             self.model_org = "fzyzcjy"
-            self.megatron_model_type = "deepseek-v3-5layer"
+            self.megatron_model_type = "deepseek-V3-0324-5layer"
 
 
 @app.command()
@@ -86,7 +86,7 @@ def _convert_to_megatron_ckpt(args: ScriptArgs):
         f"--hf-checkpoint /root/models/{args.model_name}-bf16/ "
         f"--save {path_dst} "
     )
-    if args.num_nodes == 1 and args.model_name == "DeepSeek-V3-5layer":
+    if args.num_nodes == 1 and args.model_name == "DeepSeek-V3-0324-5layer":
         cmd += (
             "--tensor-model-parallel-size 1 "
             "--pipeline-model-parallel-size 1 "

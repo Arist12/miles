@@ -1,6 +1,8 @@
 import re
 
 import torch
+from sglang.srt.layers.quantization.fp8_utils import quant_weight_ue8m0
+from sglang.srt.model_loader.utils import should_deepgemm_weight_requant_ue8m0
 
 from miles.utils.fp8_kernel import blockwise_cast_to_fp8_triton
 
@@ -23,7 +25,10 @@ def quantize_param(name, weight, weight_block_size):
     FP8_MIN = torch.finfo(torch.float8_e4m3fn).min
     FP8_MAX = torch.finfo(torch.float8_e4m3fn).max
     if weight_block_size is not None:
-        qweight, scale = blockwise_cast_to_fp8_triton(weight, weight_block_size)
+        if should_deepgemm_weight_requant_ue8m0(weight_block_size=weight_block_size):
+            qweight, scale = quant_weight_ue8m0(weight, weight_block_size=weight_block_size)
+        else:
+            qweight, scale = blockwise_cast_to_fp8_triton(weight, weight_block_size)
         scale_name = name.replace(".weight", ".weight_scale_inv")
     else:
         # per tensor quant

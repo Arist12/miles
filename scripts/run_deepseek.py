@@ -23,7 +23,6 @@ class ScriptArgs(U.ExecuteTrainConfig):
     num_gpus_per_node: int = 4
     enable_eval: bool = True
     extra_args: str = ""
-    extra_env_vars: str = "{}"
 
     def __post_init__(self):
         super().__post_init__()
@@ -296,7 +295,7 @@ def train(args: ScriptArgs):
         # TODO may get it from `config`
         num_gpus=args.num_gpus_per_node,
         model_type=args.megatron_model_type,
-        extra_env_vars={**sglang_extra_env_vars, **json.loads(args.extra_env_vars)},
+        extra_env_vars={**sglang_extra_env_vars},
     )
 
 

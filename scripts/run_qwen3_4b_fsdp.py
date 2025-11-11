@@ -19,7 +19,6 @@ class ScriptArgs(U.ExecuteTrainConfig):
     num_gpus_per_node: Optional[int] = None
     hardware: Literal["H100", "GB300"] = "H100"
     extra_args: str = ""
-    extra_env_vars: str = "{}"
     multi_eval: bool = True
     true_on_policy: bool = False
     dynamic_sampling: bool = False
@@ -256,7 +255,6 @@ eval:
         extra_env_vars={
             **misc_env_vars,
             **true_on_policy_envs,
-            **json.loads(args.extra_env_vars),
         },
     )
 

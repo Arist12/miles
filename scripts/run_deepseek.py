@@ -262,7 +262,8 @@ def train(args: ScriptArgs):
         # should be good for model performance
         "--accumulate-allreduce-grads-in-fp32 "
         "--attention-softmax-in-fp32 "
-        "--attention-backend flash "
+        # need to comment this when using model with MLA
+        # "--attention-backend flash "
         # use deepep for megatron
         "--moe-enable-deepep "
         "--moe-token-dispatcher-type flex "

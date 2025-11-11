@@ -118,7 +118,7 @@ RUN rm -rf /sgl-workspace/nvshmem && \
     (cd /sgl-workspace/DeepEP && TORCH_CUDA_ARCH_LIST="9.0;10.0;10.3" pip install --no-build-isolation --verbose .)
 
 # temporary hack
-RUN SGL_KERNEL_VERSION=0.3.16.post5 && python3 -m pip install https://github.com/sgl-project/whl/releases/download/v${SGL_KERNEL_VERSION}/sgl_kernel-${SGL_KERNEL_VERSION}+cu130-cp310-abi3-manylinux2014_$(uname -m).whl --force-reinstall --no-deps
+RUN SGL_KERNEL_VERSION=0.3.17 && python3 -m pip install https://github.com/sgl-project/whl/releases/download/v${SGL_KERNEL_VERSION}/sgl_kernel-${SGL_KERNEL_VERSION}+cu130-cp310-abi3-manylinux2014_$(uname -m).whl --force-reinstall --no-deps
 
 # temporary hack
 RUN curl -L https://github.com/NVIDIA/Megatron-LM/commit/d8c6aa4c0b5d4c15ec1196802bce292d4580ed4a.patch -o /root/temp.patch && (cd /root/Megatron-LM && (patch -p1 < /root/temp.patch))

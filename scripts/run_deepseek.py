@@ -25,6 +25,11 @@ class ScriptArgs(U.ExecuteTrainConfig):
     extra_args: str = ""
     extra_env_vars: str = "{}"
 
+    def __post_init__(self):
+        if self.model_name == "DeepSeek-V3-5layer":
+            self.model_org = "chwan"
+            self.megatron_model_type = "deepseek-v3-5layer"
+
 
 @app.command()
 @U.dataclass_cli

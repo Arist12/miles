@@ -49,12 +49,18 @@ def _fp8_cast_bf16(args: ScriptArgs):
     if Path(path_bf16_hf).exists():
         return
 
-    U.exec_command(
+    cmd = (
         "python tools/fp8_cast_bf16.py "
         f"--input-fp8-hf-path /root/models/{args.model_name} "
         f"--output-bf16-hf-path {path_bf16_hf} "
-        f"{'--max-loaded-files 10000 ' if args.model_name == 'DeepSeek-V3-5layer' else ''}"
     )
+    # That checkpoint has inaccurate indexing information, thus we need to workaround it
+    if args.model_name == 'DeepSeek-V3-5layer':
+        cmd += (
+            "--max-loaded-files 10000 "
+        )
+
+    U.exec_command(cmd)
 
 
 @app.command()

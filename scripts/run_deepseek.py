@@ -114,7 +114,7 @@ def train(args: ScriptArgs):
         f"--ref-load /root/local_data/{args.model_name}_torch_dist "
         f"--load {load_save_path} "
         f"--save {load_save_path} "
-        "--save-interval 20 "
+        "--save-retain-interval 20 "
     )
 
     rollout_args = (

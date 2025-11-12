@@ -91,12 +91,21 @@ def _convert_to_megatron_ckpt(args: ScriptArgs):
         f"--hf-checkpoint /root/models/{args.model_name}-bf16/ "
         f"--save {path_dst} "
     )
-    if args.num_nodes == 1 and (re.search(r"(\d+)layer", args.model_name) is not None):
+
+    # TODO unify 5layer w/ 20layer
+    if args.num_nodes == 1 and args.model_name == "DeepSeek-V3-0324-5layer":
         cmd += (
             "--tensor-model-parallel-size 1 "
             "--pipeline-model-parallel-size 1 "
             "--expert-tensor-parallel-size 1 "
             "--expert-model-parallel-size 1 "
+        )
+    elif args.model_name == "DeepSeek-V3-0324-20layer":
+        cmd += (
+            "--tensor-model-parallel-size 1 "
+            "--expert-tensor-parallel-size 1 "
+            "--expert-model-parallel-size 4 "
+            # PP info will be auto determined by converter script
         )
     else:
         cmd += (

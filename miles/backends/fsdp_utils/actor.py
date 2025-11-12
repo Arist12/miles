@@ -362,13 +362,6 @@ class FSDPTrainRayActor(TrainRayActor):
         with inverse_timer("train_wait"), timer("train"):
             self._train_core(rollout_id=rollout_id, rollout_data_ref=rollout_data_ref)
 
-        if (
-            self.args.record_memory_history
-            and ((s := self.args.memory_snapshot_num_steps) is not None)
-            and (rollout_id == s - 1)
-        ):
-            profile_utils.dump_snapshot_and_stop(profile_utils.get_memory_snapshot_full_path(self.args))
-
         train_metric_utils.log_perf_data_raw(
             rollout_id=rollout_id,
             args=self.args,
@@ -445,7 +438,7 @@ class FSDPTrainRayActor(TrainRayActor):
                     grad_accum=grad_accum,
                 )
 
-        self.prof.step()
+        self.prof.step(rollout_id=rollout_id)
 
         train_dump_utils.save_debug_train_data(self.args, rollout_id=rollout_id, rollout_data=rollout_data)
 

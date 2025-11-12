@@ -20,11 +20,17 @@ class TrainProfiler:
             self._torch_profiler_overall = _create_torch_profiler(args, name="train_overall")
             self._torch_profiler_overall.start()
 
-    def step(self):
-        if self._torch_profiler_overall is None:
-            return
+    def step(self, rollout_id: int):
+        if self._torch_profiler_overall is not None:
+            self._torch_profiler_overall.step()
 
-        self._torch_profiler_overall.step()
+        if (
+            self.args.record_memory_history
+            and ((s := self.args.memory_snapshot_num_steps) is not None)
+            and (rollout_id == s - 1)
+        ):
+            profile_utils.dump_snapshot_and_stop(profile_utils.get_memory_snapshot_full_path(self.args))
+
 
     def iterate_train_actor(self, iterator):
         return _profile_simple_loop(iterator, self.args, name="train_actor")

@@ -314,7 +314,7 @@ class MegatronTrainRayActor(TrainRayActor):
                     num_microbatches,
                 )
 
-            self.prof.step()
+            self.prof.step(rollout_id=rollout_id)
 
         train_dump_utils.save_debug_train_data(self.args, rollout_id=rollout_id, rollout_data=rollout_data)
 

@@ -74,15 +74,15 @@ class _BaseMemoryProfiler:
                 / f"memory_snapshot_time{time.time()}_rank{torch.distributed.get_rank()}_{args.memory_snapshot_path}"
         )
 
-    def start(self):
+    def _start(self):
         raise NotImplementedError
 
-    def stop(self):
+    def _stop(self):
         raise NotImplementedError
 
 
 class _TorchMemoryProfiler(_BaseMemoryProfiler):
-    def start(self):
+    def _start(self):
         print("Attach OOM dump memory history.")
 
         torch.cuda.memory._record_memory_history(
@@ -99,19 +99,19 @@ class _TorchMemoryProfiler(_BaseMemoryProfiler):
 
         torch._C._cuda_attach_out_of_memory_observer(oom_observer)
 
-    def stop(self):
+    def _stop(self):
         print(f"Dump memory snapshot to: {self._path_dump}")
         torch.cuda.memory._dump_snapshot(self._path_dump)
         torch.cuda.memory._record_memory_history(enabled=None)
 
 
 class _MemrayMemoryProfiler(_BaseMemoryProfiler):
-    def start(self):
+    def _start(self):
         print("Memray tracker started.")
         import memray
         self._tracker = memray.Tracker(file_name=self._path_dump)
         self._tracker.__enter__()
 
-    def stop(self):
+    def _stop(self):
         print(f"Memray tracker stopped and dump snapshot to: {self._path_dump}")
         self._tracker.__exit__(None, None, None)

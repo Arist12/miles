@@ -228,7 +228,9 @@ def train(args: ScriptArgs):
         "--recompute-num-layers 1 "
         # ------------
         "--use-dynamic-batch-size "
-        "--max-tokens-per-gpu 16384 "
+        # TODO temp use tiny value
+        "--max-tokens-per-gpu 2048 "
+        # "--max-tokens-per-gpu 16384 "
     )
 
     grpo_args = (
@@ -252,7 +254,7 @@ def train(args: ScriptArgs):
         # ------------
         # "--optimizer-cpu-offload "
         # "--overlap-cpu-optimizer-d2h-h2d "
-        # "--use-precision-aware-optimizer "
+        "--use-precision-aware-optimizer "
     )
 
     sglang_decode_max_bs = 256

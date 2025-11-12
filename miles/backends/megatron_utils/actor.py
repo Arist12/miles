@@ -335,14 +335,6 @@ class MegatronTrainRayActor(TrainRayActor):
                     print(f"Updating ref model at rollout_id {rollout_id}")
                 self.update_cpu_params_dict(self.weights["ref"])
 
-        # TODO refactor
-        if (
-            self.args.record_memory_history
-            and ((s := self.args.memory_snapshot_num_steps) is not None)
-            and (rollout_id == s - 1)
-        ):
-            profile_utils.dump_snapshot_and_stop(profile_utils.get_memory_snapshot_full_path(self.args))
-
         log_perf_data(rollout_id, self.args)
 
     def save_model(self, iteration: int) -> None:

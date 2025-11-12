@@ -128,7 +128,10 @@ class _MemrayMemoryProfiler(_BaseMemoryProfiler):
         print("Memray tracker started.")
         import memray
 
-        self._tracker = memray.Tracker(file_name=self._path_dump)
+        self._tracker = memray.Tracker(
+            file_name=self._path_dump,
+            native_traces=True,
+        )
         self._tracker.__enter__()
 
     def stop(self):

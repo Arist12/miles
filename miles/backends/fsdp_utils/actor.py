@@ -78,8 +78,7 @@ class FSDPTrainRayActor(TrainRayActor):
         if getattr(self.args, "start_rollout_id", None) is None:
             self.args.start_rollout_id = 0
 
-        if args.record_memory_history:
-            profile_utils.attach_oom_dump_memory_history(profile_utils.get_memory_snapshot_full_path(args))
+        self.prof = TrainProfiler(args)
 
         for i in range(dist.get_world_size()):
             if i == dist.get_rank():
@@ -161,7 +160,7 @@ class FSDPTrainRayActor(TrainRayActor):
         if self.args.offload_train:
             self.sleep()
 
-        self.prof = TrainProfiler(args)
+        self.prof.on_init_end()
 
         return int(getattr(self.args, "start_rollout_id", 0))
 

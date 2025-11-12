@@ -18,6 +18,9 @@ class TrainProfiler:
         self._torch_profiler_overall = None
         if args.use_pytorch_profiler and ("train_overall" in args.profile_target):
             self._torch_profiler_overall = _create_torch_profiler(args, name="train_overall")
+
+    def on_init_end(self):
+        if self._torch_profiler_overall is not None:
             self._torch_profiler_overall.start()
 
     def step(self, rollout_id: int):

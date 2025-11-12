@@ -54,6 +54,8 @@ class MegatronTrainRayActor(TrainRayActor):
         if is_megatron_main_rank():
             init_wandb_secondary(args, wandb_run_id)
 
+        self.prof = TrainProfiler(args)
+
         # read config and tokenizer serialized to prevent concurrent writing bug.
         for i in range(dist.get_world_size()):
             if i == dist.get_rank():
@@ -120,7 +122,7 @@ class MegatronTrainRayActor(TrainRayActor):
 
             self.rollout_data_postprocess = load_function(self.args.rollout_data_postprocess_path)
 
-        self.prof = TrainProfiler(args)
+        self.prof.on_init_end()
 
         return start_rollout_id
 

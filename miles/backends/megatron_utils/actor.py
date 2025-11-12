@@ -25,6 +25,7 @@ from miles.utils.timer import Timer, inverse_timer, timer
 from miles.utils.types import RolloutBatch
 from miles.utils.wandb_utils import init_wandb_secondary
 
+from ...utils import profile_utils
 from ...utils.profile_utils import TrainProfiler
 from .checkpoint import load_checkpoint
 from .cp_utils import slice_log_prob_with_cp
@@ -333,6 +334,14 @@ class MegatronTrainRayActor(TrainRayActor):
                 if is_megatron_main_rank():
                     print(f"Updating ref model at rollout_id {rollout_id}")
                 self.update_cpu_params_dict(self.weights["ref"])
+
+        # TODO refactor
+        if (
+            self.args.record_memory_history
+            and ((s := self.args.memory_snapshot_num_steps) is not None)
+            and (rollout_id == s - 1)
+        ):
+            profile_utils.dump_snapshot_and_stop(profile_utils.get_memory_snapshot_full_path(self.args))
 
         log_perf_data(rollout_id, self.args)
 

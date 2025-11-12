@@ -3,6 +3,11 @@ from pathlib import Path
 
 import torch
 
+try:
+    pass
+except ImportError:
+    pass
+
 
 # The memory_snapshot_path is not a full path, but we name like this to be compatible with megatron
 def attach_oom_dump_memory_history(path_dump):

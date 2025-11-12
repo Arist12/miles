@@ -12,8 +12,10 @@ class TrainProfiler:
 
         if args.use_pytorch_profiler and ("train_overall" in args.profile_target):
             self._torch_profiler_overall = _create_torch_profiler(args, name="train_overall")
+
         if args.record_memory_history and ("train_overall" in args.profile_target):
-            self._memory_profiler_overall = _BaseMemoryProfiler.create()
+            self._memory_profiler_overall = _BaseMemoryProfiler.create(args)
+            self._memory_profiler_overall.start()
 
     def on_init_end(self):
         if self._torch_profiler_overall is not None:
@@ -24,11 +26,11 @@ class TrainProfiler:
             self._torch_profiler_overall.step()
 
         if (
-            self.args.record_memory_history
+            self._memory_profiler_overall is not None
             and ((s := self.args.memory_snapshot_num_steps) is not None)
             and (rollout_id == s - 1)
         ):
-            TODO
+            self._memory_profiler_overall.stop()
 
     def iterate_train_actor(self, iterator):
         return _profile_simple_loop(iterator, self.args, name="train_actor")

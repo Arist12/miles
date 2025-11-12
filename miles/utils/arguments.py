@@ -947,10 +947,10 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                 nargs="+",
             )
             parser.add_argument(
-                "--memory-history-device",
+                "--memory-history-recorder",
                 type=str,
-                choices=["device", "host"],
-                default="device",
+                choices=["torch", "memray"],
+                default="torch",
             )
             return parser
 

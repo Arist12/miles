@@ -8,9 +8,12 @@ class TrainProfiler:
     def __init__(self, args):
         self.args = args
         self._torch_profiler_overall = None
+        self._memory_profiler_overall = None
 
         if args.use_pytorch_profiler and ("train_overall" in args.profile_target):
             self._torch_profiler_overall = _create_torch_profiler(args, name="train_overall")
+        if args.record_memory_history and ("train_overall" in args.profile_target):
+            self._memory_profiler_overall = _BaseMemoryProfiler.create()
 
     def on_init_end(self):
         if self._torch_profiler_overall is not None:
@@ -68,6 +71,14 @@ def _create_torch_profiler(args, name):
 
 
 class _BaseMemoryProfiler:
+    @staticmethod
+    def create(args):
+        c = {
+            "torch": _TorchMemoryProfiler,
+            "memray": _MemrayMemoryProfiler,
+        }[args.memory_history_recorder]
+        return c(args)
+
     def __init__(self, args):
         self._path_dump = (
                 Path(args.memory_snapshot_dir)

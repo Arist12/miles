@@ -250,9 +250,9 @@ def train(args: ScriptArgs):
         "--adam-beta1 0.9 "
         "--adam-beta2 0.98 "
         # ------------
-        "--optimizer-cpu-offload "
-        "--overlap-cpu-optimizer-d2h-h2d "
-        "--use-precision-aware-optimizer "
+        # "--optimizer-cpu-offload "
+        # "--overlap-cpu-optimizer-d2h-h2d "
+        # "--use-precision-aware-optimizer "
     )
 
     sglang_decode_max_bs = 256

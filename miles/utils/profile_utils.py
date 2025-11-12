@@ -121,7 +121,7 @@ class _TorchMemoryProfiler(_BaseMemoryProfiler):
 class _MemrayMemoryProfiler(_BaseMemoryProfiler):
     def __init__(self, args):
         super().__init__(args)
-        assert args.memory_snapshot_num_steps is not None
+        assert args.memory_snapshot_num_steps is not None, f"In memray, must provide --memory-snapshot-num-steps"
 
     def start(self):
         print("Memray tracker started.")

@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -90,7 +91,7 @@ def _convert_to_megatron_ckpt(args: ScriptArgs):
         f"--hf-checkpoint /root/models/{args.model_name}-bf16/ "
         f"--save {path_dst} "
     )
-    if args.num_nodes == 1 and args.model_name == "DeepSeek-V3-0324-5layer":
+    if args.num_nodes == 1 and (re.match(r"\dlayer", args.model_name) is not None):
         cmd += (
             "--tensor-model-parallel-size 1 "
             "--pipeline-model-parallel-size 1 "

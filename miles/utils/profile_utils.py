@@ -26,9 +26,9 @@ class TrainProfiler:
             self._torch_profiler_overall.step()
 
         if (
-            self._memory_profiler_overall is not None
-            and ((s := self.args.memory_snapshot_num_steps) is not None)
-            and (rollout_id == s - 1)
+                self._memory_profiler_overall is not None
+                and ((s := self.args.memory_snapshot_num_steps) is not None)
+                and (rollout_id == s - 1)
         ):
             self._memory_profiler_overall.stop()
 
@@ -119,6 +119,10 @@ class _TorchMemoryProfiler(_BaseMemoryProfiler):
 
 
 class _MemrayMemoryProfiler(_BaseMemoryProfiler):
+    def __init__(self, args):
+        super().__init__(args)
+        assert args.memory_snapshot_num_steps is not None
+
     def start(self):
         print("Memray tracker started.")
         import memray

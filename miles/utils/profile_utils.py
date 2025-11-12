@@ -15,16 +15,16 @@ def dump_snapshot_and_stop(path_dump):
 class TrainProfiler:
     def __init__(self, args):
         self.args = args
-        self._prof_overall = None
+        self._torch_profiler_overall = None
         if args.use_pytorch_profiler and ("train_overall" in args.profile_target):
-            self._prof_overall = _create_torch_profiler(args, name="train_overall")
-            self._prof_overall.start()
+            self._torch_profiler_overall = _create_torch_profiler(args, name="train_overall")
+            self._torch_profiler_overall.start()
 
     def step(self):
-        if self._prof_overall is None:
+        if self._torch_profiler_overall is None:
             return
 
-        self._prof_overall.step()
+        self._torch_profiler_overall.step()
 
     def iterate_train_actor(self, iterator):
         return _profile_simple_loop(iterator, self.args, name="train_actor")
@@ -38,11 +38,11 @@ def _profile_simple_loop(iterator, args, name):
         yield from iterator
         return
 
-    prof = _create_torch_profiler(args, name=name)
-    prof.start()
+    torch_profiler = _create_torch_profiler(args, name=name)
+    torch_profiler.start()
     for item in iterator:
         yield item
-        prof.step()
+        torch_profiler.step()
 
 
 def _create_torch_profiler(args, name):

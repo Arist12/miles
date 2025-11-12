@@ -4,18 +4,11 @@ from pathlib import Path
 import torch
 
 
-def attach_oom_dump_memory_history(path_dump):
-    TODO
-
-
-def dump_snapshot_and_stop(path_dump):
-    TODO
-
-
 class TrainProfiler:
     def __init__(self, args):
         self.args = args
         self._torch_profiler_overall = None
+
         if args.use_pytorch_profiler and ("train_overall" in args.profile_target):
             self._torch_profiler_overall = _create_torch_profiler(args, name="train_overall")
 

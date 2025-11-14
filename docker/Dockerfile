@@ -5,6 +5,8 @@ FROM lmsysorg/sglang:${SGLANG_VERSION} AS sglang
 ARG SGLANG_VERSION
 ARG MEGATRON_COMMIT=core_v0.14.0
 
+WORKDIR /root/
+
 RUN apt update
 RUN apt install -y nvtop rsync
 
@@ -16,7 +18,6 @@ RUN pip install ray[default] httpx[http2] wandb pylatexenc blobfile accelerate "
 # the newest version megatron supports is v2.7.4
 RUN MAX_JOBS=64 pip -v install flash-attn==2.7.4.post1 --no-build-isolation
 
-WORKDIR /root/
 RUN git clone https://github.com/Dao-AILab/flash-attention.git && \
     cd flash-attention/ && git checkout fbf24f67cf7f6442c5cfb2c1057f4bfc57e72d89 && git submodule update --init && cd hopper/ && python setup.py install && \
     export python_path=`python -c "import site; print(site.getsitepackages()[0])"` && \

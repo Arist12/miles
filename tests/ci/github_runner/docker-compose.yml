@@ -3,7 +3,8 @@ version: "3.9"
 
 services:
   runner:
-    image: ghcr.io/actions/actions-runner:2.328.0
+    # NOTE need to use the latest, o/w the runner will want to upgrade itself
+    image: ghcr.io/actions/actions-runner:2.329.0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /data/miles_ci:/data/miles_ci

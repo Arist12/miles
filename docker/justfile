@@ -1,7 +1,6 @@
 release:
     #!/bin/bash
     set -euxo pipefail
-
     cd ..
 
     docker build -f docker/Dockerfile . -t radixark/miles:$VERSION

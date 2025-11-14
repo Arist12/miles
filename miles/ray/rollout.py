@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import List, Union
 
+import numpy as np
 import ray
 import torch
 import wandb
@@ -23,6 +24,7 @@ from miles.utils.ray_utils import Box
 from miles.utils.types import Sample
 from miles.utils.wandb_utils import init_wandb_secondary
 
+from ..utils.metric_utils import has_repetition
 from .utils import NOSET_VISIBLE_DEVICES_ENV_VARS_LIST, Lock
 
 logging.getLogger("httpx").setLevel(logging.WARNING)

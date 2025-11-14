@@ -39,7 +39,7 @@ RUN git clone https://github.com/NVIDIA/Megatron-LM.git --recursive && \
     pip install -e .
 
 # sandwitch norm for GLM models
-COPY patch/${SGLANG_VERSION}/megatron.patch /root/Megatron-LM/
+COPY docker/patch/${SGLANG_VERSION}/megatron.patch /root/Megatron-LM/
 RUN cd Megatron-LM && \
     git update-index --refresh && \
     git apply megatron.patch --3way && \
@@ -50,7 +50,7 @@ RUN cd Megatron-LM && \
     rm megatron.patch
 
 # sglang patch
-COPY patch/${SGLANG_VERSION}/sglang.patch /sgl-workspace/sglang/
+COPY docker/patch/${SGLANG_VERSION}/sglang.patch /sgl-workspace/sglang/
 RUN cd /sgl-workspace/sglang && \
   git update-index --refresh && \
   git apply sglang.patch && \

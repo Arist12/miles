@@ -32,7 +32,7 @@ services:
           /home/runner/config.sh --url ${GITHUB_RUNNER_URL} --token ${GITHUB_RUNNER_TOKEN} --unattended --work "$DIR"
           echo "configured" > "$FLAG"
         else
-          echo "[runner] config already executed: skipping"
+          echo "config.sh already executed, skipping"
         fi
 
         exec /home/runner/run.sh

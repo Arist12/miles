@@ -16,6 +16,8 @@ services:
     restart: always
     environment:
       RUNNER_ALLOW_RUNASROOT: "1"
+    env_file:
+      - .env
     privileged: true
     user: root
     entrypoint: ["/bin/sh", "/host_pwd/entrypoint.sh"]

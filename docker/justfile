@@ -1,3 +1,8 @@
-release version:
-    docker build . -t radixark/miles:{{version}}
+release:
+    #!/bin/bash
+    set -euxo pipefail
+
+    cd ..
+
+    docker build -f docker/Dockerfile . -t radixark/miles:{{version}}
     docker push radixark/miles:{{version}}

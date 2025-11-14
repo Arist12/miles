@@ -19,7 +19,7 @@ class ScriptArgs(U.ExecuteTrainConfig):
     num_gpus_per_node: Optional[int] = None
     hardware: Literal["H100", "GB300"] = "H100"
     extra_args: str = ""
-    multi_eval: bool = True
+    multi_eval: bool = False
     true_on_policy: bool = False
     dynamic_sampling: bool = False
     enable_eval: bool = True

@@ -38,6 +38,9 @@ RUN git clone https://github.com/NVIDIA/Megatron-LM.git --recursive && \
     cd Megatron-LM && git checkout ${MEGATRON_COMMIT} && \
     pip install -e .
 
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
 # sandwitch norm for GLM models
 COPY docker/patch/${SGLANG_VERSION}/megatron.patch /root/Megatron-LM/
 RUN cd Megatron-LM && \
@@ -61,6 +64,3 @@ RUN cd /sgl-workspace/sglang && \
   rm sglang.patch
 
 RUN rm /root/.tmux.conf
-
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt

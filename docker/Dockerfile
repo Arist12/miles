@@ -36,7 +36,6 @@ RUN git clone https://github.com/NVIDIA/Megatron-LM.git --recursive && \
     cd Megatron-LM && git checkout ${MEGATRON_COMMIT} && \
     pip install -e .
 
-RUN pip install sglang-router==0.2.1 --force-reinstall
 RUN pip install git+https://github.com/fzyzcjy/torch_memory_saver.git@383bec3919fc266b25bdaaa0447ebd1ee9275f1e --no-cache-dir --force-reinstall
 
 COPY requirements.txt /tmp/requirements.txt

@@ -31,8 +31,8 @@ RUN pip install flash-linear-attention==0.4.0
 RUN pip -v install --no-build-isolation 'transformer_engine[pytorch]==2.9.0'
 
 WORKDIR /root/
-RUN git clone https://github.com/Dao-AILab/flash-attention.git@fbf24f67cf7f6442c5cfb2c1057f4bfc57e72d89 && \
-    cd flash-attention/ && git submodule update --init && cd hopper/ && python setup.py install && \
+RUN git clone https://github.com/Dao-AILab/flash-attention.git && \
+    cd flash-attention/ && git checkout fbf24f67cf7f6442c5cfb2c1057f4bfc57e72d89 && git submodule update --init && cd hopper/ && python setup.py install && \
     export python_path=`python -c "import site; print(site.getsitepackages()[0])"` && \
     mkdir -p $python_path/flash_attn_3 && \
     cp flash_attn_interface.py $python_path/flash_attn_3/flash_attn_interface.py

@@ -37,7 +37,11 @@ docker compose up -d
 Logs
 
 ```shell
+# All containers
 docker compose logs -f
+
+# One container
+docker logs -f github_runner-runner-1
 ```
 
 Exec

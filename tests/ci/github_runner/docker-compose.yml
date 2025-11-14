@@ -9,7 +9,7 @@ services:
       - /data/miles_ci:/data/miles_ci
       # it requires this folder
       - /home/runner/externals:/home/runner/externals
-      - ./entrypoint.sh:/entrypoint.sh:ro
+      - ./entrypoint.sh:/entrypoint.sh
     deploy:
       replicas: 8
     restart: always

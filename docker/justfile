@@ -3,7 +3,7 @@ release:
     set -euxo pipefail
     cd ..
 
-    read -r VERSION < docker/version.txt
+    VERSION="$(cat docker/version.txt | tr -d '\n')"
 
     docker build -f docker/Dockerfile . -t radixark/miles:$VERSION
     docker push radixark/miles:$VERSION

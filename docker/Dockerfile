@@ -1,4 +1,4 @@
-ARG SGLANG_VERSION=v0.5.5.post2
+ARG SGLANG_VERSION=v0.5.5.post1
 FROM lmsysorg/sglang:${SGLANG_VERSION} AS sglang
 
 ARG PATCH_VERSION=latest

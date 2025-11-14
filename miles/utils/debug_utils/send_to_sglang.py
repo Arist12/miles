@@ -19,7 +19,7 @@ def main(
     rollout_top_p: Annotated[float, typer.Option()] = 1.0,
 ):
     """
-    Minimally send prompts to SGLang using OpenAI endpoints with arguments in the same format as main Slime.
+    Minimally send prompts to SGLang using OpenAI endpoints with arguments in the same format as main Miles.
 
     Example usage:
     python -m miles.utils.debug_utils.send_to_sglang --prompt-data /root/datasets/aime-2024/aime-2024.jsonl --input-key prompt --n-samples-per-prompt 16 --rollout-max-response-len 32768 --rollout-temperature 0.8 --rollout-top-p 0.7

@@ -47,12 +47,12 @@ class TrainRayActor(RayActor):
         self.role = role
         self.with_ref = with_ref
 
-        torch.serialization.add_safe_globals([miles.utils.eval_config.EvalDatasetConfig])
-
         if (x := args.train_memory_margin_bytes) > 0:
             print(f"Set torch_memory_saver.memory_margin_bytes to {x}")
             assert args.offload_train
             torch_memory_saver.memory_margin_bytes = x
+
+        torch.serialization.add_safe_globals([miles.utils.eval_config.EvalDatasetConfig])
 
         local_rank = int(os.environ.get("LOCAL_RANK", 0))
         torch.cuda.set_device(f"cuda:{local_rank}")

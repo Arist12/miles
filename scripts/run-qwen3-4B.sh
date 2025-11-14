@@ -15,39 +15,49 @@ set -ex
 # will prevent ray from buffering stdout/stderr
 export PYTHONBUFFERED=16
 
+NVLINK_COUNT=$(nvidia-smi topo -m 2>/dev/null | grep -o 'NV[0-9][0-9]*' | wc -l)
+if [ "$NVLINK_COUNT" -gt 0 ]; then
+    HAS_NVLINK=1
+else
+    HAS_NVLINK=0
+fi
+echo "HAS_NVLINK: $HAS_NVLINK (detected $NVLINK_COUNT NVLink references)"
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-source "${SCRIPT_DIR}/../../scripts/models/qwen2.5-3B.sh"
+source "${SCRIPT_DIR}/models/qwen3-4B.sh"
 
 CKPT_ARGS=(
-   --hf-checkpoint /root/Qwen2.5-3B/
-   --ref-load /root/Qwen2.5-3B_torch_dist/
-   # --load /root/Qwen2.5-3B_miles/
-   # --save /root/Qwen2.5-3B_miles/
-   # --save-interval 20
+   --hf-checkpoint /root/Qwen3-4B
+   #--hf-checkpoint /root/Qwen3-4B-FP8
+   --ref-load /root/Qwen3-4B_torch_dist
+   --load /root/Qwen3-4B_miles/
+   --save /root/Qwen3-4B_miles/
+   --save-interval 20
 )
 
 ROLLOUT_ARGS=(
-   --prompt-data /root/Search-R1/data/nq_hotpotqa_train/train.parquet
+   --prompt-data /root/dapo-math-17k/dapo-math-17k.jsonl
    --input-key prompt
-   --label-key reward_model
+   --label-key label
    --apply-chat-template
    --rollout-shuffle
+   --rm-type deepscaler
    --num-rollout 3000
    --rollout-batch-size 32
    --n-samples-per-prompt 8
-   --rollout-max-response-len 512
-   --rollout-temperature 1
-
-   # eval args
-   # --eval-interval 25
-   # --eval-prompt-data nq_test /root/Search-R1/data/nq_hotpotqa_train/test.parquet@[0:3000]
-   # # --eval-prompt-data nq_test /root/nq_search/test.parquet
-   # --eval-input-key prompt
-   # --eval-label-key reward_model
-   # --n-samples-per-eval-prompt 1
+   --rollout-max-response-len 8192
+   --rollout-temperature 0.8
 
    --global-batch-size 256
    --balance-data
+)
+
+EVAL_ARGS=(
+   --eval-interval 20
+   --eval-prompt-data aime /root/aime-2024/aime-2024.jsonl
+   --n-samples-per-eval-prompt 16
+   --eval-max-response-len 16384
+   --eval-top-p 0.7
 )
 
 PERF_ARGS=(
@@ -70,21 +80,18 @@ PERF_ARGS=(
 GRPO_ARGS=(
    --advantage-estimator grpo
    --use-kl-loss
-   --kl-loss-coef 0.001
+   --kl-loss-coef 0.00
    --kl-loss-type low_var_kl
    --entropy-coef 0.00
    --eps-clip 0.2
    --eps-clip-high 0.28
-
-   # whether enabling TIS
-   # --use-tis
 )
 
 OPTIMIZER_ARGS=(
    --optimizer adam
    --lr 1e-6
    --lr-decay-style constant
-   --weight-decay 0.01
+   --weight-decay 0.1
    --adam-beta1 0.9
    --adam-beta2 0.98
 )
@@ -92,7 +99,7 @@ OPTIMIZER_ARGS=(
 WANDB_ARGS=(
    # --use-wandb
    # --wandb-project miles-dev
-   # --wandb-group search-r1_qwen2.5-3B-test
+   # --wandb-group qwen3-4B-test
    # --wandb-key ${WANDB_KEY}
 )
 
@@ -112,23 +119,16 @@ MISC_ARGS=(
    --attention-backend flash
 )
 
-CUSTOM_ARGS=(
-   --custom-generate-function-path generate_with_search.generate
-   --custom-rm-path generate_with_search.reward_func
-
-   # TIS-related args, recommended to enable when using TIS
-   # --custom-config-path examples/train_infer_mismatch_helper/mis.yaml
-   # --custom-tis-function-path examples.train_infer_mismatch_helper.mis.compute_mis_weights_with_cp
-)
-
 # launch the master node of ray in container
 export MASTER_ADDR=${MASTER_ADDR:-"127.0.0.1"}
-ray start --head --node-ip-address ${MASTER_ADDR} --num-gpus 8 --disable-usage-stats
+ray start --head --node-ip-address ${MASTER_ADDR} --num-gpus 8 --disable-usage-stats --dashboard-host=0.0.0.0 --dashboard-port=8265
 
+# Build the runtime environment JSON with proper variable substitution
 RUNTIME_ENV_JSON="{
   \"env_vars\": {
-    \"PYTHONPATH\": \"/root/Megatron-LM/:${SCRIPT_DIR}\",
-    \"CUDA_DEVICE_MAX_CONNECTIONS\": \"1\"
+    \"PYTHONPATH\": \"/root/Megatron-LM/\",
+    \"CUDA_DEVICE_MAX_CONNECTIONS\": \"1\",
+    \"NCCL_NVLS_ENABLE\": \"${HAS_NVLINK}\"
   }
 }"
 
@@ -136,8 +136,7 @@ ray job submit --address="http://127.0.0.1:8265" \
    --runtime-env-json="${RUNTIME_ENV_JSON}" \
    -- python3 train.py \
    --actor-num-nodes 1 \
-   --actor-num-gpus-per-node 4 \
-   --rollout-num-gpus 4 \
+   --actor-num-gpus-per-node 8 \
    --colocate \
    ${MODEL_ARGS[@]} \
    ${CKPT_ARGS[@]} \
@@ -146,6 +145,6 @@ ray job submit --address="http://127.0.0.1:8265" \
    ${GRPO_ARGS[@]} \
    ${WANDB_ARGS[@]} \
    ${PERF_ARGS[@]} \
+   ${EVAL_ARGS[@]} \
    ${SGLANG_ARGS[@]} \
-   ${MISC_ARGS[@]} \
-   ${CUSTOM_ARGS[@]}
+   ${MISC_ARGS[@]}

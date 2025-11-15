@@ -3,6 +3,8 @@ from pathlib import Path
 
 import torch
 
+from miles.utils.memory_utils import clear_memory, print_memory
+
 
 class TrainProfiler:
     def __init__(self, args):
@@ -110,6 +112,9 @@ class _TorchMemoryProfiler(_BaseMemoryProfiler):
                 f"Observe OOM, will dump snapshot to {self._path_dump}. ({device=} {alloc=} {device_alloc=} {device_free=})"
             )
             torch.cuda.memory._dump_snapshot(self._path_dump)
+            print_memory("when oom")
+            clear_memory()
+            print_memory("when oom (after clear memory)")
 
         torch._C._cuda_attach_out_of_memory_observer(oom_observer)
 

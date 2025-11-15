@@ -71,6 +71,9 @@ class _TensorBackuperNormal(TensorBackuper):
 
 
 class _TensorBackuperNoop(TensorBackuper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @property
     def backup_tags(self):
         return TODO
@@ -81,6 +84,5 @@ class _TensorBackuperNoop(TensorBackuper):
     def backup(self, tag: str) -> None:
         TODO
 
-    @torch.no_grad()
     def restore(self, tag: str) -> None:
         TODO

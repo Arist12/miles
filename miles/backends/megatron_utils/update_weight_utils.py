@@ -557,8 +557,6 @@ class UpdateWeightFromTensor:
         else:
             serialized_tensors = MultiprocessingSerializer.serialize(converted_named_tensors, output_str=True)
 
-        torch.cuda.empty_cache()
-
         serialized_named_tensors = (
             [None] * dist.get_world_size(self._ipc_gather_group) if self._ipc_gather_src == dist.get_rank() else None
         )

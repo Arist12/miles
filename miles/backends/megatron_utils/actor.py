@@ -113,10 +113,11 @@ class MegatronTrainRayActor(TrainRayActor):
         # empty cache after initialization
         clear_memory()
 
-        if self.args.offload_train and self.args.enable_weights_backuper:
+        if self.args.offload_train:
             # recover to actor in the end.
             self.weights_backuper.restore("actor")
-            self.sleep()
+            if self.args.enable_weights_backuper:
+                self.sleep()
 
         self.rollout_engines = None
 

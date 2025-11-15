@@ -28,6 +28,8 @@ def train(args):
 
     # always update weight first so that sglang has the loaded weights from training.
     actor_model.update_weights()
+    if args.offload_train and not args.enable_weights_backuper:
+        actor_model.offload()
 
     if args.offload_rollout:
         if GPU_MEMORY_TYPE_CUDA_GRAPH is not None:

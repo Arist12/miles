@@ -1,3 +1,4 @@
+from abc import ABC
 from collections import defaultdict
 from typing import Callable, Dict, Iterable, Tuple
 
@@ -6,7 +7,7 @@ import torch
 _SourceGetter = Callable[[], Iterable[Tuple[str, torch.Tensor]]]
 
 
-class TensorBackuper:
+class TensorBackuper(ABC):
     @staticmethod
     def create(source_getter, single_tag):
         if single_tag is None:

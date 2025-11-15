@@ -84,8 +84,9 @@ class MegatronTrainRayActor(TrainRayActor):
 
         start_rollout_id = loaded_rollout_id + 1
 
-        self.weights_backuper = TensorBackuper(
+        self.weights_backuper = TensorBackuper.create(
             source_getter=lambda: named_parameters(self.args, self.model),
+            single_tag="actor" if TODO else None,
         )
         self.weights_backuper.backup("actor")
 

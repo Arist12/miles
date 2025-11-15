@@ -73,16 +73,17 @@ class _TensorBackuperNormal(TensorBackuper):
 class _TensorBackuperNoop(TensorBackuper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._only_tag = TODO
 
     @property
     def backup_tags(self):
-        return TODO
+        return [self._only_tag]
 
     def get(self, tag: str):
-        return TODO
+        return dict(self._source_getter())
 
     def backup(self, tag: str) -> None:
-        TODO
+        assert tag == self._only_tag
 
     def restore(self, tag: str) -> None:
-        TODO
+        assert tag == self._only_tag

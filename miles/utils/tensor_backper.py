@@ -15,6 +15,9 @@ class TensorBackuper:
     def backup_tags(self):
         return list(self._backups)
 
+    def get(self, tag: str):
+        return self._backups[tag]
+
     @torch.no_grad()
     def backup(self, tag: str) -> None:
         backup_dict = self._backups[tag]

@@ -100,7 +100,7 @@ def _compute_hash_dict(tensors: Dict[str, torch.Tensor]):
 
 
 def _compute_hash_tensor(x: torch.Tensor):
-    # Not a good hash, but pretty fast
+    # Not a real/good hash, but pretty fast
     x = x.contiguous()
     x = x.view(-1)
     x = x.view(torch.uint32)

@@ -34,6 +34,7 @@ from .initialize import init, is_megatron_main_rank
 from .loss import compute_advantages_and_returns, get_log_probs_and_entropy, get_values
 from .model import forward_only, initialize_model_and_optimizer, save, train
 from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTensor, named_parameters
+from ...utils.tensor_backper import TensorBackuper
 
 
 class MegatronTrainRayActor(TrainRayActor):
@@ -82,6 +83,10 @@ class MegatronTrainRayActor(TrainRayActor):
             return
 
         start_rollout_id = loaded_rollout_id + 1
+
+        self.weights_backuper = TensorBackuper(
+            source_getter=lambda: named_parameters(self.args, self.model),
+        )
         self.weights = {"actor": {}}
         self.update_cpu_params_dict(self.weights["actor"])
 

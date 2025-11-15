@@ -68,3 +68,19 @@ class _TensorBackuperNormal(TensorBackuper):
             assert name in backup_dict
             param.copy_(backup_dict[name], non_blocking=True)
         torch.cuda.synchronize()
+
+
+class _TensorBackuperNoop(TensorBackuper):
+    @property
+    def backup_tags(self):
+        return TODO
+
+    def get(self, tag: str):
+        return TODO
+
+    def backup(self, tag: str) -> None:
+        TODO
+
+    @torch.no_grad()
+    def restore(self, tag: str) -> None:
+        TODO

@@ -423,8 +423,7 @@ class MegatronTrainRayActor(TrainRayActor):
                     print("updating model queue: rollout_actor -> old_actor, actor -> rollout_actor")
                     # Queue-style update: rollout_actor params -> old_actor, actor params -> rollout_actor
                     # First copy rollout_actor to old_actor
-                    for name in self.weights["old_actor"]:
-                        self.weights["old_actor"][name].copy_(self.weights["rollout_actor"][name])
+                    self.weights_backuper.duplicate(src_tag="rollout_actor", dst_tag="old_actor")
                     # Then copy current actor to rollout_actor
                     self.weights_backuper.backup("rollout_actor")
                 else:

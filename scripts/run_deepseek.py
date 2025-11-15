@@ -319,6 +319,7 @@ def train(args: ScriptArgs):
         "--colocate "
         "--use-fault-tolerance "
         f"--dump-details /root/shared_data/{run_id}/dump_details "
+        "--disable-weights-backuper "
     )
 
     train_args = (

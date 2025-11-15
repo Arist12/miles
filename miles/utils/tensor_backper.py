@@ -38,7 +38,7 @@ class TensorBackuper(ABC):
 class _TensorBackuperNormal(TensorBackuper):
     def __init__(self, source_getter):
         super().__init__(source_getter=source_getter)
-        self._backups: Dict[str, Dict[str, torch.Tensor]] = defaultdict()
+        self._backups: Dict[str, Dict[str, torch.Tensor]] = defaultdict(dict)
 
     @property
     def backup_tags(self):
@@ -89,10 +89,12 @@ class _TensorBackuperNoop(TensorBackuper):
     def backup(self, tag: str) -> None:
         assert tag == self._single_tag
         self._backup_hash_dict = _compute_hash_dict(dict(self._source_getter()))
+        torch.cuda.synchronize()
 
     def restore(self, tag: str) -> None:
         assert tag == self._single_tag
         assert _compute_hash_dict(dict(self._source_getter())) == self._backup_hash_dict
+        torch.cuda.synchronize()
 
 
 def _compute_hash_dict(tensors: Dict[str, torch.Tensor]):

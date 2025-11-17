@@ -1,38 +1,3 @@
-ARG SGLANG_VERSION=latest
-ARG SGLANG_IMAGE_TAG
-FROM lmsysorg/sglang:${SGLANG_IMAGE_TAG:-${SGLANG_VERSION}} AS sglang
-
-# we need to write this again after from
-ARG SGLANG_VERSION
-ARG MEGATRON_COMMIT=core_v0.14.0
-
-ARG ENABLE_BLACKWELL_BUILD=0
-ARG ENABLE_CUDA_13=0
-# Can be 0,1,2, larger value means resource is more limited
-# 0: Large machine
-# 1: Tested on 64 CPU, 432GB RAM
-# 2: Tested on 32 CPU, 64GB RAM
-ARG ENABLE_TIGHT_BUILD_RES=0
-
-RUN apt update
-RUN apt install -y nvtop rsync numactl
-
-# TODO: change to pip install sglang-router after it has a new release
-RUN pip install sglang-router --force-reinstall
-RUN pip install git+https://github.com/fzyzcjy/torch_memory_saver.git --no-cache-dir --force-reinstall
-RUN pip install ray[default]
-RUN pip install httpx[http2] wandb pylatexenc blobfile accelerate "mcp[cli]"
-
-# mbridge
-RUN pip install git+https://github.com/ISEEKYAN/mbridge.git --no-deps
-
-RUN if [ "${ENABLE_BLACKWELL_BUILD}" = "1" ]; then \
-          export TLIST="8.0;8.9;9.0;9.0a;10.0"; \
-        else \
-          export TLIST="8.0;8.9;9.0;9.0a"; \
-        fi && \
-    TORCH_CUDA_ARCH_LIST="$TLIST" pip install git+https://github.com/fanshiqing/grouped_gemm@v1.1.4 --no-build-isolation
-
 # apex
 RUN if [ "$ENABLE_TIGHT_BUILD_RES" = "2" ]; then \
           export NVCC_APPEND_FLAGS="--threads 1"; \

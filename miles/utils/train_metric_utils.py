@@ -3,8 +3,7 @@ from argparse import Namespace
 from copy import deepcopy
 from typing import Callable
 from miles.utils import tracking_utils
-
-
+from miles.utils.metric_utils import compute_rollout_step
 from miles.utils.timer import Timer
 
 logger = logging.getLogger(__name__)
@@ -43,10 +42,6 @@ def log_perf_data_raw(
 
     logger.info(f"perf {rollout_id}: {log_dict}")
 
-    step = (
-        rollout_id
-        if not args.wandb_always_use_train_step
-        else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
-    )
+    step = compute_rollout_step(self.args, rollout_id)
     log_dict["rollout/step"] = step
     tracking_utils.log(args, log_dict, step_key="rollout/step")

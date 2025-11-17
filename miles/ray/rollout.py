@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import List, Union
 
+from miles.utils.metric_utils import compute_rollout_step
 import numpy as np
 import ray
 import torch
@@ -475,11 +476,7 @@ def _log_eval_rollout_data(rollout_id, args, data):
 
     logger.info(f"eval {rollout_id}: {log_dict}")
 
-    step = (
-        rollout_id
-        if not args.wandb_always_use_train_step
-        else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
-    )
+    step = compute_rollout_step(args, rollout_id)
     log_dict["eval/step"] = step
     tracking_utils.log(args, log_dict, step_key="eval/step")
 
@@ -498,11 +495,7 @@ def _log_rollout_data(rollout_id, args, samples, rollout_extra_metrics, rollout_
     log_dict["perf/longest_sample_tokens_per_sec"] = max(response_lengths) / rollout_time
     log_dict |= dict_add_prefix(_compute_metrics_from_samples(args, samples), f"rollout/")
     logger.info(f"perf {rollout_id}: {log_dict}")
-    step = (
-        rollout_id
-        if not args.wandb_always_use_train_step
-        else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
-    )
+    step = compute_rollout_step(args, rollout_id)
     log_dict["rollout/step"] = step
     tracking_utils.log(args, log_dict, step_key="rollout/step")
 

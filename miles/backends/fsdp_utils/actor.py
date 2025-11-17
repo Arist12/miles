@@ -36,6 +36,7 @@ from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTe
 
 logger = logging.getLogger(__name__)
 
+
 class FSDPTrainRayActor(TrainRayActor):
     """Simplified TrainRayActor for pure HF+FSDP training.
 

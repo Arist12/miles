@@ -78,4 +78,9 @@ RUN cd /sgl-workspace/sglang && \
 
 # ================================= Misc lightweight operations =======================================
 
+# This patch from masahi will be included in later Triton releases
+RUN if [ "$ENABLE_CUDA_13" = "1" ]; then \
+        (cd /root && git clone -b feat/v350_plus_8045 https://github.com/fzyzcjy/triton.git && cd triton && pip install -r python/requirements.txt && pip install --verbose -e .); \
+    fi
+
 RUN rm /root/.tmux.conf

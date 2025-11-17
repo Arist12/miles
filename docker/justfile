@@ -2,7 +2,7 @@ release-primary:
     just _release-raw
 
 release-gb300:
-    just _release-raw
+    ARG_BUILD_EXTRA_ARGS='--build-arg SGLANG_IMAGE_TAG=dev-arm64-cu13-20251116 --build-arg ENABLE_BLACKWELL_BUILD=1' just _release-raw
 
 _release-raw:
     #!/bin/bash

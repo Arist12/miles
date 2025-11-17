@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 from miles.utils.misc import SingletonMeta
 
@@ -7,6 +8,7 @@ try:
 except:
     SummaryWriter = None
 
+logger = logging.getLogger(__name__)
 
 class _TensorboardAdapter(metaclass=SingletonMeta):
     _writer = None

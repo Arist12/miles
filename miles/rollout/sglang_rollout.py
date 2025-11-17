@@ -5,6 +5,7 @@ import io
 from argparse import Namespace
 from collections import defaultdict
 from typing import Any, Callable, Optional, Union
+import logging
 
 import numpy as np
 from PIL import Image
@@ -25,6 +26,7 @@ from .rm_hub import async_rm, batched_async_rm
 
 __all__ = ["generate_rollout"]
 
+logger = logging.getLogger(__name__)
 
 def _load_and_encode_image(path: str) -> str:
     """Load an image from path, ensure RGB, encode as JPEG base64 string."""

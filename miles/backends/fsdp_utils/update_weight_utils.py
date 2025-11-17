@@ -1,3 +1,4 @@
+import logging
 import socket
 from argparse import Namespace
 from collections.abc import Mapping, Sequence
@@ -31,6 +32,7 @@ except ImportError:
     use_flattened_tensor_bucket = False
 
 
+logger = logging.getLogger(__name__)
 def get_param_info_buckets(
     args: Namespace, weights: Mapping[str, Mapping[str, torch.Tensor]]
 ) -> list[list[ParamInfo]]:

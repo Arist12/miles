@@ -1,8 +1,10 @@
 import os
+import logging
 from copy import deepcopy
 
 import wandb
 
+logger = logging.getLogger(__name__)
 
 def _is_offline_mode(args) -> bool:
     """Detect whether W&B should run in offline mode.

@@ -31,6 +31,7 @@ from .utils import NOSET_VISIBLE_DEVICES_ENV_VARS_LIST, Lock
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
+logger = logging.getLogger(__name__)
 
 @ray.remote
 class RolloutManager:

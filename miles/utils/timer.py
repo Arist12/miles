@@ -1,3 +1,4 @@
+import logging
 from contextlib import contextmanager
 from functools import wraps
 from time import time
@@ -8,6 +9,7 @@ from .misc import SingletonMeta
 
 __all__ = ["Timer", "timer"]
 
+logger = logging.getLogger(__name__)
 
 class Timer(metaclass=SingletonMeta):
     def __init__(self):

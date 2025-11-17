@@ -1,3 +1,4 @@
+import logging
 import random
 
 import numpy as np
@@ -7,6 +8,7 @@ from megatron.core.num_microbatches_calculator import init_num_microbatches_calc
 from megatron.training.global_vars import _build_tokenizer, set_args
 
 
+logger = logging.getLogger(__name__)
 def _set_random_seed(
     seed_: int,
     data_parallel_random_init: bool = False,

@@ -4,6 +4,8 @@ import threading
 import ray
 
 
+logger = logging.getLogger(__name__)
+
 class RolloutHealthMonitor:
     def __init__(self, rollout_manager, args):
         # TODO may remove this dependency after refactoring

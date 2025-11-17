@@ -1,4 +1,5 @@
 import abc
+import logging
 import os
 import random
 from datetime import timedelta
@@ -14,6 +15,7 @@ from miles.utils.distributed_utils import init_gloo_group
 from miles.utils.logging_utils import configure_logger
 from miles.utils.memory_utils import clear_memory, print_memory
 
+logger = logging.getLogger(__name__)
 
 def get_local_gpu_id():
     cvd = os.environ.get("CUDA_VISIBLE_DEVICES", None)

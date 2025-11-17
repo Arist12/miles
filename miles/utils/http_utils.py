@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import multiprocessing
 import os
 import random
@@ -6,6 +7,8 @@ import socket
 from typing import Optional
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 MILES_HOST_IP_ENV = "MILES_HOST_IP"
 

@@ -1,8 +1,11 @@
 from transformers import AutoTokenizer
+import logging
 
 from miles.utils.mask_utils import MultiTurnLossMaskGenerator
 
 __all__ = ["generate_rollout"]
+
+logger = logging.getLogger(__name__)
 
 
 TOKENIZER = None

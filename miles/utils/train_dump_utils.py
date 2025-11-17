@@ -1,7 +1,9 @@
 from pathlib import Path
+import logging
 
 import torch
 
+logger = logging.getLogger(__name__)
 
 def save_debug_train_data(args, *, rollout_id, rollout_data):
     if (path_template := args.save_debug_train_data) is not None:

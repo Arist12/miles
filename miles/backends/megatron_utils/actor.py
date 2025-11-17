@@ -1,3 +1,4 @@
+import logging
 import os
 import socket
 from argparse import Namespace
@@ -37,6 +38,7 @@ from .model import forward_only, initialize_model_and_optimizer, save, train
 from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTensor, named_parameters
 
 
+logger = logging.getLogger(__name__)
 class MegatronTrainRayActor(TrainRayActor):
     @with_defer(lambda: Timer().start("train_wait"))
     def init(

@@ -1,3 +1,4 @@
+import logging
 import dataclasses
 import multiprocessing
 import time
@@ -12,6 +13,7 @@ from urllib3.exceptions import NewConnectionError
 from miles.ray.ray_actor import RayActor
 from miles.utils.http_utils import get_host_info
 
+logger = logging.getLogger(__name__)
 
 def get_base_gpu_id(args, rank):
     num_gpus = min(args.num_gpus_per_node, args.rollout_num_gpus_per_engine)

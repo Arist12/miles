@@ -1,3 +1,4 @@
+import logging
 import socket
 import ray
 from ray.util.placement_group import placement_group
@@ -6,6 +7,7 @@ from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 from .actor_group import RayTrainGroup
 from .rollout import RolloutManager
 
+logger = logging.getLogger(__name__)
 
 @ray.remote(num_gpus=1)
 class InfoActor:

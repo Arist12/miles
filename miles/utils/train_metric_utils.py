@@ -1,4 +1,5 @@
 from argparse import Namespace
+import logging
 from copy import deepcopy
 from typing import Callable
 
@@ -6,6 +7,7 @@ import wandb
 
 from miles.utils.timer import Timer
 
+logger = logging.getLogger(__name__)
 
 def log_perf_data_raw(
     rollout_id: int, args: Namespace, is_primary_rank: bool, compute_total_fwd_flops: Callable

@@ -1,10 +1,13 @@
 import os
+import logging
 from contextlib import contextmanager
 
 import torch
 import torch.distributed as dist
 
 from miles.utils.memory_utils import print_memory
+
+logger = logging.getLogger(__name__)
 
 old_new_group_dict = {}
 

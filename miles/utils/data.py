@@ -1,4 +1,5 @@
 import json
+import logging
 import random
 import re
 
@@ -13,6 +14,7 @@ from .timer import Timer
 
 __all__ = ["Dataset"]
 
+logger = logging.getLogger(__name__)
 
 # TODO: don't read the whole file into memory.
 def read_file(path):

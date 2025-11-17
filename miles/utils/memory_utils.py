@@ -1,7 +1,9 @@
+import logging
 import gc
 import torch
 import torch.distributed as dist
 
+logger = logging.getLogger(__name__)
 
 def clear_memory():
     torch.cuda.synchronize()

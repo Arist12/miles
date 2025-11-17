@@ -18,6 +18,7 @@ from miles.utils.seqlen_balancing import get_seqlen_balanced_partitions
 from miles.utils.types import RolloutBatch
 
 from .cp_utils import get_sum_of_sample_mean, slice_with_cp
+from ...utils import tracking_utils
 
 logger = logging.getLogger(__name__)
 
@@ -124,15 +125,8 @@ def gather_log_data(
             if not args.wandb_always_use_train_step
             else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
         )
-        if args.use_wandb:
-            reduced_log_dict["rollout/step"] = step
-            wandb.log(reduced_log_dict)
-
-        if args.use_tensorboard:
-            from miles.utils.tensorboard_utils import _TensorboardAdapter
-
-            tb = _TensorboardAdapter(args)
-            tb.log(data=reduced_log_dict, step=step)
+        reduced_log_dict["rollout/step"] = step
+        tracking_utils.log(args, reduced_log_dict)
 
         return reduced_log_dict
     else:

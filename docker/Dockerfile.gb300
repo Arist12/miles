@@ -1,3 +1,5 @@
+# NOTE: This image is subject to change and will be unified with the main image soon
+
 ARG SGLANG_VERSION=latest
 ARG SGLANG_IMAGE_TAG
 FROM lmsysorg/sglang:${SGLANG_IMAGE_TAG:-${SGLANG_VERSION}} AS sglang

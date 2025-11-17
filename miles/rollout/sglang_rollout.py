@@ -372,7 +372,6 @@ async def generate_rollout_async(
                 sample = group[0][0] if isinstance(group[0], list) else group[0]
                 logger.info(
                     f"First rollout sample: {[str(sample.prompt) + sample.response]}, label: {sample.label}, reward: {sample.reward}",
-                    flush=True,
                 )
                 do_print = False
 
@@ -393,7 +392,6 @@ async def generate_rollout_async(
     sample = data[-1][0][0] if isinstance(data[-1][0], list) else data[-1][0]
     logger.info(
         f"Finish rollout: {[str(sample.prompt) + sample.response]}, label: {sample.label}, reward: {sample.reward}",
-        flush=True,
     )
 
     # there are still some unfinished requests, abort them
@@ -576,7 +574,6 @@ async def eval_rollout_single_dataset(
                 "eval_rollout_single_dataset example data:",
                 [str(sample.prompt) + sample.response],
                 f"reward={sample.reward}",
-                flush=True,
             )
             do_print = False
         if isinstance(sample, list):

@@ -7,7 +7,6 @@ import ray
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-import wandb
 from packaging import version
 from ring_flash_attn import substitute_hf_flash_attn, update_ring_flash_attn_params
 from torch.distributed.checkpoint.state_dict import StateDictOptions, get_model_state_dict

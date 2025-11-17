@@ -24,8 +24,8 @@ from miles.utils.ray_utils import Box
 from miles.utils.reloadable_process_group import destroy_process_groups, monkey_patch_torch_dist, reload_process_groups
 from miles.utils.routing_replay import RoutingReplay
 from miles.utils.timer import Timer, inverse_timer, timer
-from miles.utils.types import RolloutBatch
 from miles.utils.tracking_utils import init_tracking
+from miles.utils.types import RolloutBatch
 
 from ...utils.profile_utils import TrainProfiler
 from ...utils.tensor_backper import TensorBackuper
@@ -36,7 +36,6 @@ from .initialize import init, is_megatron_main_rank
 from .loss import compute_advantages_and_returns, get_log_probs_and_entropy, get_values
 from .model import forward_only, initialize_model_and_optimizer, save, train
 from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTensor, named_parameters
-
 
 logger = logging.getLogger(__name__)
 

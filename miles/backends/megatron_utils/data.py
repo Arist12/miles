@@ -6,7 +6,6 @@ import numpy as np
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-import wandb
 from megatron.core import mpu
 from megatron.core.packed_seq_params import PackedSeqParams
 
@@ -17,8 +16,8 @@ from miles.utils.metric_utils import compute_pass_rate
 from miles.utils.seqlen_balancing import get_seqlen_balanced_partitions
 from miles.utils.types import RolloutBatch
 
-from .cp_utils import get_sum_of_sample_mean, slice_with_cp
 from ...utils import tracking_utils
+from .cp_utils import get_sum_of_sample_mean, slice_with_cp
 
 logger = logging.getLogger(__name__)
 

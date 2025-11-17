@@ -8,7 +8,6 @@ from collections.abc import Callable, Sequence
 from functools import partial
 
 import torch
-import wandb
 from megatron.core import mpu
 from megatron.core.distributed import DistributedDataParallel as DDP
 from megatron.core.distributed import finalize_model_grads
@@ -22,9 +21,9 @@ from megatron.core.utils import get_model_config
 from megatron.training.global_vars import get_args
 from megatron.training.training import get_model
 
+from miles.utils import tracking_utils
 from miles.utils.memory_utils import clear_memory
 
-from miles.utils import tracking_utils
 from .checkpoint import load_checkpoint, save_checkpoint
 from .cp_utils import slice_with_cp
 from .data import DataIterator, get_batch

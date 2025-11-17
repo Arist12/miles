@@ -132,10 +132,10 @@ class SGLangEngine(RayActor):
         logger.info(f"Launch HttpServerEngineAdapter at: {self.server_host}:{self.server_port}")
         self.process = launch_server_process(ServerArgs(**server_args_dict))
         if self.node_rank == 0 and self.router_ip and self.router_port:
-            requests.post(
-                f"http://{self.router_ip}:{self.router_port}/workers",
-                json={"url": f"http://{self.server_host}:{self.server_port}"},
+            response = requests.post(
+                f"http://{self.router_ip}:{self.router_port}/add_worker?url=http://{self.server_host}:{self.server_port}"
             )
+            response.raise_for_status()
 
     def _make_request(self, endpoint: str, payload: Optional[dict] = None):
         """Make a POST request to the specified endpoint with the given payload.
@@ -227,8 +227,10 @@ class SGLangEngine(RayActor):
 
         logger.info(f"Shutdown engine {self.server_host}:{self.server_port}...")
         if self.node_rank == 0:
-            worker_url = f"http://{self.server_host}:{self.server_port}"
-            requests.delete(f"http://{self.router_ip}:{self.router_port}/workers/{worker_url}")
+            response = requests.post(
+                f"http://{self.router_ip}:{self.router_port}/remove_worker?url=http://{self.server_host}:{self.server_port}"
+            )
+            response.raise_for_status()
         kill_process_tree(self.process.pid)
 
     def get_weight_version(self):
@@ -295,10 +297,14 @@ class SGLangEngine(RayActor):
         )
 
     def pause_generation(self):
-        return requests.post(f"http://{self.server_host}:{self.server_port}/pause_generation", json={})
+        response = requests.post(f"http://{self.server_host}:{self.server_port}/pause_generation", json={})
+        response.raise_for_status()
+        return response
 
     def continue_generation(self):
-        return requests.post(f"http://{self.server_host}:{self.server_port}/continue_generation", json={})
+        response = requests.post(f"http://{self.server_host}:{self.server_port}/continue_generation", json={})
+        response.raise_for_status()
+        return response
 
     def start_profile(
         self,
@@ -314,7 +320,7 @@ class SGLangEngine(RayActor):
         with_stack: Optional[bool] = None,
         record_shapes: Optional[bool] = None,
     ):
-        return requests.post(
+        response = requests.post(
             f"http://{self.server_host}:{self.server_port}/start_profile",
             json={
                 "output_dir": output_dir,
@@ -326,9 +332,13 @@ class SGLangEngine(RayActor):
                 "record_shapes": record_shapes,
             },
         )
+        response.raise_for_status()
+        return response
 
     def stop_profile(self):
-        return requests.post(f"http://{self.server_host}:{self.server_port}/stop_profile", json={})
+        response = requests.post(f"http://{self.server_host}:{self.server_port}/stop_profile", json={})
+        response.raise_for_status()
+        return response
 
 
 def _compute_server_args(args, rank, dist_init_addr, nccl_port, host, port):

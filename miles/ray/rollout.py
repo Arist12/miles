@@ -35,14 +35,13 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 class RolloutManager:
     """The class to run rollout and convert rollout data to training data."""
 
-    def __init__(self, args, pg, wandb_run_id):
+    def __init__(self, args, pg):
         self.args = args
         self.pg = pg
         _start_router(args)
         # TODO make args immutable
         init_observability(
             args,
-            wandb_run_id,
             primary=False,
             router_addr=f"http://{args.sglang_router_ip}:{args.sglang_router_port}",
         )

@@ -25,7 +25,7 @@ from miles.utils.reloadable_process_group import destroy_process_groups, monkey_
 from miles.utils.routing_replay import RoutingReplay
 from miles.utils.timer import Timer, inverse_timer, timer
 from miles.utils.types import RolloutBatch
-from miles.utils.wandb_utils import init_wandb_secondary
+from miles.utils.tracking_utils import init_tracking
 
 from ...utils.profile_utils import TrainProfiler
 from ...utils.tensor_backper import TensorBackuper
@@ -56,7 +56,7 @@ class MegatronTrainRayActor(TrainRayActor):
         init(args)
 
         if is_megatron_main_rank():
-            init_wandb_secondary(args)
+            init_tracking(args, primary=False)
 
         self.prof = TrainProfiler(args)
 

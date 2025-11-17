@@ -6,7 +6,6 @@ FROM lmsysorg/sglang:${SGLANG_IMAGE_TAG} AS sglang
 ARG PATCH_VERSION=latest
 ARG MEGATRON_COMMIT=core_v0.14.0
 
-ARG ENABLE_BLACKWELL_BUILD=0
 ARG ENABLE_CUDA_13=0
 
 # ======================================== Setup =============================================

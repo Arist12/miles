@@ -57,6 +57,26 @@ RUN pip install git+https://github.com/fzyzcjy/torch_memory_saver.git@383bec3919
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
+# ================================= Misc lightweight operations =======================================
+
+# This patch from masahi will be included in later Triton releases
+RUN if [ "$ENABLE_CUDA_13" = "1" ]; then \
+    (cd /root && git clone -b feat/v350_plus_8045 https://github.com/fzyzcjy/triton.git && cd triton && pip install -r python/requirements.txt && pip install --verbose -e .); \
+  fi
+
+# Temporarily install another sgl-kernel version for GB300 without rebuilding the whole image
+RUN if [ "$ENABLE_CUDA_13" = "1" ]; then \
+    SGL_KERNEL_VERSION=0.3.17 && \
+    python3 -m pip install https://github.com/sgl-project/whl/releases/download/v${SGL_KERNEL_VERSION}/sgl_kernel-${SGL_KERNEL_VERSION}+cu130-cp310-abi3-manylinux2014_$(uname -m).whl --force-reinstall --no-deps; \
+  fi
+
+# This patch is merged into main, but we are using stable version, thus still need it
+RUN if [ "$ENABLE_CUDA_13" = "1" ]; then \
+    curl -L https://github.com/NVIDIA/TransformerEngine/pull/2286.patch -o /root/te2286.patch && (cd /usr/local/lib/python3.12/dist-packages/transformer_engine && (patch -p2 < /root/te2286.patch)); \
+  fi
+
+RUN rm /root/.tmux.conf
+
 # ====================================== Patches ============================================
 
 COPY docker/patch/${PATCH_VERSION}/megatron.patch /root/Megatron-LM/
@@ -82,22 +102,3 @@ RUN if [ "$ENABLE_CUDA_13" = "0" ]; then \
   rm sglang.patch; \
 fi
 
-# ================================= Misc lightweight operations =======================================
-
-# This patch from masahi will be included in later Triton releases
-RUN if [ "$ENABLE_CUDA_13" = "1" ]; then \
-    (cd /root && git clone -b feat/v350_plus_8045 https://github.com/fzyzcjy/triton.git && cd triton && pip install -r python/requirements.txt && pip install --verbose -e .); \
-  fi
-
-# Temporarily install another sgl-kernel version for GB300 without rebuilding the whole image
-RUN if [ "$ENABLE_CUDA_13" = "1" ]; then \
-    SGL_KERNEL_VERSION=0.3.17 && \
-    python3 -m pip install https://github.com/sgl-project/whl/releases/download/v${SGL_KERNEL_VERSION}/sgl_kernel-${SGL_KERNEL_VERSION}+cu130-cp310-abi3-manylinux2014_$(uname -m).whl --force-reinstall --no-deps; \
-  fi
-
-# This patch is merged into main, but we are using stable version, thus still need it
-RUN if [ "$ENABLE_CUDA_13" = "1" ]; then \
-    curl -L https://github.com/NVIDIA/TransformerEngine/pull/2286.patch -o /root/te2286.patch && (cd /usr/local/lib/python3.12/dist-packages/transformer_engine && (patch -p2 < /root/te2286.patch)); \
-  fi
-
-RUN rm /root/.tmux.conf

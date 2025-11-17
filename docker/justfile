@@ -1,5 +1,5 @@
 release-primary:
-    just _release-raw
+    ARG_BUILD_EXTRA_ARGS="" just _release-raw
 
 release-gb300:
     ARG_BUILD_EXTRA_ARGS='--build-arg SGLANG_IMAGE_TAG=dev-arm64-cu13-20251116 --build-arg ENABLE_BLACKWELL_BUILD=1' just _release-raw
@@ -11,7 +11,7 @@ _release-raw:
 
     VERSION="$(cat docker/version.txt | tr -d '\n')"
 
-    docker build -f docker/Dockerfile . -t radixark/miles:$VERSION
+    docker build -f docker/Dockerfile . $ARG_BUILD_EXTRA_ARGS -t radixark/miles:$VERSION
     docker push radixark/miles:$VERSION
 
     docker tag radixark/miles:$VERSION radixark/miles:latest

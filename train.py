@@ -8,13 +8,13 @@ except ImportError:
 
 from miles.ray.placement_group import create_placement_groups, create_rollout_manager, create_training_models
 from miles.utils.arguments import parse_args
-from miles.utils.wandb_utils import init_wandb_primary
+from miles.utils.observability_utils import init_observability_primary
 
 
 def train(args):
     # allocate the GPUs
     pgs = create_placement_groups(args)
-    init_wandb_primary(args)
+    init_observability_primary(args)
 
     # create the rollout manager, with sglang engines inside.
     # need to initialize rollout manager first to calculate num_rollout

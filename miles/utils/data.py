@@ -16,6 +16,7 @@ __all__ = ["Dataset"]
 
 logger = logging.getLogger(__name__)
 
+
 # TODO: don't read the whole file into memory.
 def read_file(path):
     path, row_slice = _parse_generalized_path(path)

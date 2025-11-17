@@ -1,5 +1,6 @@
-from transformers import AutoTokenizer
 import logging
+
+from transformers import AutoTokenizer
 
 from miles.utils.mask_utils import MultiTurnLossMaskGenerator
 

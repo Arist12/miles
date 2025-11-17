@@ -17,6 +17,7 @@ from miles.utils.memory_utils import clear_memory, print_memory
 
 logger = logging.getLogger(__name__)
 
+
 def get_local_gpu_id():
     cvd = os.environ.get("CUDA_VISIBLE_DEVICES", None)
     if cvd is None:

@@ -1,10 +1,12 @@
+import logging
+
 from megatron.training.arguments import parse_args, validate_args
 from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
-import logging
 
 __all__ = ["validate_args", "parse_args", "set_default_megatron_args"]
 
 logger = logging.getLogger(__name__)
+
 
 def set_default_megatron_args(args):
     # always use zero optimizer

@@ -9,6 +9,7 @@ from .rollout import RolloutManager
 
 logger = logging.getLogger(__name__)
 
+
 @ray.remote(num_gpus=1)
 class InfoActor:
     def get_ip_and_gpu_id(self):

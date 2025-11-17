@@ -11,6 +11,7 @@ __all__ = ["Timer", "timer"]
 
 logger = logging.getLogger(__name__)
 
+
 class Timer(metaclass=SingletonMeta):
     def __init__(self):
         self.timers = {}

@@ -33,6 +33,7 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
+
 @ray.remote
 class RolloutManager:
     """The class to run rollout and convert rollout data to training data."""

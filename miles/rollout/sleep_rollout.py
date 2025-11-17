@@ -1,7 +1,8 @@
-import time
 import logging
+import time
 
 logger = logging.getLogger(__name__)
+
 
 def sleep(args, rollout_id, data_source, evaluation=False):
     count = 0

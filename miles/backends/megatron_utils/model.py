@@ -1,11 +1,11 @@
 import dataclasses
 import gc
+import logging
 import math
 import os
 from argparse import Namespace
 from collections.abc import Callable, Sequence
 from functools import partial
-import logging
 
 import torch
 import wandb
@@ -30,8 +30,9 @@ from .data import DataIterator, get_batch
 from .loss import loss_function
 from .model_provider import get_model_provider_func
 
-
 logger = logging.getLogger(__name__)
+
+
 def get_optimizer_param_scheduler(args: Namespace, optimizer: MegatronOptimizer) -> OptimizerParamScheduler:
     """Create and configure the optimizer learning-rate/weight-decay scheduler.
 

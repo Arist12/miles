@@ -1,5 +1,5 @@
-import logging
 import copy
+import logging
 import os
 from pathlib import Path
 
@@ -11,6 +11,7 @@ from miles.utils.misc import load_function
 from miles.utils.types import Sample
 
 logger = logging.getLogger(__name__)
+
 
 # TODO may further refactor data-loading part later
 class RolloutDataSource:

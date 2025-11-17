@@ -1,5 +1,5 @@
-import time
 import logging
+import time
 import traceback
 from pathlib import Path
 
@@ -7,8 +7,9 @@ import torch
 
 from miles.utils.memory_utils import print_memory
 
-
 logger = logging.getLogger(__name__)
+
+
 class TrainProfiler:
     def __init__(self, args):
         self.args = args

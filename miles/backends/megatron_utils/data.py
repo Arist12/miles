@@ -1,5 +1,5 @@
-from argparse import Namespace
 import logging
+from argparse import Namespace
 from typing import Optional, Sequence, Union
 
 import numpy as np
@@ -20,6 +20,7 @@ from miles.utils.types import RolloutBatch
 from .cp_utils import get_sum_of_sample_mean, slice_with_cp
 
 logger = logging.getLogger(__name__)
+
 
 def get_batch(
     data_iterator: "DataIterator",

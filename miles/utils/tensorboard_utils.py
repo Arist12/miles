@@ -10,6 +10,7 @@ except:
 
 logger = logging.getLogger(__name__)
 
+
 class _TensorboardAdapter(metaclass=SingletonMeta):
     _writer = None
 

@@ -140,7 +140,7 @@ def execute(args: ScriptArgs):
                 "--rollout-num-gpus-per-engine 4 "
                 "--sglang-ep-size 4 "
                 "--sglang-mem-fraction-static 0.7 "
-                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 513, 8)) + " "
+                "--sglang-cuda-graph-max-bs 512 "
             )
             misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 1 " "--num-gpus-per-node 4"
         case ("GB300", "2"):
@@ -156,7 +156,7 @@ def execute(args: ScriptArgs):
                 "--rollout-num-gpus-per-engine 4 "
                 "--sglang-ep-size 4 "
                 "--sglang-mem-fraction-static 0.7 "
-                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 513, 8)) + " "
+                "--sglang-cuda-graph-max-bs 512 "
             )
             misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 2 " "--num-gpus-per-node 4"
         case ("GB300", "4"):
@@ -172,7 +172,7 @@ def execute(args: ScriptArgs):
                 "--rollout-num-gpus-per-engine 4 "
                 "--sglang-ep-size 4 "
                 "--sglang-mem-fraction-static 0.7 "
-                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 513, 8)) + " "
+                "--sglang-cuda-graph-max-bs 512 "
             )
             misc_args += "--actor-num-gpus-per-node 4 " "--actor-num-nodes 8 " "--num-gpus-per-node 4"
         case _:

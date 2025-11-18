@@ -40,6 +40,7 @@ def hf_download_dataset(full_name: str):
     exec_command(f"hf download --repo-type dataset {full_name} --local-dir /root/datasets/{partial_name}")
 
 
+# This class can be extended by concrete scripts
 @dataclass
 class ExecuteTrainConfig:
     cuda_core_dump: bool = False

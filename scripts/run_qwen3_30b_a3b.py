@@ -1,14 +1,19 @@
 import datetime
-import os
+from dataclasses import dataclass
 from pathlib import Path
-
+from typing import Literal
 
 import miles.utils.external_utils.command_utils as U
 
-mode = os.environ.get("MILES_SCRIPT_MODE", "8xh100")
 
-MODEL_NAME = "Qwen3-30B-A3B"
-MODEL_TYPE = "qwen3-30B-A3B"
+@dataclass
+class ScriptArgs(U.ExecuteTrainConfig):
+    mode: Literal["normal", "debug_minimal"] = "normal"
+    model_name: str = "Qwen3-30B-A3B"
+    megatron_model_type: str = "qwen3-30B-A3B"
+    num_gpus_per_node: int = TODO
+    extra_args: str = ""
+
 
 match mode:
     case "8xh100":
@@ -25,7 +30,7 @@ match mode:
         raise NotImplementedError(f"{mode=}")
 
 
-def prepare():
+def prepare(args: ScriptArgs):
     U.exec_command("mkdir -p /root/models /root/datasets")
     U.exec_command(f"huggingface-cli download Qwen/{MODEL_NAME} --local-dir /root/models/{MODEL_NAME}")
     U.hf_download_dataset("zhuzilin/dapo-math-17k")
@@ -40,7 +45,7 @@ def prepare():
 
 
 # TODO improve layering: split algorithm vs infra
-def execute():
+def execute(args: ScriptArgs):
     load_save_path = (
         f"/root/models/{MODEL_NAME}_ckpt__{Path(__file__).stem}__{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}/"
     )
@@ -196,15 +201,21 @@ def execute():
         f"{eval_args} "
         f"{sglang_args} "
         f"{misc_args} "
+        f"{args.extra_args} "
     )
 
     U.execute_train(
         train_args=train_args,
         num_gpus_per_node=num_gpus,
-        megatron_model_type=MODEL_TYPE,
+        megatron_model_type=args.megatron_model_type,
     )
 
 
+@U.dataclass_cli
+def main(args: ScriptArgs):
+    prepare(args)
+    execute(args)
+
+
 if __name__ == "__main__":
-    prepare()
-    execute()
+    typer.run(main)

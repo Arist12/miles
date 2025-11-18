@@ -121,7 +121,7 @@ def execute(args: ScriptArgs):
             sglang_args = (
                 "--rollout-num-gpus-per-engine 8 "
                 "--sglang-mem-fraction-static 0.7 "
-                "--sglang-cuda-graph-bs 1 2 4 8 " + " ".join(str(x) for x in range(16, 257, 8)) + " "
+                "--sglang-cuda-graph-max-bs 512 "
             )
             optimizer_args += (
                 "--optimizer-cpu-offload " "--overlap-cpu-optimizer-d2h-h2d " "--use-precision-aware-optimizer "

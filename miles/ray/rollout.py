@@ -8,22 +8,22 @@ from typing import List, Union
 import numpy as np
 import ray
 import torch
-import wandb
 from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
 from miles.backends.sglang_utils.sglang_engine import SGLangEngine
 from miles.ray.rollout_data_source import RolloutDataSourceWithBuffer
 from miles.rollout.base_types import call_rollout_fn
+from miles.utils import tracking_utils
 from miles.utils.health_monitor import RolloutHealthMonitor
 from miles.utils.http_utils import find_available_port, get_host_info, init_http_client
 from miles.utils.iter_utils import group_by
 from miles.utils.logging_utils import configure_logger
 from miles.utils.metric_checker import MetricChecker
-from miles.utils.metric_utils import compute_pass_rate, compute_statistics, dict_add_prefix
+from miles.utils.metric_utils import compute_pass_rate, compute_rollout_step, compute_statistics, dict_add_prefix
 from miles.utils.misc import load_function
 from miles.utils.ray_utils import Box
+from miles.utils.tracking_utils import init_tracking
 from miles.utils.types import Sample
-from miles.utils.wandb_utils import init_wandb_secondary
 
 from ..utils.metric_utils import has_repetition
 from .utils import NOSET_VISIBLE_DEVICES_ENV_VARS_LIST, Lock
@@ -45,7 +45,7 @@ class RolloutManager:
         self.pg = pg
         _start_router(args)
         # TODO make args immutable
-        init_wandb_secondary(args, router_addr=f"http://{args.sglang_router_ip}:{args.sglang_router_port}")
+        init_tracking(args, primary=False, router_addr=f"http://{args.sglang_router_ip}:{args.sglang_router_port}")
         init_http_client(args)
 
         self.data_source = RolloutDataSourceWithBuffer(args)
@@ -475,20 +475,9 @@ def _log_eval_rollout_data(rollout_id, args, data):
 
     logger.info(f"eval {rollout_id}: {log_dict}")
 
-    step = (
-        rollout_id
-        if not args.wandb_always_use_train_step
-        else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
-    )
-    if args.use_wandb:
-        log_dict["eval/step"] = step
-        wandb.log(log_dict)
-
-    if args.use_tensorboard:
-        from miles.utils.tensorboard_utils import _TensorboardAdapter
-
-        tb = _TensorboardAdapter(args)
-        tb.log(data=log_dict, step=step)
+    step = compute_rollout_step(args, rollout_id)
+    log_dict["eval/step"] = step
+    tracking_utils.log(args, log_dict, step_key="eval/step")
 
     return log_dict
 
@@ -505,20 +494,9 @@ def _log_rollout_data(rollout_id, args, samples, rollout_extra_metrics, rollout_
     log_dict["perf/longest_sample_tokens_per_sec"] = max(response_lengths) / rollout_time
     log_dict |= dict_add_prefix(_compute_metrics_from_samples(args, samples), f"rollout/")
     logger.info(f"perf {rollout_id}: {log_dict}")
-    step = (
-        rollout_id
-        if not args.wandb_always_use_train_step
-        else rollout_id * args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
-    )
-    if args.use_wandb:
-        log_dict["rollout/step"] = step
-        wandb.log(log_dict)
-
-    if args.use_tensorboard:
-        from miles.utils.tensorboard_utils import _TensorboardAdapter
-
-        tb = _TensorboardAdapter(args)
-        tb.log(data=log_dict, step=step)
+    step = compute_rollout_step(args, rollout_id)
+    log_dict["rollout/step"] = step
+    tracking_utils.log(args, log_dict, step_key="rollout/step")
 
 
 def _compute_metrics_from_samples(args, samples):

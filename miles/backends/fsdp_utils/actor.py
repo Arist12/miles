@@ -7,7 +7,6 @@ import ray
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-import wandb
 from packaging import version
 from ring_flash_attn import substitute_hf_flash_attn, update_ring_flash_attn_params
 from torch.distributed.checkpoint.state_dict import StateDictOptions, get_model_state_dict
@@ -22,17 +21,18 @@ from miles.utils.context_utils import with_defer
 from miles.utils.data import get_minimum_num_micro_batch_size, process_rollout_data
 from miles.utils.distributed_utils import get_gloo_group
 from miles.utils.memory_utils import clear_memory, print_memory
+from miles.utils.metric_utils import compute_rollout_step
 from miles.utils.ppo_utils import compute_approx_kl, compute_policy_loss
 from miles.utils.ray_utils import Box
 from miles.utils.timer import Timer, inverse_timer, timer
-from miles.utils.wandb_utils import init_wandb_secondary
+from miles.utils.tracking_utils import init_tracking
 
+from ...utils import tracking_utils
 from ...utils.profile_utils import TrainProfiler
 from . import checkpoint
 from .data_packing import pack_sequences, pad_packed_sequence_with_cp, unpack_sequences
 from .fsdp_cpu_adam_wrapper import FSDPCPUAdamWrapper
 from .update_weight_utils import UpdateWeightFromDistributed, UpdateWeightFromTensor
-
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class FSDPTrainRayActor(TrainRayActor):
         args.world_size = dist.get_world_size()
 
         if dist.get_rank() == 0:
-            init_wandb_secondary(args)
+            init_tracking(args, primary=False)
 
         self.args = args
         self.fsdp_full_state_dict_opts = StateDictOptions(
@@ -446,7 +446,12 @@ class FSDPTrainRayActor(TrainRayActor):
 
         self.compute_log_prob("actor", packed_batches)
 
-        for metric_key in ["log_probs", "ref_log_probs", "advantages", "returns", "raw_reward"]:
+        if "raw_reward" in rollout_data and dist.get_rank() == 0:
+            raw_reward_list = rollout_data["raw_reward"]
+            if raw_reward_list:
+                log_dict["rollout/raw_reward"] = sum(raw_reward_list) / len(raw_reward_list)
+
+        for metric_key in ["log_probs", "ref_log_probs", "advantages", "returns"]:
             if metric_key not in packed_batches[0]:
                 continue
             val = torch.tensor([0.0], device=torch.cuda.current_device())
@@ -465,16 +470,8 @@ class FSDPTrainRayActor(TrainRayActor):
             ).item()
         if dist.get_rank() == 0:
             logger.info(f"rollout {rollout_id}: {log_dict}")
-            if self.args.use_wandb:
-                log_dict["rollout/step"] = (
-                    rollout_id
-                    if not self.args.wandb_always_use_train_step
-                    else rollout_id
-                    * self.args.rollout_batch_size
-                    * self.args.n_samples_per_prompt
-                    // self.args.global_batch_size
-                )
-                wandb.log(log_dict)
+            log_dict["rollout/step"] = compute_rollout_step(self.args, rollout_id)
+            tracking_utils.log(self.args, log_dict, step_key="rollout/step")
 
         with timer("actor_train"):
             reported_accum: dict[str, list[torch.Tensor]] = {}
@@ -664,9 +661,8 @@ class FSDPTrainRayActor(TrainRayActor):
                     logger.info(kl_info)
                 logger.info(f"step {self.global_step}: {log_dict}")
 
-                if self.args.use_wandb and wandb is not None:
-                    log_dict["train/step"] = self.global_step
-                    wandb.log(log_dict)
+                log_dict["train/step"] = self.global_step
+                tracking_utils.log(self.args, log_dict, step_key="train/step")
             self.global_step += 1
 
     @timer

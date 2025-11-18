@@ -8,8 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import miles.utils.external_utils.command_utils as U
 import typer
+
+import miles.utils.external_utils.command_utils as U
 
 app = typer.Typer()
 

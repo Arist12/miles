@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import Literal, Optional
 
-import miles.utils.external_utils.command_utils as U
 import typer
+
+import miles.utils.external_utils.command_utils as U
 
 
 @dataclass

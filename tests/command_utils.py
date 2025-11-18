@@ -51,8 +51,7 @@ def execute_train(
     train_args: str,
     # TODO rename to "num_gpus_per_node"
     num_gpus: int,
-    # TODO rename to "megatron_model_type"
-    model_type: Optional[str],
+    megatron_model_type: Optional[str],
     config: ExecuteTrainConfig = ExecuteTrainConfig(),
     train_script: str = "train.py",
     before_ray_job_submit=None,
@@ -62,7 +61,7 @@ def execute_train(
     master_addr = os.environ.get("MASTER_ADDR", "127.0.0.1")
 
     train_backend_fsdp = "--train-backend fsdp" in train_args
-    assert train_backend_fsdp == (model_type is None)
+    assert train_backend_fsdp == (megatron_model_type is None)
 
     exec_command(
         "pkill -9 sglang; "
@@ -123,8 +122,8 @@ def execute_train(
         }
     )
 
-    source_cmd = f'source "{repo_base_dir}/scripts/models/{model_type}.sh" && ' if model_type is not None else ""
-    model_args_str = "${MODEL_ARGS[@]}" if model_type is not None else ""
+    source_cmd = f'source "{repo_base_dir}/scripts/models/{megatron_model_type}.sh" && ' if megatron_model_type is not None else ""
+    model_args_str = "${MODEL_ARGS[@]}" if megatron_model_type is not None else ""
 
     if bool(int(os.environ.get("MILES_SCRIPT_ENABLE_RAY_SUBMIT", "1"))):
         exec_command(

@@ -90,7 +90,7 @@ def execute():
 
     U.execute_train(
         train_args=train_args,
-        num_gpus=2,
+        num_gpus_per_node=2,
         megatron_model_type=None,
     )
 

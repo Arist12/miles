@@ -135,7 +135,7 @@ def execute():
 
     U.execute_train(
         train_args=train_args,
-        num_gpus=NUM_GPUS,
+        num_gpus_per_node=NUM_GPUS,
         megatron_model_type=None,
         extra_env_vars={
             **true_on_policy_envs,

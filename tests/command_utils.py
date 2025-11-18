@@ -15,7 +15,7 @@ _ = exec_command, dataclass_cli
 repo_base_dir = Path(os.path.abspath(__file__)).resolve().parents[1]
 
 
-def convert_checkpoint(model_name, model_type, num_gpus_per_node: int, dir_dst="/root"):
+def convert_checkpoint(model_name, megatron_model_type, num_gpus_per_node: int, dir_dst="/root"):
     # TODO shall we make it in host-mapped folder and thus can cache it to speedup CI
     path_dst = f"{dir_dst}/{model_name}_torch_dist"
     if Path(path_dst).exists():
@@ -23,7 +23,7 @@ def convert_checkpoint(model_name, model_type, num_gpus_per_node: int, dir_dst="
         return
 
     exec_command(
-        f"source {repo_base_dir}/scripts/models/{model_type}.sh && "
+        f"source {repo_base_dir}/scripts/models/{megatron_model_type}.sh && "
         f"PYTHONPATH=/root/Megatron-LM torchrun --nproc-per-node {num_gpus_per_node} tools/convert_hf_to_torch_dist.py "
         "${MODEL_ARGS[@]} "
         f"--hf-checkpoint /root/models/{model_name} "

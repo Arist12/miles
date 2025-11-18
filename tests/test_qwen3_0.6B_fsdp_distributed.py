@@ -91,7 +91,7 @@ def execute():
 
     U.execute_train(
         train_args=train_args,
-        num_gpus=2 if FEW_GPU else 4,
+        num_gpus_per_node=2 if FEW_GPU else 4,
         megatron_model_type=None,
         train_script="train_async.py",
     )

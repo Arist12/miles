@@ -122,7 +122,11 @@ def execute_train(
         }
     )
 
-    source_cmd = f'source "{repo_base_dir}/scripts/models/{megatron_model_type}.sh" && ' if megatron_model_type is not None else ""
+    source_cmd = (
+        f'source "{repo_base_dir}/scripts/models/{megatron_model_type}.sh" && '
+        if megatron_model_type is not None
+        else ""
+    )
     model_args_str = "${MODEL_ARGS[@]}" if megatron_model_type is not None else ""
 
     if bool(int(os.environ.get("MILES_SCRIPT_ENABLE_RAY_SUBMIT", "1"))):

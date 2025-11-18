@@ -20,21 +20,6 @@ class ScriptArgs(U.ExecuteTrainConfig):
         self.num_gpus_per_node = self.num_gpus_per_node or U.NUM_GPUS_OF_HARDWARE[self.hardware]
 
 
-match mode:
-    case "8xh100":
-        num_gpus_for_convert = num_gpus = 8
-    case "4xgb300":
-        num_gpus_for_convert = num_gpus = 4
-    case "8xgb300":
-        num_gpus_for_convert = 4
-        num_gpus = 8
-    case "32xgb300":
-        num_gpus_for_convert = 4
-        num_gpus = 32
-    case _:
-        raise NotImplementedError(f"{mode=}")
-
-
 def prepare(args: ScriptArgs):
     U.exec_command("mkdir -p /root/models /root/datasets")
     U.exec_command(f"huggingface-cli download Qwen/{args.model_name} --local-dir /root/models/{args.model_name}")
@@ -43,7 +28,7 @@ def prepare(args: ScriptArgs):
     U.convert_checkpoint(
         model_name=args.model_name,
         megatron_model_type=args.megatron_model_type,
-        num_gpus_per_node=num_gpus_for_convert,
+        num_gpus_per_node=args.num_gpus_per_node,
         # To support multi-node training, for simplicity, we put model into shared folder
         dir_dst="/root/models",
     )
@@ -211,7 +196,7 @@ def execute(args: ScriptArgs):
 
     U.execute_train(
         train_args=train_args,
-        num_gpus_per_node=num_gpus,
+        num_gpus_per_node=args.num_gpus_per_node,
         megatron_model_type=args.megatron_model_type,
     )
 

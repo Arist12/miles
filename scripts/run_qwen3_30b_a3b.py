@@ -110,6 +110,8 @@ def execute(args: ScriptArgs):
         # need to comment this when using model with MLA
         "--attention-backend flash "
         "--colocate "
+        "--use-fault-tolerance "
+        f"--dump-details /root/shared_data/{args.run_id}/dump_details "
     )
 
     match (args.hardware, args.num_nodes):

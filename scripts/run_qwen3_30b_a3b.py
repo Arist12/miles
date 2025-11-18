@@ -9,7 +9,7 @@ import miles.utils.external_utils.command_utils as U
 @dataclass
 class ScriptArgs(U.ExecuteTrainConfig):
     mode: Literal["normal", "debug_minimal"] = "normal"
-    run_id = U.create_run_id()
+    run_id: str = U.create_run_id()
     model_name: str = "Qwen3-30B-A3B"
     megatron_model_type: str = "qwen3-30B-A3B"
     num_gpus_per_node: Optional[int] = None

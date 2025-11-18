@@ -15,7 +15,7 @@ _ = exec_command, dataclass_cli
 repo_base_dir = Path(os.path.abspath(__file__)).resolve().parents[1]
 
 
-def convert_checkpoint(model_name, model_type, num_gpus: int, dir_dst="/root"):
+def convert_checkpoint(model_name, model_type, num_gpus_per_node: int, dir_dst="/root"):
     # TODO shall we make it in host-mapped folder and thus can cache it to speedup CI
     path_dst = f"{dir_dst}/{model_name}_torch_dist"
     if Path(path_dst).exists():
@@ -24,7 +24,7 @@ def convert_checkpoint(model_name, model_type, num_gpus: int, dir_dst="/root"):
 
     exec_command(
         f"source {repo_base_dir}/scripts/models/{model_type}.sh && "
-        f"PYTHONPATH=/root/Megatron-LM torchrun --nproc-per-node {num_gpus} tools/convert_hf_to_torch_dist.py "
+        f"PYTHONPATH=/root/Megatron-LM torchrun --nproc-per-node {num_gpus_per_node} tools/convert_hf_to_torch_dist.py "
         "${MODEL_ARGS[@]} "
         f"--hf-checkpoint /root/models/{model_name} "
         f"--save {path_dst}"
@@ -49,8 +49,7 @@ class ExecuteTrainConfig:
 
 def execute_train(
     train_args: str,
-    # TODO rename to "num_gpus_per_node"
-    num_gpus: int,
+    num_gpus_per_node: int,
     megatron_model_type: Optional[str],
     config: ExecuteTrainConfig = ExecuteTrainConfig(),
     train_script: str = "train.py",
@@ -84,7 +83,7 @@ def execute_train(
         exec_command(
             # will prevent ray from buffering stdout/stderr
             f"export PYTHONBUFFERED=16 && "
-            f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus} --disable-usage-stats"
+            f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus_per_node} --disable-usage-stats"
         )
 
     if (f := before_ray_job_submit) is not None:

@@ -122,14 +122,12 @@ def execute_train(
         }
     )
 
-    cmd_megatron_model_source = (
-        f'source "{repo_base_dir}/scripts/models/{megatron_model_type}.sh" && '
-        if megatron_model_type is not None
-        else ""
-    )
-    model_args_str = "${MODEL_ARGS[@]}" if megatron_model_type is not None else ""
-
     if bool(int(os.environ.get("MILES_SCRIPT_ENABLE_RAY_SUBMIT", "1"))):
+        cmd_megatron_model_source = (
+            f'source "{repo_base_dir}/scripts/models/{megatron_model_type}.sh" && '
+            if megatron_model_type is not None
+            else ""
+        )
         exec_command(
             f"export no_proxy=127.0.0.1 && export PYTHONBUFFERED=16 && "
             f"{cmd_megatron_model_source}"
@@ -137,7 +135,7 @@ def execute_train(
             f'ray job submit --address="http://127.0.0.1:8265" '
             f"--runtime-env-json='{runtime_env_json}' "
             f"-- python3 {train_script} "
-            f"{model_args_str} "
+            f"{'${MODEL_ARGS[@]}' if megatron_model_type is not None else ''} "
             f"{train_args}"
         )
 

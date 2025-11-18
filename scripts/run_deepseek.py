@@ -4,15 +4,12 @@ This file is in preview, and will be further refined and optimized.
 
 import os
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import typer
-
-
 import command_utils as U
+import typer
 
 app = typer.Typer()
 

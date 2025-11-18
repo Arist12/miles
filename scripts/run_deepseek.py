@@ -4,16 +4,13 @@ This file is in preview, and will be further refined and optimized.
 
 import os
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 import typer
 
-sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
-
-import command_utils as U
+import miles.utils.external_utils.command_utils as U
 
 app = typer.Typer()
 
@@ -30,7 +27,6 @@ class ScriptArgs(U.ExecuteTrainConfig):
     task: Literal["dapo_aime", "gsm8k"] = "dapo_aime"
 
     def __post_init__(self):
-        super().__post_init__()
         if (m := re.search(r"(\d+)layer", self.model_name)) is not None:
             self.model_org = "fzyzcjy"
             self.megatron_model_type = f"deepseek-v3-{m.group(1)}layer"
@@ -341,8 +337,8 @@ def train(args: ScriptArgs):
         train_args=train_args,
         config=args,
         # TODO may get it from `config`
-        num_gpus=args.num_gpus_per_node,
-        model_type=args.megatron_model_type,
+        num_gpus_per_node=args.num_gpus_per_node,
+        megatron_model_type=args.megatron_model_type,
         extra_env_vars={**sglang_extra_env_vars},
     )
 

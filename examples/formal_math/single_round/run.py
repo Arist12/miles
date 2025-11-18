@@ -1,10 +1,8 @@
 import os
-import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[3] / "tests"))
 
-import command_utils as U
+import miles.utils.external_utils.command_utils as U
 
 
 # TODO unify "arg" prefix
@@ -29,8 +27,8 @@ def prepare():
     if arg_ref_load is None:
         U.convert_checkpoint(
             model_name=MODEL_NAME,
-            model_type=MODEL_TYPE,
-            num_gpus=NUM_GPUS,
+            megatron_model_type=MODEL_TYPE,
+            num_gpus_per_node=NUM_GPUS,
             # To support multi-node training, for simplicity, we put model into shared folder
             dir_dst="/root/models",
         )
@@ -175,8 +173,8 @@ def execute():
 
     U.execute_train(
         train_args=train_args,
-        num_gpus=NUM_GPUS,
-        model_type=MODEL_TYPE,
+        num_gpus_per_node=NUM_GPUS,
+        megatron_model_type=MODEL_TYPE,
     )
 
 

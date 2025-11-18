@@ -1,13 +1,9 @@
-import sys
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Literal, Optional
 
 import typer
 
-sys.path.append(str(Path(__file__).resolve().parents[1] / "tests"))
-
-import command_utils as U
+import miles.utils.external_utils.command_utils as U
 
 
 @dataclass
@@ -26,8 +22,6 @@ class ScriptArgs(U.ExecuteTrainConfig):
     train_backend: Literal["fsdp", "megatron"] = "fsdp"
 
     def __post_init__(self):
-        super().__post_init__()
-
         if self.train_backend == "megatron":
             self.megatron_model_type = {
                 "Qwen3-4B-Instruct-2507": "qwen3-4B-Instruct-2507",
@@ -51,8 +45,8 @@ def prepare(args: ScriptArgs):
     if args.train_backend == "megatron":
         U.convert_checkpoint(
             model_name=args.model_name,
-            model_type=args.megatron_model_type,
-            num_gpus=args.num_gpus_per_node,
+            megatron_model_type=args.megatron_model_type,
+            num_gpus_per_node=args.num_gpus_per_node,
             # TODO unify
             dir_dst="/root/models",
         )
@@ -248,8 +242,8 @@ eval:
         train_args=train_args,
         config=args,
         # TODO may get it from `config`
-        num_gpus=args.num_gpus_per_node,
-        model_type=args.megatron_model_type,
+        num_gpus_per_node=args.num_gpus_per_node,
+        megatron_model_type=args.megatron_model_type,
         extra_env_vars={
             **misc_env_vars,
             **true_on_policy_envs,

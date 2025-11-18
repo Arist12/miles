@@ -1,3 +1,7 @@
+"""
+This file is not for miles framework itself, but as an optional utility to easily launch miles jobs and tests.
+"""
+
 import datetime
 import json
 import os
@@ -15,7 +19,7 @@ _ = exec_command, dataclass_cli
 repo_base_dir = Path(os.path.abspath(__file__)).resolve().parents[1]
 
 
-def convert_checkpoint(model_name, model_type, num_gpus: int, dir_dst="/root"):
+def convert_checkpoint(model_name, megatron_model_type, num_gpus_per_node: int, dir_dst="/root"):
     # TODO shall we make it in host-mapped folder and thus can cache it to speedup CI
     path_dst = f"{dir_dst}/{model_name}_torch_dist"
     if Path(path_dst).exists():
@@ -23,8 +27,8 @@ def convert_checkpoint(model_name, model_type, num_gpus: int, dir_dst="/root"):
         return
 
     exec_command(
-        f"source {repo_base_dir}/scripts/models/{model_type}.sh && "
-        f"PYTHONPATH=/root/Megatron-LM torchrun --nproc-per-node {num_gpus} tools/convert_hf_to_torch_dist.py "
+        f"source {repo_base_dir}/scripts/models/{megatron_model_type}.sh && "
+        f"PYTHONPATH=/root/Megatron-LM torchrun --nproc-per-node {num_gpus_per_node} tools/convert_hf_to_torch_dist.py "
         "${MODEL_ARGS[@]} "
         f"--hf-checkpoint /root/models/{model_name} "
         f"--save {path_dst}"
@@ -36,33 +40,28 @@ def hf_download_dataset(full_name: str):
     exec_command(f"hf download --repo-type dataset {full_name} --local-dir /root/datasets/{partial_name}")
 
 
+# This class can be extended by concrete scripts
 @dataclass
 class ExecuteTrainConfig:
     cuda_core_dump: bool = False
-    num_nodes: int = 1
+    num_nodes: int = int(os.environ.get("SLURM_JOB_NUM_NODES", "1"))
     extra_env_vars: str = ""
-
-    def __post_init__(self):
-        if (x := os.environ.get("SLURM_JOB_NUM_NODES")) is not None:
-            self.num_nodes = int(x)
 
 
 def execute_train(
     train_args: str,
-    # TODO rename to "num_gpus_per_node"
-    num_gpus: int,
-    # TODO rename to "megatron_model_type"
-    model_type: Optional[str],
-    config: ExecuteTrainConfig = ExecuteTrainConfig(),
+    num_gpus_per_node: int,
+    megatron_model_type: Optional[str],
     train_script: str = "train.py",
     before_ray_job_submit=None,
     extra_env_vars={},
+    config: ExecuteTrainConfig = ExecuteTrainConfig(),
 ):
-    external_ray = bool(int(os.environ.get("MILES_SCRIPT_EXTERNAL_RAY", "0")))
+    external_ray = get_bool_env_var("MILES_SCRIPT_EXTERNAL_RAY")
     master_addr = os.environ.get("MASTER_ADDR", "127.0.0.1")
 
     train_backend_fsdp = "--train-backend fsdp" in train_args
-    assert train_backend_fsdp == (model_type is None)
+    assert train_backend_fsdp == (megatron_model_type is None)
 
     exec_command(
         "pkill -9 sglang; "
@@ -85,7 +84,7 @@ def execute_train(
         exec_command(
             # will prevent ray from buffering stdout/stderr
             f"export PYTHONBUFFERED=16 && "
-            f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus} --disable-usage-stats"
+            f"ray start --head --node-ip-address {master_addr} --num-gpus {num_gpus_per_node} --disable-usage-stats"
         )
 
     if (f := before_ray_job_submit) is not None:
@@ -123,18 +122,19 @@ def execute_train(
         }
     )
 
-    source_cmd = f'source "{repo_base_dir}/scripts/models/{model_type}.sh" && ' if model_type is not None else ""
-    model_args_str = "${MODEL_ARGS[@]}" if model_type is not None else ""
-
-    if bool(int(os.environ.get("MILES_SCRIPT_ENABLE_RAY_SUBMIT", "1"))):
+    if get_bool_env_var("MILES_SCRIPT_ENABLE_RAY_SUBMIT", "1"):
+        cmd_megatron_model_source = (
+            f'source "{repo_base_dir}/scripts/models/{megatron_model_type}.sh" && '
+            if megatron_model_type is not None
+            else ""
+        )
         exec_command(
             f"export no_proxy=127.0.0.1 && export PYTHONBUFFERED=16 && "
-            f"{source_cmd}"
-            # TODO should this 127.0.0.1 be `master_addr` instead
+            f"{cmd_megatron_model_source}"
             f'ray job submit --address="http://127.0.0.1:8265" '
             f"--runtime-env-json='{runtime_env_json}' "
             f"-- python3 {train_script} "
-            f"{model_args_str} "
+            f"{'${MODEL_ARGS[@]}' if megatron_model_type is not None else ''} "
             f"{train_args}"
         )
 

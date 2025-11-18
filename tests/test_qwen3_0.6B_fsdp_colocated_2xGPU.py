@@ -91,7 +91,7 @@ def execute():
     U.execute_train(
         train_args=train_args,
         num_gpus=2,
-        model_type=None,
+        megatron_model_type=None,
     )
 
 

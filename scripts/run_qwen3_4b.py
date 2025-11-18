@@ -16,7 +16,7 @@ def prepare():
     U.exec_command(f"huggingface-cli download Qwen/{MODEL_NAME} --local-dir /root/models/{MODEL_NAME}")
     U.hf_download_dataset("zhuzilin/dapo-math-17k")
     U.hf_download_dataset("zhuzilin/aime-2024")
-    U.convert_checkpoint(model_name=MODEL_NAME, model_type=MODEL_TYPE, num_gpus=NUM_GPUS)
+    U.convert_checkpoint(model_name=MODEL_NAME, megatron_model_type=MODEL_TYPE, num_gpus=NUM_GPUS)
 
 
 def execute():
@@ -123,7 +123,7 @@ def execute():
     U.execute_train(
         train_args=train_args,
         num_gpus=NUM_GPUS,
-        model_type=MODEL_TYPE,
+        megatron_model_type=MODEL_TYPE,
     )
 
 

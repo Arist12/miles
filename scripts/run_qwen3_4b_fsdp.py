@@ -51,7 +51,7 @@ def prepare(args: ScriptArgs):
     if args.train_backend == "megatron":
         U.convert_checkpoint(
             model_name=args.model_name,
-            model_type=args.megatron_model_type,
+            megatron_model_type=args.megatron_model_type,
             num_gpus=args.num_gpus_per_node,
             # TODO unify
             dir_dst="/root/models",
@@ -249,7 +249,7 @@ eval:
         config=args,
         # TODO may get it from `config`
         num_gpus=args.num_gpus_per_node,
-        model_type=args.megatron_model_type,
+        megatron_model_type=args.megatron_model_type,
         extra_env_vars={
             **misc_env_vars,
             **true_on_policy_envs,

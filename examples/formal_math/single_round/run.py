@@ -29,7 +29,7 @@ def prepare():
     if arg_ref_load is None:
         U.convert_checkpoint(
             model_name=MODEL_NAME,
-            model_type=MODEL_TYPE,
+            megatron_model_type=MODEL_TYPE,
             num_gpus=NUM_GPUS,
             # To support multi-node training, for simplicity, we put model into shared folder
             dir_dst="/root/models",
@@ -176,7 +176,7 @@ def execute():
     U.execute_train(
         train_args=train_args,
         num_gpus=NUM_GPUS,
-        model_type=MODEL_TYPE,
+        megatron_model_type=MODEL_TYPE,
     )
 
 

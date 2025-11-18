@@ -34,7 +34,7 @@ def prepare():
     U.hf_download_dataset("zhuzilin/aime-2024")
     U.convert_checkpoint(
         model_name=MODEL_NAME,
-        model_type=MODEL_TYPE,
+        megatron_model_type=MODEL_TYPE,
         num_gpus=num_gpus_for_convert,
         # To support multi-node training, for simplicity, we put model into shared folder
         dir_dst="/root/models",
@@ -203,7 +203,7 @@ def execute():
     U.execute_train(
         train_args=train_args,
         num_gpus=num_gpus,
-        model_type=MODEL_TYPE,
+        megatron_model_type=MODEL_TYPE,
     )
 
 

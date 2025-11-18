@@ -136,7 +136,7 @@ def execute():
     U.execute_train(
         train_args=train_args,
         num_gpus=NUM_GPUS,
-        model_type=None,
+        megatron_model_type=None,
         extra_env_vars={
             **true_on_policy_envs,
             "SGLANG_DUMPER_ENABLE": "1" if MODE == "debug_one_sample" else "0",

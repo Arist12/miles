@@ -2,7 +2,7 @@ import typer
 import datetime
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 import miles.utils.external_utils.command_utils as U
 
@@ -15,6 +15,9 @@ class ScriptArgs(U.ExecuteTrainConfig):
     num_gpus_per_node: Optional[int] = None
     hardware: Literal["H100", "GB300"] = "H100"
     extra_args: str = ""
+
+    def __post_init__(self):
+        self.num_gpus_per_node = self.num_gpus_per_node or U.NUM_GPUS_OF_HARDWARE[self.hardware]
 
 
 match mode:

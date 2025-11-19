@@ -65,29 +65,23 @@ def _fp8_cast_bf16(args: ScriptArgs):
 @app.command()
 @U.dataclass_cli
 def prepare_spmd(args: ScriptArgs):
-    _convert_to_megatron_ckpt(args)
-
-
-def _convert_to_megatron_ckpt(args: ScriptArgs):
-    """This script needs to be executed once per node."""
-
-    # TODO unify 5layer w/ 20layer
+    # TODO unify 5layer w/ 20layer, also maybe unify the whole script
     if args.num_nodes == 1 and args.model_name == "DeepSeek-V3-0324-5layer":
-        cmd += (
+        extra_args = (
             "--tensor-model-parallel-size 1 "
             "--pipeline-model-parallel-size 1 "
             "--expert-tensor-parallel-size 1 "
             "--expert-model-parallel-size 1 "
         )
     elif args.model_name == "DeepSeek-V3-0324-20layer":
-        cmd += (
+        extra_args = (
             "--tensor-model-parallel-size 1 "
             "--expert-tensor-parallel-size 1 "
             "--expert-model-parallel-size 4 "
             # PP info will be auto determined by converter script
         )
     else:
-        cmd += (
+        extra_args = (
             "--tensor-model-parallel-size 1 "
             "--pipeline-model-parallel-size 8 "
             "--expert-tensor-parallel-size 1 "
@@ -96,7 +90,14 @@ def _convert_to_megatron_ckpt(args: ScriptArgs):
             "--decoder-last-pipeline-num-layers 6 "
         )
 
-    U.exec_command(cmd)
+    U.convert_to_checkpoint(
+        model_name=args.model_name,
+        megatron_model_type=args.megatron_model_type,
+        num_gpus_per_node=args.num_gpus_per_node,
+        multinode=True,
+        extra_args=extra_args,
+        dir_dst="/root/models",
+    )
 
 
 # TODO improve these commadns

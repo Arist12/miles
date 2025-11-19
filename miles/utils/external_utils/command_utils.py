@@ -19,19 +19,41 @@ _ = exec_command, dataclass_cli
 repo_base_dir = Path(os.path.abspath(__file__)).resolve().parents[3]
 
 
-def convert_checkpoint(model_name, megatron_model_type, num_gpus_per_node: int, dir_dst="/root"):
+def convert_checkpoint(
+        model_name,
+        megatron_model_type,
+        num_gpus_per_node: int,
+        multinode: bool = False,
+        extra_args: str = "",
+        dir_dst: str="/root",
+):
     # TODO shall we make it in host-mapped folder and thus can cache it to speedup CI
     path_dst = f"{dir_dst}/{model_name}_torch_dist"
     if Path(path_dst).exists():
         print(f"convert_checkpoint skip {path_dst} since exists")
         return
 
+    if multinode:
+        # This variable can be provided via:
+        # `export SLURM_JOB_HOSTNAMES=$(scontrol show hostnames "$SLURM_JOB_NODELIST")`
+        print(f"{os.environ.get('SLURM_JOB_HOSTNAMES')=} {os.environ.get('SLURM_NODEID')=}")
+        master_addr = os.environ["SLURM_JOB_HOSTNAMES"].split("\n")[0]
+        node_rank = int(os.environ["SLURM_NODEID"])
+
     exec_command(
         f"source {repo_base_dir}/scripts/models/{megatron_model_type}.sh && "
-        f"PYTHONPATH=/root/Megatron-LM torchrun --nproc-per-node {num_gpus_per_node} tools/convert_hf_to_torch_dist.py "
+        f"PYTHONPATH=/root/Megatron-LM "
+        f"torchrun "
+        f"--nproc-per-node {num_gpus_per_node} "
+        f"--master-addr {master_addr} "
+        "--master-port 23456 "
+        f"--nnodes={num_nodes} "
+        f"--node-rank {node_rank} "
+        f"tools/convert_hf_to_torch_dist.py "
         "${MODEL_ARGS[@]} "
         f"--hf-checkpoint /root/models/{model_name} "
         f"--save {path_dst}"
+        f"{extra_args}"
     )
 
 

@@ -133,7 +133,7 @@ def train(args: ScriptArgs):
         "--sequence-parallel "
         f"--pipeline-model-parallel-size 4 "
         "--context-parallel-size 2 "
-        "--expert-model-parallel-size 16 "
+        "--expert-model-parallel-size 8 "
         "--expert-tensor-parallel-size 1 "
         # ------------
         "--recompute-granularity full "

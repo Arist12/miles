@@ -8,7 +8,7 @@ Miles keeps slime’s lightweight, modular design, but focuses on:
 
 - New hardware support (e.g., GB300 and beyond)  
 - Stable, controllable RL for large MoE models  
-- Production-grade behavior: determinism, on-policy alignment, and better failure modes  
+- Production-grade features  
 
 <p align="left">
   <img src="imgs/miles_logo.png" alt="Miles Logo" width="500">
@@ -22,7 +22,7 @@ Miles keeps slime’s lightweight, modular design, but focuses on:
 - [Quick Start](#quick-start)
 - [Arguments Walkthrough](#arguments-walkthrough)
 - [Developer Guide](#developer-guide)
-- [Key Features](#key-features)
+- [Recent Updates](#recent-updates)
 - [Roadmap](#roadmap)
 - [Architecture Overview](#architecture-overview)
 - [FAQ & Acknowledgements](#faq--acknowledgements)
@@ -46,7 +46,7 @@ Arguments in Miles follow the same three-layer pattern as slime:
 
 1. **Megatron arguments**
 
-   * Miles reads Megatron arguments via `PYTHONPATH`.
+   * Miles reads all arguments in Megatron.
    * Example: `--tensor-model-parallel-size 2`.
 
 2. **SGLang arguments**
@@ -59,17 +59,17 @@ Arguments in Miles follow the same three-layer pattern as slime:
 
    * For Miles-only options, see:
 
-     * [`miles/utils/arguments.py`](miles/utils/arguments.py) (path may vary slightly depending on repo layout)
+     * [`miles/utils/arguments.py`](miles/utils/arguments.py)  for a full list
 
 For more detailed usage, please refer to the documentation and example configs in the repo as they become available.
  
 
 
-## Key Features
+## Recent Updates
 
-Miles starts from slime’s proven backbone and adds a series of system-level upgrades for production environments.
+Miles starts from slime’s proven backbone and adds a series of upgrades for production environments. The recent PRs and changes have also been synced to slime side.
 
-### ✅ Determinism & True On-Policy
+### ✅ True On-Policy
 
 Miles extends slime’s deterministic training and supports **infrastructure-level true on-policy support** for SGLang + FSDP:
 
@@ -146,7 +146,7 @@ We’ll continue to iterate based on feedback from users across research labs, s
 
 ## Architecture Overview
 
-Miles inherits slime’s core architecture and extends it with production-grade features.
+Miles inherits slime’s core architecture as below.
 
 
 ![arch](./imgs/arch.png)

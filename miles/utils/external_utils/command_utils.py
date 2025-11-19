@@ -61,6 +61,10 @@ def convert_checkpoint(
     )
 
 
+def rsync_simple(path_src: str, path_dst: str):
+    exec_command(f"mkdir -p {path_dst} && rsync -a --info=progress2 {path_src}/ {path_dst}")
+
+
 def hf_download_dataset(full_name: str):
     _, partial_name = full_name.split("/")
     exec_command(f"hf download --repo-type dataset {full_name} --local-dir /root/datasets/{partial_name}")

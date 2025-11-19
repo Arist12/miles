@@ -91,18 +91,13 @@ def prepare_spmd(args: ScriptArgs):
     )
 
 
-# TODO improve these commadns
 @app.command()
 @U.dataclass_cli
 def prepare_cp(args: ScriptArgs):
-    _cp_model_to_local(args)
-
-
-def _cp_model_to_local(args: ScriptArgs):
-    path_src = f"/root/models/{args.model_name}_torch_dist"
-    path_dst = f"/root/local_data/{args.model_name}_torch_dist"
-    # Always execute, since this is rsync and is cheap
-    U.exec_command(f"mkdir -p {path_dst} && rsync -a --info=progress2 {path_src}/ {path_dst}")
+    U.rsync_simple(
+        path_src=f"/root/models/{args.model_name}_torch_dist",
+        path_dst=f"/root/local_data/{args.model_name}_torch_dist",
+    )
 
 
 @app.command()

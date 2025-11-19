@@ -153,9 +153,7 @@ def train(args: ScriptArgs):
         "--recompute-num-layers 1 "
         # ------------
         "--use-dynamic-batch-size "
-        # TODO temp use tiny value
-        "--max-tokens-per-gpu 2048 "
-        # "--max-tokens-per-gpu 16384 "
+        "--max-tokens-per-gpu 16384 "
     )
 
     grpo_args = (

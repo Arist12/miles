@@ -65,25 +65,23 @@ def _fp8_cast_bf16(args: ScriptArgs):
 @U.dataclass_cli
 def prepare_spmd(args: ScriptArgs):
     # TODO unify 5layer w/ 20layer, also maybe unify the whole script
+    extra_args = (
+        "--tensor-model-parallel-size 1 "
+        "--expert-tensor-parallel-size 1 "
+    )
     if args.num_nodes == 1 and args.model_name == "DeepSeek-V3-0324-5layer":
-        extra_args = (
-            "--tensor-model-parallel-size 1 "
+        extra_args += (
             "--pipeline-model-parallel-size 1 "
-            "--expert-tensor-parallel-size 1 "
             "--expert-model-parallel-size 1 "
         )
     elif args.model_name == "DeepSeek-V3-0324-20layer":
-        extra_args = (
-            "--tensor-model-parallel-size 1 "
-            "--expert-tensor-parallel-size 1 "
+        extra_args += (
             "--expert-model-parallel-size 4 "
             # PP info will be auto determined by converter script
         )
     else:
-        extra_args = (
-            "--tensor-model-parallel-size 1 "
+        extra_args += (
             "--pipeline-model-parallel-size 8 "
-            "--expert-tensor-parallel-size 1 "
             "--expert-model-parallel-size 4 "
             "--decoder-first-pipeline-num-layers 7 "
             "--decoder-last-pipeline-num-layers 6 "

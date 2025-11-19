@@ -220,7 +220,7 @@ def train(args: ScriptArgs):
         "--accumulate-allreduce-grads-in-fp32 "
         "--attention-softmax-in-fp32 "
         # need to comment this when using model with MLA
-        # "--attention-backend flash "
+        "--attention-backend flash "
         f"--update-weight-buffer-size {4 * 1024 ** 3} "
         # TODO maybe enable it
         # use deepep for megatron

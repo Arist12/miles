@@ -143,6 +143,10 @@ Miles inherits slime’s core architecture as below.
 ![arch](./imgs/arch.png)
 
 
+
+![arch](./imgs/arch.png)
+
+
 **Module overview:**
 
 - **training (Megatron)**  

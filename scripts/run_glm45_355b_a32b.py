@@ -88,6 +88,7 @@ def train(args: ScriptArgs):
         # ------------
         "--num-steps-per-rollout 4 "
         "--balance-data "
+        "--rollout-stop-token-ids 151329 151336 151338 "
     )
 
     if args.mode != "debug_minimal":

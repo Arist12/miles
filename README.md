@@ -11,7 +11,7 @@ Miles keeps slime’s lightweight, modular design, but focuses on:
 - Production-grade behavior: determinism, on-policy alignment, and better failure modes  
 
 <p align="left">
-  <img src="imgs/miles_logo.png" alt="Miles Logo" width="700">
+  <img src="imgs/miles_logo.png" alt="Miles Logo" width="500">
 </p>
 
 > A journey of a thousand miles begins with a single step.
@@ -26,7 +26,6 @@ Miles keeps slime’s lightweight, modular design, but focuses on:
 - [Roadmap](#roadmap)
 - [Architecture Overview](#architecture-overview)
 - [FAQ & Acknowledgements](#faq--acknowledgements)
-- [Relationship to slime](#relationship-to-slime)
 
 ---
 

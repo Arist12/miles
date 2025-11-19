@@ -10,8 +10,8 @@ Miles keeps slime’s lightweight, modular design, but focuses on:
 - Stable, controllable RL for large MoE models  
 - Production-grade behavior: determinism, on-policy alignment, and better failure modes  
 
-<p align="center">
-  <img src="imgs/miles_logo.png" alt="Miles Logo" width="200">
+<p align="left">
+  <img src="imgs/miles_logo.png" alt="Miles Logo" width="700">
 </p>
 
 > A journey of a thousand miles begins with a single step.
@@ -34,28 +34,10 @@ Miles keeps slime’s lightweight, modular design, but focuses on:
 
 > **Note:** Miles is under active development. Commands and examples may evolve; please check the repo for the latest instructions.
 
-### Installation
+For a comprehensive quick start guide covering environment setup, data preparation, training startup, and key code analysis, please refer to:
+- [Quick Start Guide](./docs/en/get_started/quick_start.md)
 
-```bash
-git clone https://github.com/radixark/miles.git
-cd miles
-pip install -e .
-```
-
-### Running an Example
-
-We provide example scripts (e.g. formal mathematics / Lean) showing SFT + RL training with Miles.
-
-```bash
-# Example (placeholder, adapt to actual script names in the repo)
-python examples/lean/run_sft.py \
-  --config-path configs/...
-
-python examples/lean/run_rl.py \
-  --config-path configs/...
-```
-
-More examples and detailed guides will live under `examples/` and `docs/` in this repository.
+We also provide examples for some use cases not covered in the quick start guide; please check [examples](examples/).
 
 ---
 
@@ -167,6 +149,10 @@ We’ll continue to iterate based on feedback from users across research labs, s
 
 Miles inherits slime’s core architecture and extends it with production-grade features.
 
+
+![arch](./imgs/arch.png)
+
+
 **Module overview:**
 
 - **training (Megatron)**  
@@ -216,11 +202,6 @@ pre-commit run --all-files --show-diff-on-failure --color=always
 * For FAQs, please see `docs/en/get_started/qa.md` (to be added as the project matures).
 * **Huge thanks** to the **slime** authors and community — Miles would not exist without slime’s design and ecosystem.
 * We also acknowledge and rely on the broader LLM infra ecosystem, including SGLang, Megatron-LM, and related tools.
-
-If you use **Miles** in your work, we encourage you to:
-
-* Cite **slime** (see their README for the latest BibTeX); and
-* Mention Miles and the RadixArk team in your repo / paper.
 
 ---
 

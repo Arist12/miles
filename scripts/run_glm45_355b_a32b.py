@@ -23,6 +23,7 @@ class ScriptArgs(U.ExecuteTrainConfig):
     num_gpus_per_node: int = 4
     enable_eval: bool = True
     extra_args: str = ""
+    task: Literal["dapo_aime", "gsm8k"] = "dapo_aime"
 
 
 @app.command()
@@ -33,8 +34,12 @@ def prepare_single(args: ScriptArgs):
     U.exec_command(
         f"huggingface-cli download {args.model_org}/{args.model_name} --local-dir /root/models/{args.model_name}"
     )
-    U.hf_download_dataset("zhuzilin/dapo-math-17k")
-    U.hf_download_dataset("zhuzilin/aime-2024")
+    match args.task:
+        case "dapo_aime":
+            U.hf_download_dataset("zhuzilin/dapo-math-17k")
+            U.hf_download_dataset("zhuzilin/aime-2024")
+        case "gsm8k":
+            U.hf_download_dataset("zhuzilin/gsm8k")
 
 
 @app.command()

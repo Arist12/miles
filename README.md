@@ -14,7 +14,7 @@ Miles keeps slime’s lightweight, modular design, but focuses on:
   <img src="imgs/miles_logo.png" alt="Miles Logo" width="500">
 </p>
 
-> A journey of a thousand miles begins with a single step.
+> A journey of a thousand miles is made one small step at a time.
 
 ---
 

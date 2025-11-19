@@ -20,12 +20,12 @@ repo_base_dir = Path(os.path.abspath(__file__)).resolve().parents[3]
 
 
 def convert_checkpoint(
-        model_name,
-        megatron_model_type,
-        num_gpus_per_node: int,
-        multinode: bool = False,
-        extra_args: str = "",
-        dir_dst: str="/root",
+    model_name,
+    megatron_model_type,
+    num_gpus_per_node: int,
+    multinode: bool = False,
+    extra_args: str = "",
+    dir_dst: str = "/root",
 ):
     # TODO shall we make it in host-mapped folder and thus can cache it to speedup CI
     path_dst = f"{dir_dst}/{model_name}_torch_dist"
@@ -44,10 +44,7 @@ def convert_checkpoint(
         node_rank = int(os.environ["SLURM_NODEID"])
 
         multinode_args = (
-            f"--master-addr {master_addr} "
-            "--master-port 23456 "
-            f"--nnodes={nnodes} "
-            f"--node-rank {node_rank} "
+            f"--master-addr {master_addr} " "--master-port 23456 " f"--nnodes={nnodes} " f"--node-rank {node_rank} "
         )
 
     exec_command(

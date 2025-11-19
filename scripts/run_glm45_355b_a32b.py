@@ -166,6 +166,7 @@ def train(args: ScriptArgs):
         "--entropy-coef 0.00 "
         "--eps-clip 1e-4 "
         "--eps-clip-high 2e-4 "
+        "--use-tis "
     )
 
     optimizer_args = (

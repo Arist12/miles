@@ -7,7 +7,7 @@
 </div>
 
 --------------------------------------------------------------------------------
-> A journey of a thousand miles begins with a single step.
+> A journey of a thousand miles is made one small step at a time.
 
 **Miles** is an enterprise-facing reinforcement learning framework for **large-scale MoE post-training and production workloads**, forked from and co-evolving with **[slime](https://github.com/THUDM/slime)**.
 

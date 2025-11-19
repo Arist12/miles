@@ -44,22 +44,11 @@ We also provide examples for some use cases not covered in the quick start guide
 
 Arguments in Miles follow the same three-layer pattern as slime:
 
-1. **Megatron arguments**
+1. **Megatron arguments**: Megatron arguments are exposed unchanged, e.g. `--tensor-model-parallel-size 2`.
 
-   * Miles reads all arguments in Megatron.
-   * Example: `--tensor-model-parallel-size 2`.
+2. **SGLang arguments**: All SGLang arguments are exposed with a prefix `--sglang-`, e.g. `--mem-fraction-static` → `--sglang-mem-fraction-static`.
 
-2. **SGLang arguments**
-
-   * All SGLang arguments are supported.
-   * They must be prefixed with `--sglang-`.
-   * Example: `--mem-fraction-static` → `--sglang-mem-fraction-static`.
-
-3. **Miles-specific arguments**
-
-   * For Miles-only options, see:
-
-     * [`miles/utils/arguments.py`](miles/utils/arguments.py)  for a full list
+3. **Miles-specific arguments*: Please refer to [`miles/utils/arguments.py`](miles/utils/arguments.py)  for a full list
 
 For more detailed usage, please refer to the documentation and example configs in the repo as they become available.
  

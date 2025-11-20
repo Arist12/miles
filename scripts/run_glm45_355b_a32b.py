@@ -209,6 +209,7 @@ def train(args: ScriptArgs):
     )
 
     # TODO optimize parameters, especially for FP8
+    # TODO pure tp attention is very inefficient
     # sglang_decode_max_bs = 256
     sglang_world_size = min(32, args.num_gpus_per_node * args.num_nodes)
     # sglang_attn_dp_size = 4

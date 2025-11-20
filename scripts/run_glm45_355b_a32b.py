@@ -173,7 +173,7 @@ def train(args: ScriptArgs):
 
     # TODO enable EP
     # sglang_decode_max_bs = 256
-    sglang_world_size = 32
+    sglang_world_size = min(32, args.num_gpus_per_node * args.num_nodes)
     sglang_attn_dp_size = 4
     # sglang_attn_tp_size = sglang_world_size // sglang_attn_dp_size
     sglang_args = (

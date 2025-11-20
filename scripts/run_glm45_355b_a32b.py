@@ -218,8 +218,8 @@ def train(args: ScriptArgs):
         f"--sglang-tp-size {sglang_world_size} "
         # f"--sglang-ep-size {sglang_world_size} "
         # dp attention
-        "--sglang-enable-dp-attention "
-        f"--sglang-dp-size {sglang_attn_dp_size} "
+        # "--sglang-enable-dp-attention "
+        # f"--sglang-dp-size {sglang_attn_dp_size} "
         # "--sglang-moe-dense-tp-size 1 "
         # "--sglang-enable-dp-lm-head "
         # TODO why disable?

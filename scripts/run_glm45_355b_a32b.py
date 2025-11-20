@@ -127,15 +127,26 @@ def train(args: ScriptArgs):
                 "--eval-max-response-len 256 "
             )
 
-    perf_args = (
-        # TODO choose a good config
-        "--tensor-model-parallel-size 4 "
-        "--sequence-parallel "
-        f"--pipeline-model-parallel-size 4 "
-        "--context-parallel-size 2 "
-        "--expert-model-parallel-size 8 "
-        "--expert-tensor-parallel-size 1 "
-        # ------------
+    if args.num_nodes <= 4:
+        perf_args = (
+            "--tensor-model-parallel-size 4 "
+            "--sequence-parallel "
+            f"--pipeline-model-parallel-size 2 "
+            "--context-parallel-size 2 "
+            "--expert-model-parallel-size 8 "
+            "--expert-tensor-parallel-size 1 "
+        )
+    else:
+        perf_args = (
+            # TODO choose a good config
+            "--tensor-model-parallel-size 4 "
+            "--sequence-parallel "
+            f"--pipeline-model-parallel-size 4 "
+            "--context-parallel-size 2 "
+            "--expert-model-parallel-size 8 "
+            "--expert-tensor-parallel-size 1 "
+        )
+    perf_args += (
         "--recompute-granularity full "
         "--recompute-method uniform "
         "--recompute-num-layers 1 "

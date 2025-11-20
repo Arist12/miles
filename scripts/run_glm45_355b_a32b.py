@@ -173,7 +173,7 @@ def train(args: ScriptArgs):
             # TODO choose a good config
             "--tensor-model-parallel-size 4 "
             "--sequence-parallel "
-            f"--pipeline-model-parallel-size 4 "
+            f"--pipeline-model-parallel-size {8 if args.num_nodes == 8 else 4} "
             "--context-parallel-size 2 "
             "--expert-model-parallel-size 8 "
             "--expert-tensor-parallel-size 1 "

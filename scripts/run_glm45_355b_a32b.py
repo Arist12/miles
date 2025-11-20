@@ -172,9 +172,9 @@ def train(args: ScriptArgs):
     )
 
     # TODO enable EP
-    sglang_decode_max_bs = 256
+    # sglang_decode_max_bs = 256
     sglang_world_size = 32
-    sglang_attn_dp_size = 8
+    sglang_attn_dp_size = 4
     # sglang_attn_tp_size = sglang_world_size // sglang_attn_dp_size
     sglang_args = (
         f"--rollout-num-gpus-per-engine {sglang_world_size} "
@@ -186,15 +186,16 @@ def train(args: ScriptArgs):
         f"--sglang-dp-size {sglang_attn_dp_size} "
         # "--sglang-moe-dense-tp-size 1 "
         # "--sglang-enable-dp-lm-head "
-        "--sglang-disable-radix-cache "
+        # TODO why disable?
+        # "--sglang-disable-radix-cache "
         # enable deepep for sglang
         # "--sglang-moe-a2a-backend deepep "
         # "--sglang-deepep-mode low_latency "
         # make every dp rank has 128 concurrency
-        "--sglang-server-concurrency 1024 "
+        # "--sglang-server-concurrency 1024 "
         # f"--sglang-max-running-requests {sglang_world_size * sglang_decode_max_bs // sglang_attn_tp_size} "
         # f"--sglang-chunked-prefill-size {sglang_world_size * sglang_decode_max_bs} "
-        f"--sglang-cuda-graph-max-bs {sglang_decode_max_bs} "
+        # f"--sglang-cuda-graph-max-bs {sglang_decode_max_bs} "
         # For quick experiments
         # """--sglang-json-model-override-args '{"num_hidden_layers": 5}' """
     )

@@ -24,6 +24,7 @@ class ScriptArgs(U.ExecuteTrainConfig):
     enable_eval: bool = True
     extra_args: str = ""
     rollout_fp8: bool = False
+    dynamic_sampling: bool = False
     task: Literal["dapo_aime", "gsm8k"] = "dapo_aime"
 
 
@@ -115,7 +116,7 @@ def train(args: ScriptArgs):
         "--rollout-stop-token-ids 151329 151336 151338 "
     )
 
-    if args.mode != "debug_minimal":
+    if args.dynamic_sampling and (args.true_on_policy != "debug_minimal"):
         rollout_args += (
             "--over-sampling-batch-size 256 "
             "--dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std "
@@ -131,12 +132,12 @@ def train(args: ScriptArgs):
             rollout_args += (
                 "--prompt-data /root/datasets/dapo-math-17k/dapo-math-17k.jsonl "
                 "--input-key prompt "
-                f"--rollout-max-response-len {100 if args.mode == 'debug_minimal' else 32768} "
+                f"--rollout-max-response-len {100 if args.mode == 'debug_minimal' else 8192} "
             )
             eval_args += (
                 "--eval-prompt-data aime /root/datasets/aime-2024/aime-2024.jsonl "
                 "--n-samples-per-eval-prompt 8 "
-                "--eval-max-response-len 32768 "
+                "--eval-max-response-len 16384 "
             )
         case "gsm8k":
             rollout_args += (

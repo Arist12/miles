@@ -32,7 +32,6 @@ class UpdateWeightFromDistributed:
         *,
         model_name: str,
         quantization_config: dict[str, int | str | list[str]] | None,
-        vocab_size: int,
     ) -> None:
         """
         Initialize. Groups created in connect_rollout_engines.
@@ -40,7 +39,6 @@ class UpdateWeightFromDistributed:
         self.args = args
         self.model = model
         self.model_name = model_name
-        self.vocab_size = vocab_size
         self.quantization_config = quantization_config
         self.weight_version = 0
         self._model_update_groups = None

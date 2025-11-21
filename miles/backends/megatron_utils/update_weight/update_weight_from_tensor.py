@@ -56,7 +56,6 @@ class UpdateWeightFromTensor:
         *,
         model_name: str,
         quantization_config: dict[str, int | str | list[str]] | None,
-        vocab_size: int,
     ) -> None:
         """
         Compute param buckets, create IPC Gloo groups (rollout_num_gpus_per_engine ranks/group).
@@ -65,7 +64,6 @@ class UpdateWeightFromTensor:
         self.model = model
         self.weights_getter = weights_getter
         self.model_name = model_name
-        self.vocab_size = vocab_size
         self.quantization_config = quantization_config
         self.megatron_local_param_info_buckets = _get_megatron_local_param_info_buckets(self.args, self.model)
         self.weight_version = 0

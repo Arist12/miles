@@ -161,7 +161,6 @@ class UpdateWeightFromTensor:
 
         if self.use_distribute and self._is_distributed_src_rank:
             refs_distributed = update_weights_from_distributed(
-                self.args,
                 self._group_name,
                 self._model_update_groups,
                 self.weight_version,

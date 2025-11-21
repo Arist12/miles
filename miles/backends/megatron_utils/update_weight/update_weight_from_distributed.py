@@ -219,7 +219,6 @@ class UpdateWeightFromDistributed:
             time.sleep(0.1)
 
         refs = update_weights_from_distributed(
-            self.args,
             self._group_name,
             self._model_update_groups,
             self.weight_version,
@@ -277,7 +276,6 @@ def disconnect_rollout_engines_from_distributed(args, group_name, model_update_g
 
 
 def update_weights_from_distributed(
-    args: Namespace,
     group_name: str,
     group: dist.ProcessGroup,
     weight_version: int,

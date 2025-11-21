@@ -173,13 +173,13 @@ class UpdateWeightFromTensor:
 
         return all_refs
 
-    def _send_to_colocated_engine(self, converted_named_tensors: list[tuple[str, torch.Tensor]]) -> list[ObjectRef]:
+    def _send_to_colocated_engine(self, hf_named_tensors: list[tuple[str, torch.Tensor]]) -> list[ObjectRef]:
         if use_flattened_tensor_bucket:
             if getattr(FlattenedTensorBucket, "supports_multi_dtypes", False):
-                converted_named_tensors_by_dtypes = {"dtype": converted_named_tensors}
+                converted_named_tensors_by_dtypes = {"dtype": hf_named_tensors}
             else:
                 converted_named_tensors_by_dtypes = {}
-                for name, tensor in converted_named_tensors:
+                for name, tensor in hf_named_tensors:
                     dtype = tensor.dtype
                     if dtype not in converted_named_tensors_by_dtypes:
                         converted_named_tensors_by_dtypes[dtype] = []
@@ -195,7 +195,7 @@ class UpdateWeightFromTensor:
                 }
                 serialized_tensors.append(MultiprocessingSerializer.serialize(flattened_tensor_data, output_str=True))
         else:
-            serialized_tensors = MultiprocessingSerializer.serialize(converted_named_tensors, output_str=True)
+            serialized_tensors = MultiprocessingSerializer.serialize(hf_named_tensors, output_str=True)
 
         serialized_named_tensors = (
             [None] * dist.get_world_size(self._ipc_gather_group) if self._ipc_gather_src == dist.get_rank() else None

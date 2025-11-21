@@ -1,0 +1,251 @@
+import inspect
+import re
+import socket
+import time
+from argparse import Namespace
+from collections.abc import Iterator, Mapping, Sequence
+from typing import Callable
+
+import ray
+import torch
+import torch.distributed as dist
+from megatron.core import mpu
+from megatron.core.transformer.transformer_layer import get_transformer_layer_offset
+from ray import ObjectRef
+from ray.actor import ActorHandle
+
+try:
+    from sglang.srt.utils.patch_torch import monkey_patch_torch_reductions
+except:
+    from sglang.srt.patch_torch import monkey_patch_torch_reductions
+from sglang.srt.utils import MultiprocessingSerializer
+from tqdm import tqdm
+
+from miles.utils.distributed_utils import get_gloo_group, init_process_group
+from miles.utils.types import ParamInfo
+
+from .megatron_to_hf import convert_to_hf  # noqa: F401
+
+try:
+    try:
+        from sglang.srt.weight_sync.tensor_bucket import FlattenedTensorBucket  # type: ignore[import]
+    except ImportError:
+        from sglang.srt.model_executor.model_runner import FlattenedTensorBucket  # type: ignore[import]
+
+    use_flattened_tensor_bucket = True
+except Exception:
+    use_flattened_tensor_bucket = False
+
+
+class UpdateWeightFromDistributed:
+    """
+    Update distributed engines via NCCL. Each PP rank: group "miles-pp_{pp_rank}",
+    only DP=TP=0 broadcasts. Non-expert (TP) and expert (EP) params separate.
+    """
+
+    def __init__(
+            self,
+            args: Namespace,
+            model: Sequence[torch.nn.Module],
+            weights_getter: Callable[[], Mapping[str, torch.Tensor]],
+            *,
+            model_name: str,
+            quantization_config: dict[str, int | str | list[str]] | None,
+            vocab_size: int,
+    ) -> None:
+        """
+        Initialize. Groups created in connect_rollout_engines.
+        """
+        self.args = args
+        self.model = model
+        self.model_name = model_name
+        self.vocab_size = vocab_size
+        self.quantization_config = quantization_config
+        self.weight_version = 0
+        self._model_update_groups = None
+
+    def connect_rollout_engines(
+            self, rollout_engines: Sequence[ActorHandle], rollout_engine_lock: ActorHandle
+    ) -> None:
+        """
+        Create NCCL "miles-pp_{pp_rank}" if PP source (DP=TP=0). Lock prevents concurrent broadcasts.
+        """
+        self.rollout_engines = rollout_engines
+        self.rollout_engine_lock = rollout_engine_lock
+
+        # For TP:
+        #   1. AllGather paramters to rank 0
+        #   2. Broadcast parameters from rank 0 to all sglang engines
+        self._is_pp_src_rank = (
+                mpu.get_data_parallel_rank(with_context_parallel=True) == 0 and mpu.get_tensor_model_parallel_rank() == 0
+        )
+        pp_rank = mpu.get_pipeline_model_parallel_rank()
+        if self._is_pp_src_rank:
+            self._group_name = f"miles-pp_{pp_rank}"
+
+        if self._is_pp_src_rank:
+            if self._model_update_groups is not None:
+                disconnect_rollout_engines_from_distributed(
+                    self.args, self._group_name, self._model_update_groups, self.rollout_engines
+                )
+            self._model_update_groups = connect_rollout_engines_from_distributed(
+                self.args, self._group_name, rollout_engines
+            )
+
+    @torch.no_grad()
+    def update_weights(self) -> None:
+        """
+        Pause → flush → non-expert (TP) → expert (EP) → continue. Progress on PP source.
+        """
+        self.weight_version += 1
+
+        if dist.get_rank() == 0:
+            ray.get([engine.pause_generation.remote() for engine in self.rollout_engines])
+            ray.get([engine.flush_cache.remote() for engine in self.rollout_engines])
+        dist.barrier(group=get_gloo_group())
+
+        buffer_size = 0
+        converted_named_tensors = []
+        # non expert params
+        pbar = tqdm(desc=f"[{self._group_name}] Update weights", total=0) if self._is_pp_src_rank else None
+
+        for name, param in named_parameters(self.args, self.model):
+            if ".experts." in name:
+                continue
+            buffer_size = self._update_weight_from_distributed(
+                name, param, converted_named_tensors, buffer_size, pbar=pbar
+            )
+
+        if converted_named_tensors:
+            self._update_bucket_weights_from_distributed(converted_named_tensors, pbar=pbar)
+
+        dist.barrier(group=get_gloo_group())
+
+        buffer_size = 0
+        named_tensors = []
+        for name, param in named_parameters(self.args, self.model):
+            if ".experts." not in name:
+                continue
+            buffer_size = self._update_expert_weight_from_distributed(
+                name, param, named_tensors, buffer_size, pbar=pbar
+            )
+
+        if named_tensors:
+            self._update_expert_bucket_weights_from_distributed(named_tensors, pbar=pbar)
+
+        dist.barrier(group=get_gloo_group())
+        if dist.get_rank() == 0:
+            ray.get([engine.continue_generation.remote() for engine in self.rollout_engines])
+        dist.barrier(group=get_gloo_group())
+
+    def _update_weight_from_distributed(
+            self,
+            name: str,
+            param: torch.nn.Parameter,
+            converted_named_tensors: list[tuple[str, torch.Tensor]],
+            buffer_size: int,
+            pbar: tqdm | None = None,
+    ) -> int | None:
+        """
+        Non-expert: gather TP → rm pad → HF → buffer (flush if full). All gather, PP source buffers.
+        Returns updated bytes on source, None on non-source.
+        """
+        param = all_gather_param(name, param)
+        param = remove_padding(name, param, self.vocab_size)
+        if not self._is_pp_src_rank:
+            return
+
+        param_size = param.numel() * param.element_size()
+        if buffer_size + param_size > self.args.update_weight_buffer_size:
+            self._update_bucket_weights_from_distributed(converted_named_tensors, pbar=pbar)
+            buffer_size = 0
+        converted_named_tensors += convert_to_hf(self.args, self.model_name, name, param, self.quantization_config)
+        buffer_size += param_size
+        return buffer_size
+
+    def _update_expert_weight_from_distributed(
+            self,
+            name: str,
+            param: torch.nn.Parameter,
+            named_tensors: list[tuple[str, torch.Tensor]],
+            buffer_size: int,
+            pbar: tqdm | None = None,
+    ) -> int:
+        """
+        Expert: gather TP → rm pad → buffer. EP gather + HF deferred. Threshold × EP size.
+        """
+        param = all_gather_param(name, param)
+        param = remove_padding(name, param, self.vocab_size)
+
+        param_size = param.numel() * param.element_size()
+        if (
+                buffer_size + param_size
+        ) * mpu.get_expert_model_parallel_world_size() > self.args.update_weight_buffer_size:
+            self._update_expert_bucket_weights_from_distributed(named_tensors, pbar=pbar)
+            buffer_size = 0
+
+        named_tensors.append((name, param))
+        buffer_size += param_size
+        return buffer_size
+
+    def _update_expert_bucket_weights_from_distributed(
+            self, named_tensors: list[tuple[str, torch.Tensor]], pbar: tqdm | None = None
+    ) -> None:
+        """
+        Gather EP → HF → broadcast. Clears buffer.
+        """
+        names = [name for name, _ in named_tensors]
+        all_names = [None] * mpu.get_expert_model_parallel_world_size()
+        dist.all_gather_object(all_names, names, group=mpu.get_expert_model_parallel_group())
+
+        for names in all_names:
+            assert len(named_tensors) == len(names), f"mismatch names length: {len(named_tensors)} != {len(names)}"
+
+        all_gathered_params = [[] for _ in range(mpu.get_expert_model_parallel_world_size())]
+        handles = []
+        for i, (name, param) in enumerate(named_tensors):
+            params = [
+                torch.empty_like(param.data, device=torch.cuda.current_device())
+                for _ in range(mpu.get_expert_model_parallel_world_size())
+            ]
+            handle = dist.all_gather(params, param.data, group=mpu.get_expert_model_parallel_group(), async_op=True)
+            handles.append(handle)
+            for ep_rank, names in enumerate(all_names):
+                all_gathered_params[ep_rank].append((names[i], params[ep_rank]))
+        for handle in handles:
+            handle.wait()
+
+        named_tensors.clear()
+        if not self._is_pp_src_rank:
+            return
+
+        all_gathered_params = sum(all_gathered_params, [])
+        converted_hf_tensors = []
+        for name, param in all_gathered_params:
+            converted_hf_tensors += convert_to_hf(self.args, self.model_name, name, param, self.quantization_config)
+
+        self._update_bucket_weights_from_distributed(converted_hf_tensors, pbar)
+
+    def _update_bucket_weights_from_distributed(
+            self, converted_named_tensors: list[tuple[str, torch.Tensor]], pbar: tqdm | None = None
+    ) -> None:
+        """
+        Lock → broadcast → clear → unlock → pbar++. Lock prevents NCCL deadlock.
+        """
+        # lock the rollout engines to prevent dead lock on broadcast.
+        while not ray.get(self.rollout_engine_lock.acquire.remote()):
+            time.sleep(0.1)
+
+        refs = update_weights_from_distributed(
+            self.args,
+            self._group_name,
+            self._model_update_groups,
+            self.weight_version,
+            self.rollout_engines,
+            converted_named_tensors,
+        )
+
+        ray.get(refs)
+        converted_named_tensors.clear()
+        ray.get(self.rollout_engine_lock.release.remote())
+        pbar.update(1)

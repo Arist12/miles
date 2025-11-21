@@ -136,7 +136,7 @@ class UpdateWeightFromTensor:
         megatron_local_weights = self.weights_getter()
 
         for current_infos in tqdm(self.param_info_buckets, disable=rank != 0, desc="Update weights"):
-            current_megatron_params = _gather_bucket_megatron_params(current_infos, megatron_local_weights)
+            current_megatron_params = _get_megatron_full_params(current_infos, megatron_local_weights)
             refs = self._update_converted_params_from_tensor(current_megatron_params, current_infos)
             ray.get(refs)
             del current_megatron_params
@@ -229,7 +229,7 @@ class UpdateWeightFromTensor:
         return []
 
 
-def _gather_bucket_megatron_params(
+def _get_megatron_full_params(
     param_infos: Sequence[ParamInfo],
     megatron_local_weights,
 ) -> Sequence[torch.Tensor]:

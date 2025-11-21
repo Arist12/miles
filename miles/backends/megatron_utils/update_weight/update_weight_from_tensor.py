@@ -289,3 +289,110 @@ class UpdateWeightFromTensor:
                 refs.append(self._ipc_engine.update_weights_from_tensor.remote(**kwargs))
             return refs
         return []
+
+def get_param_info_buckets(args: Namespace, model: Sequence[torch.nn.Module]) -> list[list[ParamInfo]]:
+    """
+    Partition params into buckets ≤ update_weight_buffer_size (with TP replication).
+    """
+    param_infos = get_param_infos(args, model)
+    param_info_buckets = [[]]  # Start with one empty bucket
+    buffer_size = 0  # Track current bucket size in bytes
+
+    for info in param_infos:
+        # Expert params use expert-TP size, others use regular-TP size
+        if ".experts." in info.name:
+            tp_size = mpu.get_expert_tensor_parallel_world_size()
+        else:
+            tp_size = mpu.get_tensor_model_parallel_world_size()
+
+        # Full param size = shard size × TP replicas (all-gather will reconstruct full param)
+        param_size = info.size * tp_size
+
+        # If adding this param exceeds limit AND current bucket has params: start new bucket
+        if buffer_size + param_size > args.update_weight_buffer_size and len(param_info_buckets[-1]) > 0:
+            param_info_buckets.append([])
+            buffer_size = 0
+
+        # Add param to current bucket and update size
+        param_info_buckets[-1].append(info)
+        buffer_size += param_size
+
+    return param_info_buckets
+
+def get_param_infos(args: Namespace, model: Sequence[torch.nn.Module]) -> list[ParamInfo]:
+    """
+    Build global param metadata: collect → exchange PP/EP → resolve duplicates (MTP virtual PP)
+    by min src_rank → validate. Returns sorted ParamInfo identical across all ranks.
+    """
+    pp_size = mpu.get_pipeline_model_parallel_world_size()
+    ep_size = mpu.get_expert_model_parallel_world_size()
+
+    param_infos = {}
+    rank = dist.get_rank()
+    for name, param in named_parameters(args, model):
+        param_infos[name] = ParamInfo(
+            name=name,
+            dtype=param.dtype,
+            shape=param.shape,
+            attrs={
+                "tensor_model_parallel": getattr(param, "tensor_model_parallel", False),
+                "partition_dim": getattr(param, "partition_dim", -1),
+                "partition_stride": getattr(param, "partition_stride", 1),
+                "parallel_mode": getattr(param, "parallel_mode", None),
+            },
+            size=param.numel() * param.element_size(),
+            src_rank=rank,
+        )
+
+    if pp_size > 1:
+        param_infos_list = [None] * pp_size
+        dist.all_gather_object(
+            obj=(rank, param_infos), object_list=param_infos_list, group=mpu.get_pipeline_model_parallel_group()
+        )
+        for src_rank, infos in param_infos_list:
+            if src_rank == rank:
+                continue
+            for name, info in infos.items():
+                if name in param_infos:
+                    assert args.mtp_num_layers is not None
+                    old_info = param_infos[name]
+                    if old_info.src_rank > src_rank:
+                        param_infos[name] = info
+                else:
+                    param_infos[name] = info
+
+    if ep_size > 1:
+        param_infos_list = [None] * ep_size
+        dist.all_gather_object(
+            obj=(rank, param_infos), object_list=param_infos_list, group=mpu.get_expert_model_parallel_group()
+        )
+        for src_rank, infos in param_infos_list:
+            for name, info in infos.items():
+                if name not in param_infos:
+                    # here we need to set the src_rank to the rank within the expert model parallel group
+                    info.src_rank = src_rank
+                    param_infos[name] = info
+
+    param_infos = list(param_infos.values())
+    param_infos = sorted(param_infos, key=lambda info: info.name)
+
+    # Check all ranks has the same parameter info
+    all_param_info_list = [None] * dist.get_world_size()
+    dist.all_gather_object(
+        obj=param_infos,
+        object_list=all_param_info_list,
+        group=get_gloo_group(),
+    )
+    for i, param_info in enumerate(param_infos):
+        for infos in all_param_info_list:
+            assert infos[i].name == param_info.name, f"Parameter name mismatch: {infos[i].name} != {param_info.name}"
+            assert (
+                    infos[i].shape == param_info.shape
+            ), f"Parameter shape mismatch: {infos[i].shape} != {param_info.shape}"
+            assert (
+                    infos[i].dtype == param_info.dtype
+            ), f"Parameter dtype mismatch: {infos[i].dtype} != {param_info.dtype}"
+
+    return param_infos
+
+

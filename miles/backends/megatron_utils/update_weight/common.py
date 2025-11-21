@@ -1,27 +1,18 @@
 import inspect
 import re
-import socket
-import time
 from argparse import Namespace
-from collections.abc import Iterator, Mapping, Sequence
-from typing import Callable
+from collections.abc import Iterator, Sequence
 
-import ray
 import torch
 import torch.distributed as dist
 from megatron.core import mpu
 from megatron.core.transformer.transformer_layer import get_transformer_layer_offset
-from ray import ObjectRef
-from ray.actor import ActorHandle
 
 try:
-    from sglang.srt.utils.patch_torch import monkey_patch_torch_reductions
+    pass
 except:
-    from sglang.srt.patch_torch import monkey_patch_torch_reductions
-from sglang.srt.utils import MultiprocessingSerializer
-from tqdm import tqdm
+    pass
 
-from miles.utils.distributed_utils import get_gloo_group, init_process_group
 from miles.utils.types import ParamInfo
 
 from .megatron_to_hf import convert_to_hf  # noqa: F401
@@ -222,5 +213,3 @@ def named_parameters(args: Namespace, model: Sequence[torch.nn.Module]) -> Itera
                 layer_idx, rest = match.groups()
                 layer_idx = int(layer_idx) + layer_offset
                 yield f"module.module.decoder.layers.{layer_idx}.{rest}", buffer
-
-

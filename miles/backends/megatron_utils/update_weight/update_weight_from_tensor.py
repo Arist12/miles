@@ -1,33 +1,32 @@
-import inspect
-import re
-import socket
-import time
 from argparse import Namespace
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Callable
 
 import ray
 import torch
 import torch.distributed as dist
 from megatron.core import mpu
-from megatron.core.transformer.transformer_layer import get_transformer_layer_offset
 from ray import ObjectRef
 from ray.actor import ActorHandle
 
-from .update_weight_from_distributed import update_weights_from_distributed, connect_rollout_engines_from_distributed, disconnect_rollout_engines_from_distributed
+from .update_weight_from_distributed import (
+    connect_rollout_engines_from_distributed,
+    disconnect_rollout_engines_from_distributed,
+    update_weights_from_distributed,
+)
 
 try:
     from sglang.srt.utils.patch_torch import monkey_patch_torch_reductions
 except:
     from sglang.srt.patch_torch import monkey_patch_torch_reductions
+
 from sglang.srt.utils import MultiprocessingSerializer
 from tqdm import tqdm
 
-from miles.utils.distributed_utils import get_gloo_group, init_process_group
+from miles.utils.distributed_utils import get_gloo_group
 from miles.utils.types import ParamInfo
 
-from .common import all_gather_params_async, remove_padding, named_parameters
-
+from .common import all_gather_params_async, named_parameters, remove_padding
 from .megatron_to_hf import convert_to_hf  # noqa: F401
 
 try:
@@ -50,14 +49,14 @@ class UpdateWeightFromTensor:
     """
 
     def __init__(
-            self,
-            args: Namespace,
-            model: Sequence[torch.nn.Module],
-            weights_getter: Callable[[], Mapping[str, torch.Tensor]],
-            *,
-            model_name: str,
-            quantization_config: dict[str, int | str | list[str]] | None,
-            vocab_size: int,
+        self,
+        args: Namespace,
+        model: Sequence[torch.nn.Module],
+        weights_getter: Callable[[], Mapping[str, torch.Tensor]],
+        *,
+        model_name: str,
+        quantization_config: dict[str, int | str | list[str]] | None,
+        vocab_size: int,
     ) -> None:
         """
         Compute param buckets, create IPC Gloo groups (rollout_num_gpus_per_engine ranks/group).
@@ -83,7 +82,7 @@ class UpdateWeightFromTensor:
         self._model_update_groups = None
 
     def connect_rollout_engines(
-            self, rollout_engines: Sequence[ActorHandle], rollout_engine_lock: ActorHandle
+        self, rollout_engines: Sequence[ActorHandle], rollout_engine_lock: ActorHandle
     ) -> None:
         """
         Split colocated/distributed engines. Global source rank (DP=TP=PP=0) creates NCCL
@@ -91,7 +90,7 @@ class UpdateWeightFromTensor:
         """
         self.rollout_engines = rollout_engines
         colocate_engine_nums = (
-                self.args.actor_num_nodes * self.args.actor_num_gpus_per_node // self.args.rollout_num_gpus_per_engine
+            self.args.actor_num_nodes * self.args.actor_num_gpus_per_node // self.args.rollout_num_gpus_per_engine
         )
         self.use_distribute = len(rollout_engines) > colocate_engine_nums
 
@@ -99,9 +98,9 @@ class UpdateWeightFromTensor:
             self.rollout_engines = rollout_engines[:colocate_engine_nums]
             self.distributed_rollout_engines = rollout_engines[colocate_engine_nums:]
             self._is_distributed_src_rank = (
-                    mpu.get_data_parallel_rank(with_context_parallel=True) == 0
-                    and mpu.get_tensor_model_parallel_rank() == 0
-                    and mpu.get_pipeline_model_parallel_rank() == 0
+                mpu.get_data_parallel_rank(with_context_parallel=True) == 0
+                and mpu.get_tensor_model_parallel_rank() == 0
+                and mpu.get_pipeline_model_parallel_rank() == 0
             )
             self._group_name = "miles"
             if self._is_distributed_src_rank:
@@ -146,9 +145,9 @@ class UpdateWeightFromTensor:
         dist.barrier(group=get_gloo_group())
 
     def _gather_bucket_params(
-            self,
-            param_infos: Sequence[ParamInfo],
-            weights,
+        self,
+        param_infos: Sequence[ParamInfo],
+        weights,
     ) -> tuple[Sequence[torch.Tensor], Sequence[ParamInfo]]:
         monkey_patch_torch_reductions()
         pp_size = mpu.get_pipeline_model_parallel_world_size()
@@ -210,7 +209,7 @@ class UpdateWeightFromTensor:
         return gathered_params, param_infos
 
     def _update_converted_params_from_tensor(
-            self, gathered_params: Sequence[torch.Tensor], param_infos: list[ParamInfo]
+        self, gathered_params: Sequence[torch.Tensor], param_infos: list[ParamInfo]
     ) -> list[ObjectRef]:
 
         converted_named_tensors = []
@@ -294,6 +293,7 @@ class UpdateWeightFromTensor:
             return refs
         return []
 
+
 def get_param_info_buckets(args: Namespace, model: Sequence[torch.nn.Module]) -> list[list[ParamInfo]]:
     """
     Partition params into buckets ≤ update_weight_buffer_size (with TP replication).
@@ -322,6 +322,7 @@ def get_param_info_buckets(args: Namespace, model: Sequence[torch.nn.Module]) ->
         buffer_size += param_size
 
     return param_info_buckets
+
 
 def get_param_infos(args: Namespace, model: Sequence[torch.nn.Module]) -> list[ParamInfo]:
     """
@@ -391,12 +392,10 @@ def get_param_infos(args: Namespace, model: Sequence[torch.nn.Module]) -> list[P
         for infos in all_param_info_list:
             assert infos[i].name == param_info.name, f"Parameter name mismatch: {infos[i].name} != {param_info.name}"
             assert (
-                    infos[i].shape == param_info.shape
+                infos[i].shape == param_info.shape
             ), f"Parameter shape mismatch: {infos[i].shape} != {param_info.shape}"
             assert (
-                    infos[i].dtype == param_info.dtype
+                infos[i].dtype == param_info.dtype
             ), f"Parameter dtype mismatch: {infos[i].dtype} != {param_info.dtype}"
 
     return param_infos
-
-

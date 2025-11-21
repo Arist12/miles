@@ -1,31 +1,25 @@
-import inspect
-import re
 import socket
 import time
 from argparse import Namespace
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Callable
 
 import ray
 import torch
 import torch.distributed as dist
 from megatron.core import mpu
-from megatron.core.transformer.transformer_layer import get_transformer_layer_offset
 from ray import ObjectRef
 from ray.actor import ActorHandle
 
 try:
-    from sglang.srt.utils.patch_torch import monkey_patch_torch_reductions
+    pass
 except:
-    from sglang.srt.patch_torch import monkey_patch_torch_reductions
-from sglang.srt.utils import MultiprocessingSerializer
+    pass
 from tqdm import tqdm
 
 from miles.utils.distributed_utils import get_gloo_group, init_process_group
-from miles.utils.types import ParamInfo
 
-from .common import all_gather_param, remove_padding, named_parameters
-
+from .common import all_gather_param, named_parameters, remove_padding
 from .megatron_to_hf import convert_to_hf  # noqa: F401
 
 try:
@@ -46,14 +40,14 @@ class UpdateWeightFromDistributed:
     """
 
     def __init__(
-            self,
-            args: Namespace,
-            model: Sequence[torch.nn.Module],
-            weights_getter: Callable[[], Mapping[str, torch.Tensor]],
-            *,
-            model_name: str,
-            quantization_config: dict[str, int | str | list[str]] | None,
-            vocab_size: int,
+        self,
+        args: Namespace,
+        model: Sequence[torch.nn.Module],
+        weights_getter: Callable[[], Mapping[str, torch.Tensor]],
+        *,
+        model_name: str,
+        quantization_config: dict[str, int | str | list[str]] | None,
+        vocab_size: int,
     ) -> None:
         """
         Initialize. Groups created in connect_rollout_engines.
@@ -67,7 +61,7 @@ class UpdateWeightFromDistributed:
         self._model_update_groups = None
 
     def connect_rollout_engines(
-            self, rollout_engines: Sequence[ActorHandle], rollout_engine_lock: ActorHandle
+        self, rollout_engines: Sequence[ActorHandle], rollout_engine_lock: ActorHandle
     ) -> None:
         """
         Create NCCL "miles-pp_{pp_rank}" if PP source (DP=TP=0). Lock prevents concurrent broadcasts.
@@ -79,7 +73,7 @@ class UpdateWeightFromDistributed:
         #   1. AllGather paramters to rank 0
         #   2. Broadcast parameters from rank 0 to all sglang engines
         self._is_pp_src_rank = (
-                mpu.get_data_parallel_rank(with_context_parallel=True) == 0 and mpu.get_tensor_model_parallel_rank() == 0
+            mpu.get_data_parallel_rank(with_context_parallel=True) == 0 and mpu.get_tensor_model_parallel_rank() == 0
         )
         pp_rank = mpu.get_pipeline_model_parallel_rank()
         if self._is_pp_src_rank:
@@ -141,12 +135,12 @@ class UpdateWeightFromDistributed:
         dist.barrier(group=get_gloo_group())
 
     def _update_weight_from_distributed(
-            self,
-            name: str,
-            param: torch.nn.Parameter,
-            converted_named_tensors: list[tuple[str, torch.Tensor]],
-            buffer_size: int,
-            pbar: tqdm | None = None,
+        self,
+        name: str,
+        param: torch.nn.Parameter,
+        converted_named_tensors: list[tuple[str, torch.Tensor]],
+        buffer_size: int,
+        pbar: tqdm | None = None,
     ) -> int | None:
         """
         Non-expert: gather TP → rm pad → HF → buffer (flush if full). All gather, PP source buffers.
@@ -166,12 +160,12 @@ class UpdateWeightFromDistributed:
         return buffer_size
 
     def _update_expert_weight_from_distributed(
-            self,
-            name: str,
-            param: torch.nn.Parameter,
-            named_tensors: list[tuple[str, torch.Tensor]],
-            buffer_size: int,
-            pbar: tqdm | None = None,
+        self,
+        name: str,
+        param: torch.nn.Parameter,
+        named_tensors: list[tuple[str, torch.Tensor]],
+        buffer_size: int,
+        pbar: tqdm | None = None,
     ) -> int:
         """
         Expert: gather TP → rm pad → buffer. EP gather + HF deferred. Threshold × EP size.
@@ -181,7 +175,7 @@ class UpdateWeightFromDistributed:
 
         param_size = param.numel() * param.element_size()
         if (
-                buffer_size + param_size
+            buffer_size + param_size
         ) * mpu.get_expert_model_parallel_world_size() > self.args.update_weight_buffer_size:
             self._update_expert_bucket_weights_from_distributed(named_tensors, pbar=pbar)
             buffer_size = 0
@@ -191,7 +185,7 @@ class UpdateWeightFromDistributed:
         return buffer_size
 
     def _update_expert_bucket_weights_from_distributed(
-            self, named_tensors: list[tuple[str, torch.Tensor]], pbar: tqdm | None = None
+        self, named_tensors: list[tuple[str, torch.Tensor]], pbar: tqdm | None = None
     ) -> None:
         """
         Gather EP → HF → broadcast. Clears buffer.
@@ -229,7 +223,7 @@ class UpdateWeightFromDistributed:
         self._update_bucket_weights_from_distributed(converted_hf_tensors, pbar)
 
     def _update_bucket_weights_from_distributed(
-            self, converted_named_tensors: list[tuple[str, torch.Tensor]], pbar: tqdm | None = None
+        self, converted_named_tensors: list[tuple[str, torch.Tensor]], pbar: tqdm | None = None
     ) -> None:
         """
         Lock → broadcast → clear → unlock → pbar++. Lock prevents NCCL deadlock.
@@ -252,8 +246,9 @@ class UpdateWeightFromDistributed:
         ray.get(self.rollout_engine_lock.release.remote())
         pbar.update(1)
 
+
 def connect_rollout_engines_from_distributed(
-        args: Namespace, group_name: str, rollout_engines: Sequence[ActorHandle]
+    args: Namespace, group_name: str, rollout_engines: Sequence[ActorHandle]
 ) -> dist.ProcessGroup:
     """
     Create NCCL group: training rank 0 + all engine GPUs. Blocks until joined.
@@ -272,7 +267,7 @@ def connect_rollout_engines_from_distributed(
             world_size,
             group_name,
             backend="nccl",
-            )
+        )
         for i, engine in enumerate(rollout_engines)
     ]
     model_update_groups = init_process_group(
@@ -296,12 +291,12 @@ def disconnect_rollout_engines_from_distributed(args, group_name, model_update_g
 
 
 def update_weights_from_distributed(
-        args: Namespace,
-        group_name: str,
-        group: dist.ProcessGroup,
-        weight_version: int,
-        rollout_engines: Sequence[ActorHandle],
-        converted_named_tensors: Sequence[tuple[str, torch.Tensor]],
+    args: Namespace,
+    group_name: str,
+    group: dist.ProcessGroup,
+    weight_version: int,
+    rollout_engines: Sequence[ActorHandle],
+    converted_named_tensors: Sequence[tuple[str, torch.Tensor]],
 ) -> list[ObjectRef]:
     """
     Send metadata (Ray), broadcast tensors (NCCL rank 0 → engines).

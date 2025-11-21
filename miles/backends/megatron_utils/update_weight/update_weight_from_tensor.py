@@ -8,24 +8,17 @@ import torch.distributed as dist
 from megatron.core import mpu
 from ray import ObjectRef
 from ray.actor import ActorHandle
+from sglang.srt.utils import MultiprocessingSerializer
+
+from miles.utils.distributed_utils import get_gloo_group
 
 from .hf_weight_source_direct import HfWeightSourceDirect
+from .megatron_to_hf import convert_to_hf  # noqa: F401
 from .update_weight_from_distributed import (
     connect_rollout_engines_from_distributed,
     disconnect_rollout_engines_from_distributed,
     update_weights_from_distributed,
 )
-
-try:
-    pass
-except:
-    pass
-
-from sglang.srt.utils import MultiprocessingSerializer
-
-from miles.utils.distributed_utils import get_gloo_group
-
-from .megatron_to_hf import convert_to_hf  # noqa: F401
 
 try:
     try:

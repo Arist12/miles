@@ -156,7 +156,13 @@ class UpdateWeightFromTensor:
     def _send_hf_params(self, hf_named_tensors) -> list[ObjectRef]:
         all_refs = []
 
-        refs_colocated = self._send_to_colocated_engine(hf_named_tensors)
+        refs_colocated = _send_to_colocated_engine(
+            hf_named_tensors,
+            ipc_engine=self._ipc_engine,
+            ipc_gather_src=self._ipc_gather_src,
+            ipc_gather_group=self._ipc_gather_group,
+            weight_version=self.weight_version,
+        )
         all_refs.extend(refs_colocated)
 
         if self.use_distribute and self._is_distributed_src_rank:
@@ -172,60 +178,68 @@ class UpdateWeightFromTensor:
 
         return all_refs
 
-    def _send_to_colocated_engine(self, hf_named_tensors: list[tuple[str, torch.Tensor]]) -> list[ObjectRef]:
-        if use_flattened_tensor_bucket:
-            if getattr(FlattenedTensorBucket, "supports_multi_dtypes", False):
-                converted_named_tensors_by_dtypes = {"dtype": hf_named_tensors}
-            else:
-                converted_named_tensors_by_dtypes = {}
-                for name, tensor in hf_named_tensors:
-                    dtype = tensor.dtype
-                    if dtype not in converted_named_tensors_by_dtypes:
-                        converted_named_tensors_by_dtypes[dtype] = []
-                    converted_named_tensors_by_dtypes[dtype].append((name, tensor))
 
-            serialized_tensors = []
-            for dtype, named_tensors in converted_named_tensors_by_dtypes.items():
-                flattened_tensor_bucket = FlattenedTensorBucket(named_tensors=named_tensors)
-                metadata = flattened_tensor_bucket.get_metadata()
-                flattened_tensor_data = {
-                    "flattened_tensor": flattened_tensor_bucket.get_flattened_tensor(),
-                    "metadata": metadata,
-                }
-                serialized_tensors.append(MultiprocessingSerializer.serialize(flattened_tensor_data, output_str=True))
+def _send_to_colocated_engine(
+    hf_named_tensors: list[tuple[str, torch.Tensor]],
+    *,
+    ipc_engine,
+    ipc_gather_src,
+    ipc_gather_group,
+    weight_version,
+) -> list[ObjectRef]:
+    if use_flattened_tensor_bucket:
+        if getattr(FlattenedTensorBucket, "supports_multi_dtypes", False):
+            converted_named_tensors_by_dtypes = {"dtype": hf_named_tensors}
         else:
-            serialized_tensors = MultiprocessingSerializer.serialize(hf_named_tensors, output_str=True)
+            converted_named_tensors_by_dtypes = {}
+            for name, tensor in hf_named_tensors:
+                dtype = tensor.dtype
+                if dtype not in converted_named_tensors_by_dtypes:
+                    converted_named_tensors_by_dtypes[dtype] = []
+                converted_named_tensors_by_dtypes[dtype].append((name, tensor))
 
-        serialized_named_tensors = (
-            [None] * dist.get_world_size(self._ipc_gather_group) if self._ipc_gather_src == dist.get_rank() else None
-        )
-        dist.gather_object(
-            serialized_tensors,
-            object_gather_list=serialized_named_tensors,
-            dst=self._ipc_gather_src,
-            group=self._ipc_gather_group,
-        )
+        serialized_tensors = []
+        for dtype, named_tensors in converted_named_tensors_by_dtypes.items():
+            flattened_tensor_bucket = FlattenedTensorBucket(named_tensors=named_tensors)
+            metadata = flattened_tensor_bucket.get_metadata()
+            flattened_tensor_data = {
+                "flattened_tensor": flattened_tensor_bucket.get_flattened_tensor(),
+                "metadata": metadata,
+            }
+            serialized_tensors.append(MultiprocessingSerializer.serialize(flattened_tensor_data, output_str=True))
+    else:
+        serialized_tensors = MultiprocessingSerializer.serialize(hf_named_tensors, output_str=True)
 
-        if dist.get_rank() == self._ipc_gather_src:
-            refs = []
-            if use_flattened_tensor_bucket:
-                # TODO: here we assume all ranks have the same number of dtypes, not sure if that is correct.
-                num_dtypes = len(serialized_named_tensors[0])
-                for i in range(num_dtypes):
-                    kwargs = {
-                        "serialized_named_tensors": [tensors[i] for tensors in serialized_named_tensors],
-                        "load_format": "flattened_bucket",
-                        "weight_version": str(self.weight_version),
-                    }
-                    refs.append(self._ipc_engine.update_weights_from_tensor.remote(**kwargs))
-            else:
+    serialized_named_tensors = (
+        [None] * dist.get_world_size(ipc_gather_group) if ipc_gather_src == dist.get_rank() else None
+    )
+    dist.gather_object(
+        serialized_tensors,
+        object_gather_list=serialized_named_tensors,
+        dst=ipc_gather_src,
+        group=ipc_gather_group,
+    )
+
+    if dist.get_rank() == ipc_gather_src:
+        refs = []
+        if use_flattened_tensor_bucket:
+            # TODO: here we assume all ranks have the same number of dtypes, not sure if that is correct.
+            num_dtypes = len(serialized_named_tensors[0])
+            for i in range(num_dtypes):
                 kwargs = {
-                    "serialized_named_tensors": serialized_named_tensors,
-                    "weight_version": str(self.weight_version),
+                    "serialized_named_tensors": [tensors[i] for tensors in serialized_named_tensors],
+                    "load_format": "flattened_bucket",
+                    "weight_version": str(weight_version),
                 }
-                refs.append(self._ipc_engine.update_weights_from_tensor.remote(**kwargs))
-            return refs
-        return []
+                refs.append(ipc_engine.update_weights_from_tensor.remote(**kwargs))
+        else:
+            kwargs = {
+                "serialized_named_tensors": serialized_named_tensors,
+                "weight_version": str(weight_version),
+            }
+            refs.append(ipc_engine.update_weights_from_tensor.remote(**kwargs))
+        return refs
+    return []
 
 
 def _get_megatron_full_params(

@@ -139,7 +139,7 @@ class UpdateWeightFromTensor:
             current_megatron_params = _gather_bucket_megatron_params(current_infos, megatron_all_weights)
             refs = self._update_converted_params_from_tensor(current_megatron_params, current_infos)
             ray.get(refs)
-            del current_megatron_params, current_infos
+            del current_megatron_params
 
         dist.barrier(group=get_gloo_group())
 

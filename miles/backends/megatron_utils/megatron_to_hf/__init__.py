@@ -1,3 +1,4 @@
+from .processors.quantizer import quantize_params
 from .deepseekv3 import convert_deepseekv3_to_hf
 from .glm4 import convert_glm4_to_hf
 from .glm4moe import convert_glm4moe_to_hf

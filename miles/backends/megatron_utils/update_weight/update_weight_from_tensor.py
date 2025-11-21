@@ -9,9 +9,6 @@ from megatron.core import mpu
 from ray import ObjectRef
 from ray.actor import ActorHandle
 
-# TODO do not use it here
-from miles.backends.megatron_utils.megatron_to_hf.processors.padding_remover import remove_padding
-
 from .update_weight_from_distributed import (
     connect_rollout_engines_from_distributed,
     disconnect_rollout_engines_from_distributed,
@@ -152,7 +149,6 @@ class UpdateWeightFromTensor:
     def _convert_to_hf_named_tensors(self, megatron_full_params: Sequence[torch.Tensor], param_infos: list[ParamInfo]):
         hf_named_tensors = []
         for info, param in zip(param_infos, megatron_full_params):
-            param = remove_padding(info.name, param, self.vocab_size)
             hf_named_tensors.extend(
                 convert_to_hf(self.args, self.model_name, info.name, param, self.quantization_config)
             )

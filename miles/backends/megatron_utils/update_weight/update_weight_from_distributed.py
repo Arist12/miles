@@ -12,8 +12,6 @@ from ray import ObjectRef
 from ray.actor import ActorHandle
 from tqdm import tqdm
 
-# TODO do not use it here
-from miles.backends.megatron_utils.megatron_to_hf.processors.padding_remover import remove_padding
 from miles.utils.distributed_utils import get_gloo_group, init_process_group
 
 from .common import all_gather_param, named_parameters
@@ -134,7 +132,6 @@ class UpdateWeightFromDistributed:
         Returns updated bytes on source, None on non-source.
         """
         param = all_gather_param(name, param)
-        param = remove_padding(name, param, self.vocab_size)
         if not self._is_pp_src_rank:
             return
 
@@ -158,7 +155,6 @@ class UpdateWeightFromDistributed:
         Expert: gather TP → rm pad → buffer. EP gather + HF deferred. Threshold × EP size.
         """
         param = all_gather_param(name, param)
-        param = remove_padding(name, param, self.vocab_size)
 
         param_size = param.numel() * param.element_size()
         if (

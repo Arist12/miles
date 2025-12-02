@@ -3,12 +3,13 @@ import shutil
 
 import torch
 import torch.distributed as dist
-from mbridge import AutoBridge
 from megatron.core import parallel_state as mpu
 from megatron.core.tensor_parallel.random import model_parallel_cuda_manual_seed
 from megatron.training.arguments import parse_args
 from megatron.training.checkpointing import get_checkpoint_name, get_checkpoint_tracker_filename, save_checkpoint
 from megatron.training.global_vars import set_args
+
+from mbridge import AutoBridge
 
 
 def init_distributed():
@@ -66,6 +67,7 @@ def main():
         shutil.move(source_dir, target_dir)
     dist.barrier()
     dist.destroy_process_group()
+
 
 if __name__ == "__main__":
     main()

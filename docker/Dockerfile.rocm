@@ -271,6 +271,12 @@ RUN pip install "ray[data,train,tune,serve]==2.47.1"
 ################apex###################
 #######################################
 WORKDIR /workspace/
+# Ensure ROCm PyTorch is installed before apex (in case earlier deps installed CUDA version)
+RUN pip install --force-reinstall \
+    torch==2.7.1 \
+    torchvision==0.22.1 \
+    torchaudio==2.7.1 \
+    --index-url https://download.pytorch.org/whl/rocm6.3
 RUN pip uninstall -y apex && \
     git clone https://github.com/ROCm/apex.git && \
     cd apex && \

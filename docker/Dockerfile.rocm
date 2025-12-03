@@ -3,7 +3,6 @@
 # The Docker image built with this Dockerfile:
 # Updated to match NVIDIA image versions: sglang v0.5.5.post1 and megatron core_v0.14.0
 # Using amd_patch/sglv0.5.5.post1 (based on old sglv0.5.0rc0 patches)
-# WARNING: Patches may need updates after testing - they were designed for older versions
 
 # You can find the latest pre-built Docker image from here: https://hub.docker.com/r/rlsys/miles/tags
 # Current latest docker img: `rlsys/miles:miles_ubuntu22.04_rocm6.3.4-patch-numa-patch_sglang0.4.9_megatron-patch_ray2.47.1_apex_torch-memory-saver0.0.8-patch-vim` manually add the patch to mitigate checkpoint loading issue. (vim /workspace/Megatron-LM-amd_version/megatron/training/checkpointing.py. Line: 1449 ~ 1457 - comment out if becasue of dismatch number of dist checkpoints
@@ -207,7 +206,6 @@ ENV TORCHINDUCTOR_MAX_AUTOTUNE_POINTWISE=1
 
 
 # sglang patch
-# WARNING: Using patches from sglv0.5.0rc0 as starting point - may need updates for v0.5.5.post1
 # COPY patch/${SGLANG_VERSION}/sglang.patch /sgl-workspace/sglang/
 COPY amd_patch/${PATCH_VERSION} /workspace/patch
 RUN cd /workspace/sglang && \
@@ -264,7 +262,6 @@ RUN pip install "numpy>=1.21.0,<2.0" --force-reinstall
 
 COPY amd_patch/${PATCH_VERSION} /workspace/patch
 
-# WARNING: Patches are from sglv0.5.0rc0 and may need updates for this version
 RUN pip uninstall -y megatron-core && \
     git clone https://github.com/NVIDIA/Megatron-LM && \
     cd Megatron-LM && \

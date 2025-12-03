@@ -19,7 +19,7 @@
 
 FROM "rlsys/rocm-6.3.4-patch:rocm6.3.4-numa-patch_ubuntu-22.04"
 
-ARG PATCH_VERSION=latest
+ARG PATCH_VERSION=sglv0.5.5.post1
 
 SHELL ["/bin/bash", "-ceuxo", "pipefail"]
 

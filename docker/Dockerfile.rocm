@@ -270,18 +270,20 @@ RUN pip install "ray[data,train,tune,serve]==2.47.1"
 #######################################
 ################apex###################
 #######################################
-WORKDIR /workspace/
-# Ensure ROCm PyTorch is installed before apex (in case earlier deps installed CUDA version)
-RUN pip install --force-reinstall \
-    torch==2.7.1 \
-    torchvision==0.22.1 \
-    torchaudio==2.7.1 \
-    --index-url https://download.pytorch.org/whl/rocm6.3
-RUN pip uninstall -y apex && \
-    git clone https://github.com/ROCm/apex.git && \
-    cd apex && \
-    python setup.py install && \
-    cd /workspace/
+# NOTE: ROCm does not support apex yet. The ROCm/apex repository is incomplete
+# and missing required source files (apex/csrc).
+#
+# WORKAROUND: When training, add the --no-gradient-accumulation-fusion flag
+# to disable gradient accumulation fusion (which requires apex).
+#
+# See: AMD tutorial notes on ROCm apex limitations
+#######################################
+# WORKDIR /workspace/
+# RUN pip uninstall -y apex && \
+#     git clone https://github.com/ROCm/apex.git && \
+#     cd apex && \
+#     python setup.py install && \
+#     cd /workspace/
 #######################################
 #######################################
 #######################################

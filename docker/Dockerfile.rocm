@@ -21,6 +21,8 @@
 # FROM "rlfoundation.azurecr.io/rocm6.3.4:vllm-0.8.5-numa-patch-ubuntu-22.04"
 FROM "rlsys/rocm-6.3.4-patch:rocm6.3.4-numa-patch_ubuntu-22.04"
 
+ARG PATCH_VERSION=latest
+
 SHELL ["/bin/bash", "-ceuxo", "pipefail"]
 
 ARG MAX_JOBS=512
@@ -207,7 +209,7 @@ ENV TORCHINDUCTOR_MAX_AUTOTUNE_POINTWISE=1
 # sglang patch
 # WARNING: Using patches from sglv0.5.0rc0 as starting point - may need updates for v0.5.5.post1
 # COPY patch/${SGLANG_VERSION}/sglang.patch /sgl-workspace/sglang/
-COPY amd_patch/sglv0.5.5.post1 /workspace/patch
+COPY amd_patch/${PATCH_VERSION} /workspace/patch
 RUN cd /workspace/sglang && \
   git apply /workspace/patch/sglang.patch && \
   if grep -R -n '^<<<<<<< ' .; then \
@@ -260,7 +262,7 @@ WORKDIR /workspace/
 # Can be removed just the current megatron-lm dependency
 RUN pip install "numpy>=1.21.0,<2.0" --force-reinstall
 
-COPY amd_patch/sglv0.5.5.post1 /workspace/patch
+COPY amd_patch/${PATCH_VERSION} /workspace/patch
 
 # WARNING: Patches are from sglv0.5.0rc0 and may need updates for this version
 RUN pip uninstall -y megatron-core && \

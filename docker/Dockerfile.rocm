@@ -67,23 +67,44 @@ WORKDIR /workspace/
 ###########################################
 ##Reinstall PyTorch ROCm after TE##########
 ###########################################
-# Ensure ROCm PyTorch is properly installed after TransformerEngine
-# This prevents library mismatch issues with libc10_hip.so
-RUN pip install --force-reinstall \
+# CRITICAL FIX: Ensure ROCm PyTorch is installed, not CUDA PyTorch
+# The issue: pip may cache or default to CUDA wheels even with --index-url
+
+# Step 1: Completely remove all PyTorch packages
+RUN pip uninstall -y torch torchvision torchaudio triton
+
+# Step 2: Clear ALL pip caches to prevent using cached CUDA wheels
+RUN pip cache purge && rm -rf ~/.cache/pip
+
+# Step 3: Install PyTorch ROCm with explicit source and verification
+# Using --extra-index-url instead of --index-url to avoid dependency resolution issues
+RUN pip install --no-cache-dir \
     torch==2.7.1 \
     torchvision==0.22.1 \
     torchaudio==2.7.1 \
-    --index-url https://download.pytorch.org/whl/rocm6.3
+    --extra-index-url https://download.pytorch.org/whl/rocm6.3
+
+# Step 4: VERIFY that ROCm PyTorch was actually installed
+# This will fail the build if CUDA PyTorch was installed instead
+RUN python -c "import torch; \
+    assert hasattr(torch.version, 'hip') and torch.version.hip is not None, \
+    f'ERROR: PyTorch is CUDA-built, not ROCm! torch.version.hip={getattr(torch.version, \"hip\", None)}'; \
+    print(f'SUCCESS: PyTorch ROCm version: {torch.version.hip}')"
 
 # Set library path to include ROCm and PyTorch libraries
 # This ensures libc10_hip.so and other ROCm libraries can be found at runtime
 ENV LD_LIBRARY_PATH="/opt/rocm/lib:/usr/local/lib/python3.12/dist-packages/torch/lib:${LD_LIBRARY_PATH}"
 
-# Rebuild TransformerEngine against the reinstalled PyTorch
+# Step 5: Rebuild TransformerEngine against the verified ROCm PyTorch
 # This is necessary because TE's compiled extensions must link against the correct PyTorch libraries
 WORKDIR /workspace/TransformerEngine
 RUN pip uninstall -y transformer-engine && \
     MAX_JOBS=${MAX_JOBS} pip install . -vvv
+
+# Step 6: Final verification after TE rebuild
+RUN python -c "import torch; import transformer_engine.pytorch as te; \
+    print(f'Final check - PyTorch ROCm: {torch.version.hip}, TransformerEngine loaded successfully')"
+
 WORKDIR /workspace/
 ###########################################
 ###########################################

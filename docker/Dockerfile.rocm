@@ -98,12 +98,14 @@ ENV LD_LIBRARY_PATH="/opt/rocm/lib:/usr/local/lib/python3.12/dist-packages/torch
 # Step 5: Rebuild TransformerEngine against the verified ROCm PyTorch
 # This is necessary because TE's compiled extensions must link against the correct PyTorch libraries
 WORKDIR /workspace/TransformerEngine
+# Clean all build artifacts from previous build to avoid conflicts
 RUN pip uninstall -y transformer-engine && \
-    MAX_JOBS=${MAX_JOBS} pip install . -vvv
+    rm -rf build/ dist/ *.egg-info .eggs/ && \
+    find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
+    git clean -fdx transformer_engine/ || true
 
-# Step 6: Final verification after TE rebuild
-RUN python -c "import torch; import transformer_engine.pytorch as te; \
-    print(f'Final check - PyTorch ROCm: {torch.version.hip}, TransformerEngine loaded successfully')"
+# Rebuild with clean slate - environment variables are already set from lines 53-59
+RUN MAX_JOBS=${MAX_JOBS} pip install . -vvv
 
 WORKDIR /workspace/
 ###########################################

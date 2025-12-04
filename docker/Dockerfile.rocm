@@ -67,13 +67,17 @@ WORKDIR /workspace/
 ###########################################
 ##Reinstall PyTorch ROCm after TE##########
 ###########################################
-# Ensure ROCm PyTorch is properly installed after TransformerEngine
-# This prevents library mismatch issues with libc10_hip.so
-RUN pip install --force-reinstall \
-    torch==2.7.1 \
-    torchvision==0.22.1 \
-    torchaudio==2.7.1 \
+# CRITICAL: Ensure ROCm PyTorch is installed, not CUDA PyTorch
+# TransformerEngine requires libc10_hip.so which only exists in ROCm builds
+RUN pip uninstall -y torch torchvision torchaudio && \
+    pip install --no-cache-dir \
+    torch==2.7.1+rocm6.3 \
+    torchvision==0.22.1+rocm6.3 \
+    torchaudio==2.7.1+rocm6.3 \
     --index-url https://download.pytorch.org/whl/rocm6.3
+
+# Verify ROCm PyTorch installation
+RUN python -c "import torch; assert torch.version.hip is not None, 'PyTorch is not ROCm-built!'; print(f'PyTorch ROCm version: {torch.version.hip}')"
 
 # Set library path to include ROCm and PyTorch libraries
 # This ensures libc10_hip.so and other ROCm libraries can be found at runtime

@@ -78,6 +78,13 @@ RUN pip install --force-reinstall \
 # Set library path to include ROCm and PyTorch libraries
 # This ensures libc10_hip.so and other ROCm libraries can be found at runtime
 ENV LD_LIBRARY_PATH="/opt/rocm/lib:/usr/local/lib/python3.12/dist-packages/torch/lib:${LD_LIBRARY_PATH}"
+
+# Rebuild TransformerEngine against the reinstalled PyTorch
+# This is necessary because TE's compiled extensions must link against the correct PyTorch libraries
+WORKDIR /workspace/TransformerEngine
+RUN pip uninstall -y transformer-engine && \
+    MAX_JOBS=${MAX_JOBS} pip install . -vvv
+WORKDIR /workspace/
 ###########################################
 ###########################################
 ###########################################

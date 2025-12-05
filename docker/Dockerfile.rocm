@@ -89,42 +89,18 @@ RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/rocm6.3
 
 # Step 5: STRICT VERIFICATION - build fails if CUDA PyTorch installed
-RUN python3 -c "
-import torch
-import sys
-
-# Check 1: torch.version.hip must exist and not be None
-hip_version = getattr(torch.version, 'hip', None)
-if hip_version is None:
-    print('ERROR: torch.version.hip is None - PyTorch is CUDA-built!')
-    print(f'torch.version.cuda: {getattr(torch.version, \"cuda\", None)}')
-    print(f'Available attributes: {dir(torch.version)}')
-    sys.exit(1)
-
-# Check 2: Verify we can access HIP/ROCm backends
-try:
-    # In ROCm PyTorch, torch.cuda maps to ROCm/HIP
-    device_count = torch.cuda.device_count()
-    backend = torch.cuda.get_device_properties(0).name if device_count > 0 else 'No devices (OK for build)'
-    print(f'SUCCESS: PyTorch ROCm {hip_version}')
-    print(f'Backend: {backend}')
-except Exception as e:
-    print(f'ERROR accessing CUDA/HIP backend: {e}')
-    sys.exit(1)
-
-# Check 3: Verify libc10_hip.so exists
-import torch.utils.cpp_extension
-lib_dir = torch.utils.cpp_extension.library_paths()[0] if torch.utils.cpp_extension.library_paths() else None
-if lib_dir:
-    import os
-    libc10_hip = os.path.join(lib_dir, 'libc10_hip.so')
-    if os.path.exists(libc10_hip):
-        print(f'SUCCESS: Found libc10_hip.so at {libc10_hip}')
-    else:
-        print(f'ERROR: libc10_hip.so not found in {lib_dir}')
-        print(f'Contents: {os.listdir(lib_dir)}')
-        sys.exit(1)
-"
+RUN python3 -c 'import torch, sys, os; \
+hip_version = getattr(torch.version, "hip", None); \
+sys.exit(1) if hip_version is None else None; \
+print(f"ERROR: PyTorch is CUDA-built! hip={hip_version}, cuda={getattr(torch.version, \"cuda\", None)}") if hip_version is None else print(f"Check 1 PASSED: PyTorch ROCm {hip_version}"); \
+device_count = torch.cuda.device_count(); \
+print(f"Check 2 PASSED: HIP backend accessible, {device_count} devices"); \
+lib_paths = torch.utils.cpp_extension.library_paths(); \
+lib_dir = lib_paths[0] if lib_paths else ""; \
+libc10_hip = os.path.join(lib_dir, "libc10_hip.so") if lib_dir else ""; \
+sys.exit(1) if not os.path.exists(libc10_hip) else None; \
+print(f"ERROR: libc10_hip.so not found in {lib_dir}") if not os.path.exists(libc10_hip) else print(f"Check 3 PASSED: Found libc10_hip.so at {libc10_hip}"); \
+print("=== ALL VERIFICATION PASSED: ROCm PyTorch installed correctly ===")'
 
 # Set library path to include ROCm and PyTorch libraries
 # This ensures libc10_hip.so and other ROCm libraries can be found at runtime

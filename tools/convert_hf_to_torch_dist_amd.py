@@ -12,24 +12,6 @@ from megatron.training.global_vars import set_args
 from mbridge import AutoBridge
 
 
-# Monkey-patch torch.cuda.current_device() for CPU-only conversion
-# This is needed because some Megatron-LM code paths call current_device()
-# even when use_cpu_initialization=True is set
-_original_current_device = torch.cuda.current_device
-_original_is_available = torch.cuda.is_available
-
-
-def _patched_current_device():
-    """Return CPU device when CUDA is not available"""
-    if not _original_is_available():
-        return 'cpu'
-    return _original_current_device()
-
-
-# Apply the patch
-torch.cuda.current_device = _patched_current_device
-
-
 def init_distributed():
     """Initialize distributed environment"""
     os.environ["RANK"] = "0"

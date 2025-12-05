@@ -264,20 +264,6 @@ RUN pip install "ray[data,train,tune,serve]==2.47.1"
 ########################################
 
 
-### Need to verify whether numerical/convergence issue
-#######################################
-################apex###################
-#######################################
-WORKDIR /workspace/
-RUN pip uninstall -y apex && \
-    git clone https://github.com/ROCm/apex.git && \
-    cd apex && \
-    python setup.py install && \
-    cd /workspace/
-#######################################
-#######################################
-#######################################
-
 
 ########################################
 ############ mbridge####################

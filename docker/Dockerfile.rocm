@@ -70,26 +70,61 @@ WORKDIR /workspace/
 # CRITICAL FIX: Ensure ROCm PyTorch is installed, not CUDA PyTorch
 # The issue: pip may cache or default to CUDA wheels even with --index-url
 
-# Step 1: Completely remove all PyTorch packages
-RUN pip uninstall -y torch torchvision torchaudio triton
+# Step 1: Remove any pip config that might force PyPI
+RUN rm -f /etc/pip.conf ~/.pip/pip.conf ~/.config/pip/pip.conf 2>/dev/null || true
 
-# Step 2: Clear ALL pip caches to prevent using cached CUDA wheels
-RUN pip cache purge && rm -rf ~/.cache/pip
+# Step 2: Completely remove all PyTorch packages
+RUN pip uninstall -y torch torchvision torchaudio triton 2>/dev/null || true
 
-# Step 3: Install PyTorch ROCm with explicit source and verification
-# Using --extra-index-url instead of --index-url to avoid dependency resolution issues
+# Step 3: Clear ALL pip caches to prevent using cached CUDA wheels
+RUN pip cache purge && rm -rf ~/.cache/pip /root/.cache/pip
+
+# Step 4: Install PyTorch ROCm - MUST use --index-url NOT --extra-index-url
+# --index-url REPLACES PyPI entirely, forcing use of ROCm index
+# --extra-index-url adds ROCm index but PyPI is checked FIRST (wrong!)
 RUN pip install --no-cache-dir \
     torch==2.7.1 \
     torchvision==0.22.1 \
     torchaudio==2.7.1 \
-    --extra-index-url https://download.pytorch.org/whl/rocm6.3
+    --index-url https://download.pytorch.org/whl/rocm6.3
 
-# Step 4: VERIFY that ROCm PyTorch was actually installed
-# This will fail the build if CUDA PyTorch was installed instead
-RUN python -c "import torch; \
-    assert hasattr(torch.version, 'hip') and torch.version.hip is not None, \
-    f'ERROR: PyTorch is CUDA-built, not ROCm! torch.version.hip={getattr(torch.version, \"hip\", None)}'; \
-    print(f'SUCCESS: PyTorch ROCm version: {torch.version.hip}')"
+# Step 5: STRICT VERIFICATION - build fails if CUDA PyTorch installed
+RUN python3 -c "
+import torch
+import sys
+
+# Check 1: torch.version.hip must exist and not be None
+hip_version = getattr(torch.version, 'hip', None)
+if hip_version is None:
+    print('ERROR: torch.version.hip is None - PyTorch is CUDA-built!')
+    print(f'torch.version.cuda: {getattr(torch.version, \"cuda\", None)}')
+    print(f'Available attributes: {dir(torch.version)}')
+    sys.exit(1)
+
+# Check 2: Verify we can access HIP/ROCm backends
+try:
+    # In ROCm PyTorch, torch.cuda maps to ROCm/HIP
+    device_count = torch.cuda.device_count()
+    backend = torch.cuda.get_device_properties(0).name if device_count > 0 else 'No devices (OK for build)'
+    print(f'SUCCESS: PyTorch ROCm {hip_version}')
+    print(f'Backend: {backend}')
+except Exception as e:
+    print(f'ERROR accessing CUDA/HIP backend: {e}')
+    sys.exit(1)
+
+# Check 3: Verify libc10_hip.so exists
+import torch.utils.cpp_extension
+lib_dir = torch.utils.cpp_extension.library_paths()[0] if torch.utils.cpp_extension.library_paths() else None
+if lib_dir:
+    import os
+    libc10_hip = os.path.join(lib_dir, 'libc10_hip.so')
+    if os.path.exists(libc10_hip):
+        print(f'SUCCESS: Found libc10_hip.so at {libc10_hip}')
+    else:
+        print(f'ERROR: libc10_hip.so not found in {lib_dir}')
+        print(f'Contents: {os.listdir(lib_dir)}')
+        sys.exit(1)
+"
 
 # Set library path to include ROCm and PyTorch libraries
 # This ensures libc10_hip.so and other ROCm libraries can be found at runtime

@@ -1,8 +1,7 @@
 #### Use the base image
 
 # The Docker image built with this Dockerfile:
-# Updated to match NVIDIA image versions: sglang v0.5.5.post1 and megatron core_v0.14.0
-# Using amd_patch/sglv0.5.5.post1 (based on old sglv0.5.0rc0 patches)
+# Still need to update amd_patch
 
 # You can find the latest pre-built Docker image from here: https://hub.docker.com/r/rlsys/miles/tags
 # Current latest docker img: `rlsys/miles:miles_ubuntu22.04_rocm6.3.4-patch-numa-patch_sglang0.4.9_megatron-patch_ray2.47.1_apex_torch-memory-saver0.0.8-patch-vim` manually add the patch to mitigate checkpoint loading issue. (vim /workspace/Megatron-LM-amd_version/megatron/training/checkpointing.py. Line: 1449 ~ 1457 - comment out if becasue of dismatch number of dist checkpoints
@@ -17,9 +16,8 @@
 
 # Thanks to Yang Wang (https://www.microsoft.com/en-us/research/people/yangwang5/) for working on the patch for this ROCm base Docker image to support virtual memory management on MI300X.
 
+# FROM "rlfoundation.azurecr.io/rocm6.3.4:vllm-0.8.5-numa-patch-ubuntu-22.04"
 FROM "rlsys/rocm-6.3.4-patch:rocm6.3.4-numa-patch_ubuntu-22.04"
-
-ARG PATCH_VERSION=sglv0.5.5.post1
 
 SHELL ["/bin/bash", "-ceuxo", "pipefail"]
 
@@ -32,6 +30,7 @@ RUN ln -sf /usr/bin/python3.12 /usr/bin/python && \
 
 RUN apt-get update
 RUN apt-get install -y pkg-config liblzma-dev
+
 
 ###########################################
 ##########Install TransformerEngine########
@@ -64,87 +63,6 @@ WORKDIR /workspace/
 ###########################################
 
 
-###########################################
-##Reinstall PyTorch ROCm after TE##########
-###########################################
-# CRITICAL FIX: Ensure ROCm PyTorch is installed, not CUDA PyTorch
-# The issue: pip may cache or default to CUDA wheels even with --index-url
-
-# Step 1: Remove any pip config that might force PyPI
-RUN rm -f /etc/pip.conf ~/.pip/pip.conf ~/.config/pip/pip.conf 2>/dev/null || true
-
-# Step 2: Completely remove all PyTorch packages
-RUN pip uninstall -y torch torchvision torchaudio triton 2>/dev/null || true
-
-# Step 3: Clear ALL pip caches to prevent using cached CUDA wheels
-RUN pip cache purge && rm -rf ~/.cache/pip /root/.cache/pip
-
-# Step 4: Install PyTorch ROCm - MUST use --index-url NOT --extra-index-url
-# --index-url REPLACES PyPI entirely, forcing use of ROCm index
-# --extra-index-url adds ROCm index but PyPI is checked FIRST (wrong!)
-RUN pip install --no-cache-dir \
-    torch==2.7.1 \
-    torchvision==0.22.1 \
-    torchaudio==2.7.1 \
-    --index-url https://download.pytorch.org/whl/rocm6.3
-
-# Step 5: STRICT VERIFICATION - build fails if CUDA PyTorch installed
-RUN cat > /tmp/verify_rocm.py << 'VERIFY_EOF'
-import torch
-import sys
-import os
-
-# Check 1: torch.version.hip must exist and not be None
-hip_version = getattr(torch.version, 'hip', None)
-if hip_version is None:
-    print('ERROR: torch.version.hip is None - PyTorch is CUDA-built!')
-    print(f'torch.version.cuda: {getattr(torch.version, "cuda", None)}')
-    sys.exit(1)
-print(f'Check 1 PASSED: PyTorch ROCm {hip_version}')
-
-# Check 2: Verify HIP backend accessible
-device_count = torch.cuda.device_count()
-print(f'Check 2 PASSED: HIP backend accessible, {device_count} devices')
-
-# Check 3: Verify libc10_hip.so exists
-lib_paths = torch.utils.cpp_extension.library_paths()
-if lib_paths:
-    lib_dir = lib_paths[0]
-    libc10_hip = os.path.join(lib_dir, 'libc10_hip.so')
-    if os.path.exists(libc10_hip):
-        print(f'Check 3 PASSED: Found libc10_hip.so at {libc10_hip}')
-    else:
-        print(f'ERROR: libc10_hip.so not found in {lib_dir}')
-        print(f'Contents: {os.listdir(lib_dir)}')
-        sys.exit(1)
-
-print('=== ALL VERIFICATION PASSED: ROCm PyTorch installed correctly ===')
-VERIFY_EOF
-
-RUN python3 /tmp/verify_rocm.py && rm /tmp/verify_rocm.py
-
-# Set library path to include ROCm and PyTorch libraries
-# This ensures libc10_hip.so and other ROCm libraries can be found at runtime
-ENV LD_LIBRARY_PATH="/opt/rocm/lib:/usr/local/lib/python3.12/dist-packages/torch/lib:${LD_LIBRARY_PATH}"
-
-# Step 5: Rebuild TransformerEngine against the verified ROCm PyTorch
-# This is necessary because TE's compiled extensions must link against the correct PyTorch libraries
-WORKDIR /workspace/TransformerEngine
-# Clean all build artifacts from previous build to avoid conflicts
-RUN pip uninstall -y transformer-engine && \
-    rm -rf build/ dist/ *.egg-info .eggs/ && \
-    find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
-    git clean -fdx transformer_engine/ || true
-
-# Rebuild with clean slate - environment variables are already set from lines 53-59
-RUN MAX_JOBS=${MAX_JOBS} pip install . -vvv
-
-WORKDIR /workspace/
-###########################################
-###########################################
-###########################################
-
-
 
 ###########################################
 ##############Install SGLang###############
@@ -157,6 +75,7 @@ ENV GPU_ARCH=gfx942
 # ===============================
 # Base image 942 and args
 # FROM $BASE_IMAGE_942 AS gfx942
+ENV BUILD_VLLM="0"
 ENV BUILD_TRITON="1"
 ENV BUILD_AITER_ALL="1"
 ENV AITER_COMMIT="v0.1.4"
@@ -164,6 +83,7 @@ ENV AITER_COMMIT="v0.1.4"
 # # ===============================
 # # Base image 950 and args
 # FROM $BASE_IMAGE_950 AS gfx950
+# ENV BUILD_VLLM="0"
 # ENV BUILD_TRITON="0"
 # ENV BUILD_AITER_ALL="1"
 # ENV AITER_COMMIT="v0.1.4"
@@ -178,7 +98,6 @@ ENV GPU_ARCH_LIST=${GPU_ARCH:-${PYTORCH_ROCM_ARCH}}
 
 ARG SGL_REPO="https://github.com/sgl-project/sglang.git"
 ARG SGL_DEFAULT="main"
-# ARG SGL_BRANCH=${SGL_DEFAULT}
 ARG SGL_BRANCH="v0.5.5.post1"
 
 ARG TRITON_REPO="https://github.com/ROCm/triton.git"
@@ -261,13 +180,17 @@ ENV NCCL_MIN_NCHANNELS=112
 
 ENV SGLANG_USE_AITER=1
 ENV SGLANG_MOE_PADDING=1
+ENV VLLM_FP8_PADDING=1
+ENV VLLM_FP8_ACT_PADDING=1
+ENV VLLM_FP8_WEIGHT_PADDING=1
+ENV VLLM_FP8_REDUCE_CONV=1
 ENV TORCHINDUCTOR_MAX_AUTOTUNE=1
 ENV TORCHINDUCTOR_MAX_AUTOTUNE_POINTWISE=1
 
 
 # sglang patch
 # COPY patch/${SGLANG_VERSION}/sglang.patch /sgl-workspace/sglang/
-COPY amd_patch/${PATCH_VERSION} /workspace/patch
+COPY amd_patch/sglv0.5.5.post1 /workspace/patch
 RUN cd /workspace/sglang && \
   git apply /workspace/patch/sglang.patch && \
   if grep -R -n '^<<<<<<< ' .; then \
@@ -287,12 +210,40 @@ RUN pip install sglang-router --force-reinstall
 RUN pip install transformers==4.51.1
 
 #########################################
+#####Install vllm v0.8.5#################
+#########################################
+
+WORKDIR /workspace/
+
+ENV VLLM_TARGET_DEVICE=rocm
+ENV ROCM_PATH=/opt/rocm
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.8.5.dev
+
+RUN pip uninstall -y vllm || true
+RUN rm -rf vllm-patch
+
+# Fix importlib-metadata version conflict before vllm installation
+RUN pip install "importlib-metadata>=6.0,<=8.0.0" --force-reinstall
+
+RUN git clone https://github.com/RLFoundation/vllm-patch.git \
+    && cd vllm-patch \
+    && git checkout v0.8.5-sleep-numa \
+    && rm -rf build/ dist/ *.egg-info \
+    && ln -sf /opt/rocm/lib/libamdhip64.so /usr/lib/libamdhip64.so \
+    && SETUPTOOLS_SCM_PRETEND_VERSION=0.8.5.dev PYTORCH_ROCM_ARCH="gfx90a;gfx942" MAX_JOBS=${MAX_JOBS} python3 setup.py install
+
+WORKDIR /workspace/
+###########################################
+###########################################
+
+
+#########################################
 #### Install megatron-core###############
 #########################################
 # Can be removed just the current megatron-lm dependency
 RUN pip install "numpy>=1.21.0,<2.0" --force-reinstall
 
-COPY amd_patch/${PATCH_VERSION} /workspace/patch
+COPY amd_patch/sglv0.5.5.post1 /workspace/patch
 
 RUN pip uninstall -y megatron-core && \
     git clone https://github.com/NVIDIA/Megatron-LM && \
@@ -351,20 +302,12 @@ RUN pip install "ray[data,train,tune,serve]==2.47.1"
 #######################################
 ################apex###################
 #######################################
-# NOTE: ROCm does not support apex yet. The ROCm/apex repository is incomplete
-# and missing required source files (apex/csrc).
-#
-# WORKAROUND: When training, add the --no-gradient-accumulation-fusion flag
-# to disable gradient accumulation fusion (which requires apex).
-#
-# See: AMD tutorial notes on ROCm apex limitations
-#######################################
-# WORKDIR /workspace/
-# RUN pip uninstall -y apex && \
-#     git clone https://github.com/ROCm/apex.git && \
-#     cd apex && \
-#     python setup.py install && \
-#     cd /workspace/
+WORKDIR /workspace/
+RUN pip uninstall -y apex && \
+    git clone https://github.com/ROCm/apex.git && \
+    cd apex && \
+    python setup.py install && \
+    cd /workspace/
 #######################################
 #######################################
 #######################################
@@ -373,7 +316,7 @@ RUN pip install "ray[data,train,tune,serve]==2.47.1"
 ########################################
 ############ mbridge####################
 ########################################
-RUN pip install git+https://github.com/ISEEKYAN/mbridge.git
+RUN pip install git+https://github.com/ISEEKYAN/mbridge.git --no-deps
 ########################################
 ########################################
 ########################################

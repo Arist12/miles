@@ -37,20 +37,17 @@ RUN apt-get install -y pkg-config liblzma-dev
 WORKDIR /workspace/
 
 RUN rm -rf TransformerEngine
-# RUN git clone --recursive https://github.com/ROCm/TransformerEngine.git
-RUN git clone https://github.com/ROCm/TransformerEngine.git
+RUN git clone --recursive https://github.com/ROCm/TransformerEngine.git
+# RUN git clone https://github.com/ROCm/TransformerEngine.git
 WORKDIR /workspace/TransformerEngine
 
 
-RUN git checkout 236178e
+# RUN git checkout 236178e
 # RUN git checkout bb061ad
 # RUN git checkout 864405c
 
-RUN git submodule update --init --recursive
-
 ENV NVTE_FRAMEWORK=pytorch
 ENV NVTE_ROCM_ARCH=gfx942
-ENV NVTE_USE_HIPBLASLT=1
 ENV NVTE_USE_ROCM=1
 
 # export CMAKE_PREFIX_PATH="/opt/rocm:/opt/rocm/hip:/usr/local:/usr:${CMAKE_PREFIX_PATH:-}"

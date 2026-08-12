@@ -1,9 +1,12 @@
-# P2P Weight Transfer Examples
-
+---
+title: "P2P Weight Transfer Examples"
+description: "Point-to-point weight transfer between training and rollout engines."
+# Generated from examples/infra_features/p2p_weight_transfer/README.md by scripts/tools/sync_example_docs.py. Edit that README, not this file.
+---
 Example scripts for running P2P (RDMA) and broadcast (NCCL) weight transfer between
 Megatron training and sglang rollout engines.
 
-See [docs/advanced/p2p-weight-transfer.md](../../../docs/advanced/p2p-weight-transfer.md)
+See [docs/advanced/p2p-weight-transfer.md](/advanced/p2p-weight-transfer)
 for full documentation, architecture details, and profiling results.
 
 ## Quick Start

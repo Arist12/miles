@@ -1,5 +1,8 @@
-# FP8 training examples
-
+---
+title: "FP8 training examples"
+description: "Examples of FP8 training and inference, plus INT4 QAT, for improved throughput and stability."
+# Generated from examples/infra_features/low_precision/README.md by scripts/tools/sync_example_docs.py. Edit that README, not this file.
+---
 This is an example of FP8 training and FP8 inference. Under FP8 training and inference, it can achieve more efficient inference throughput and lower training-inference mismatch, resulting in more stable training. More details can be found in [this blog](https://lmsys.org/blog/2025-11-25-fp8-rl/).
 
 ## Files
@@ -43,7 +46,6 @@ This is an example of FP8 training and FP8 inference. Under FP8 training and inf
 
    Note that TransformerEngine does not specifically save FP8 quantized weights; the saved torch dist remains in original precision (usually bf16). If you want to evaluate under FP8, you need to convert the checkpoint from `torch_dist` to HuggingFace format, then convert to FP8 HuggingFace format.
 
-
 ## Quick Explanation
 
 Here's a quick explanation of how FP8 training is currently implemented in miles:
@@ -55,7 +57,6 @@ Here's a quick explanation of how FP8 training is currently implemented in miles
 3. Weight updates: During RL weight updates, Megatron first dequantizes FP8 weights to bf16 format, then miles quantizes these bf16 weights to fp8 format and sends them to sglang. (This additional dequantization and quantization is not elegant, but we haven't modified the interface yet for framework compatibility.)
 
 4. Save checkpoint: Similar to weight updates, if checkpoints need to be saved from the training engine, they will also be dequantized back to bf16 and saved to `torch_dist` format checkpoints.
-
 
 ## TODO
 

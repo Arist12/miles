@@ -1,5 +1,8 @@
-# Retool v2
-
+---
+title: "Retool v2"
+description: "Tool-enabled language model generation with sandboxed Python code execution interleaved with thinking."
+# Generated from examples/retool_v2/README.md by scripts/tools/sync_example_docs.py. Edit that README, not this file.
+---
 This example is an upgraded version of the original retool example, using the updated interfaces provided by the miles framework to implement multi-turn RL training with tool calls in a cleaner way.
 
 ## Key Differences from v1

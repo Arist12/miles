@@ -11,6 +11,8 @@ import torch
 import torch.distributed as dist
 
 from miles.backends.training_utils.parallel import get_parallel_state
+from miles.utils.distributed_utils import get_gloo_group
+from miles.utils.ft_utils.process_group_utils import collective_bool_and
 from miles.utils.lora import is_lora_enabled, lora_rollout_enabled  # noqa: F401  (re-exported)
 
 logger = logging.getLogger(__name__)
@@ -404,6 +406,35 @@ def create_lora_instance(args: Namespace):
 # ---------------------------------------------------------------------------
 
 
+def _optimizer_param_state_path(args: Namespace, directory: Path) -> Path:
+    """Path for the sharded optimizer state, one file per model-parallel group.
+
+    ``save_parameter_state`` writes on each group's data-parallel rank 0, so a flat name in this
+    shared directory would mean concurrent writers. Megatron names the same state by tp/pp/ep;
+    etp refines that. Context parallel is folded into the writing group
+    (``get_megatron_optimizer`` passes ``intra_dp_cp_group``) and must stay out.
+    """
+    assert args.num_distributed_optimizer_instances == 1, (
+        "LoRA checkpointing does not support --num-distributed-optimizer-instances > 1: each "
+        "instance has its own data-parallel rank 0, and they would write the same file."
+    )
+    parallel_state = get_parallel_state()
+    tp_rank = parallel_state.tp.rank
+    pp_rank = parallel_state.pp.rank
+    ep_rank = parallel_state.ep.rank
+    etp_rank = parallel_state.etp.rank
+    return directory / f"optimizer_param_state_tp{tp_rank}_pp{pp_rank}_ep{ep_rank}_etp{etp_rank}.pt"
+
+
+def _keeps_moments_outside_state_dict(args: Namespace, optimizer: Any) -> bool:
+    """Whether the moments live in sharded buffers that ``state_dict()`` omits.
+
+    Same gate Megatron's own checkpointing uses. ``hasattr(optimizer, "save_parameter_state")``
+    cannot answer it: ``ChainedOptimizer`` inherits the method whatever it wraps.
+    """
+    return args.use_distributed_optimizer and not optimizer.is_stub_optimizer
+
+
 def save_lora_checkpoint(
     model: Sequence[torch.nn.Module],
     args: Namespace,
@@ -511,6 +542,8 @@ def save_lora_checkpoint(
             },
             save_path / f"training_state_rank{rank}.pt",
         )
+        if _keeps_moments_outside_state_dict(args, optimizer):
+            optimizer.save_parameter_state(str(_optimizer_param_state_path(args, save_path)))
         logger.info(f"Saved optimizer/scheduler state to {save_path}")
 
     if dist.is_initialized():
@@ -521,6 +554,7 @@ def save_lora_checkpoint(
 
 def load_lora_adapter(
     model: Sequence[torch.nn.Module],
+    args: Namespace,
     adapter_path: str,
     *,
     optimizer: Any | None = None,
@@ -538,6 +572,8 @@ def load_lora_adapter(
 
     Args:
         model: List of DDP-wrapped model chunks with LoRA layers already applied.
+        args: Parsed arguments; used to decide whether the optimizer keeps its moments in
+            sharded buffers that ``state_dict()`` omits.
         adapter_path: Path to the adapter checkpoint directory.
         optimizer: If provided, restore optimizer state for training resume.
         opt_param_scheduler: If provided, restore LR scheduler state.
@@ -563,7 +599,10 @@ def load_lora_adapter(
         if legacy.exists():
             logger.warning(f"Using legacy tp/pp-named adapter shard {legacy}; only valid when EP<=TP")
             native_path = legacy
-    if native_path.exists():
+    # The restore below is collective, so every rank has to agree on whether it happens before
+    # any rank enters it -- the shard is per global rank, and a rank that took the HF-PEFT exit
+    # while its peers restored would hang them.
+    if collective_bool_and(value=native_path.exists(), group=get_gloo_group()):
         state_dict = torch.load(native_path, map_location="cpu", weights_only=True)
         loaded = 0
         for model_chunk in model:
@@ -573,8 +612,15 @@ def load_lora_adapter(
                     loaded += 1
         logger.info(f"Loaded {loaded} adapter tensors from Megatron-native checkpoint: {native_path}")
 
-        iteration = _load_training_state(adapter_dir, optimizer, opt_param_scheduler)
+        iteration = _load_training_state(adapter_dir, args, optimizer, opt_param_scheduler)
+        if optimizer is not None:
+            # Refresh the masters from the adapter just written into the model, or the first
+            # step() copies the pre-load initialization back over it. model.py does the same
+            # after the native adapter load.
+            optimizer.reload_model_params()
         return True, iteration
+    if native_path.exists():
+        logger.warning(f"{native_path.name} is missing on some ranks; not loading the adapter on any")
 
     # ---- HF PEFT format (future work) ----
     hf_path = adapter_dir / "adapter_model.bin"
@@ -592,6 +638,7 @@ def load_lora_adapter(
 
 def _load_training_state(
     adapter_dir: Path,
+    args: Namespace,
     optimizer: Any | None,
     opt_param_scheduler: Any | None,
 ) -> int | None:
@@ -601,15 +648,35 @@ def _load_training_state(
 
     rank = dist.get_rank() if dist.is_initialized() else 0
     state_path = adapter_dir / f"training_state_rank{rank}.pt"
-    if not state_path.exists():
+    if not collective_bool_and(value=state_path.exists(), group=get_gloo_group()):
+        if state_path.exists():
+            logger.warning(f"{state_path.name} is missing on some ranks; skipping the training state restore")
         return None
 
     # Optimizer state dicts may contain non-tensor objects (e.g. step counts,
     # param group metadata), so full unpickling is required here.
     training_state = torch.load(state_path, map_location="cpu", weights_only=False)
 
-    optimizer.load_state_dict(training_state["optimizer"])
-    logger.info("Restored optimizer state from LoRA checkpoint")
+    # The moments and fp32 masters live in a separate file (see save_lora_checkpoint).
+    # load_state_dict allocates the moment shards with torch.empty(), expecting
+    # load_parameter_state to fill them; without that file the optimizer steps on
+    # uninitialized memory. Checkpoints written before it existed are warm-started instead.
+    param_state_path = (
+        _optimizer_param_state_path(args, adapter_dir) if _keeps_moments_outside_state_dict(args, optimizer) else None
+    )
+    if param_state_path is not None and not collective_bool_and(
+        value=param_state_path.exists(), group=get_gloo_group()
+    ):
+        logger.warning(
+            f"{state_path.name} has no matching {param_state_path.name}; restoring the scheduler but "
+            f"warm-starting the optimizer, because its moments were never written. Re-save the "
+            f"checkpoint with a build that writes the parameter state to resume exactly."
+        )
+    else:
+        optimizer.load_state_dict(training_state["optimizer"])
+        if param_state_path is not None:
+            optimizer.load_parameter_state(str(param_state_path))
+        logger.info("Restored optimizer state from LoRA checkpoint")
 
     if opt_param_scheduler is not None and training_state.get("opt_param_scheduler") is not None:
         opt_param_scheduler.load_state_dict(training_state["opt_param_scheduler"])

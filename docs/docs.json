@@ -233,6 +233,7 @@
          "advanced/fault-tolerance",
          "advanced/pd-disaggregation",
          "advanced/p2p-weight-transfer",
+         "advanced/disaggregated-rollout",
          "advanced/disk-offload"
         ],
         "expanded": false

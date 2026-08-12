@@ -40,6 +40,11 @@ def test_external_rollout_only_reserves_no_local_bundles():
     assert _get_placement_group_layout(_layout_args(debug_rollout_only=True, rollout_external=True)) == (0, 0)
 
 
+def test_missing_rollout_num_gpus_names_the_flag():
+    with pytest.raises(AssertionError, match="'--rollout-num-gpus' is required"):
+        _get_placement_group_layout(_layout_args(rollout_num_gpus=None))
+
+
 async def test_critic_role_disables_reward_kl_and_preserves_actor_args(monkeypatch):
     groups = []
 

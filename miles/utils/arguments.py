@@ -3239,6 +3239,10 @@ def miles_validate_args(args):
         if args.colocate and (not args.rollout_num_gpus):
             args.rollout_num_gpus = args.actor_num_gpus_per_node * args.actor_num_nodes
         else:
+            assert args.rollout_num_gpus, (
+                "'--rollout-num-gpus' is required with '--debug-rollout-only' unless '--colocate' is "
+                "set: it sizes the rollout engines, and the actor placement is derived from it."
+            )
             args.actor_num_gpus_per_node = min(8, args.rollout_num_gpus)
             args.actor_num_nodes = args.rollout_num_gpus // args.actor_num_gpus_per_node
         args.colocate = False

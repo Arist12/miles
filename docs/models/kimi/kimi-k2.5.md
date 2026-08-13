@@ -167,7 +167,7 @@ SGLANG_ARGS=(
 )
 ```
 
-The `--use-rollout-routing-replay` flag replays the rollout-time MoE routing decisions during training so the two stages stay consistent. On the Megatron side, attention uses the Flash backend (`--attention-backend flash`).
+The `--use-rollout-routing-replay` flag replays the rollout-time MoE routing decisions during training so the two stages stay consistent. On the Megatron side, attention is left to TransformerEngine (`--attention-backend auto`): forcing `flash` also disables the fused and unfused backends, and FlashAttention 2 rejects K2.5's asymmetric MLA head dims.
 
 The launcher sets the required env vars for you, including the INT4 QAT pair (`OPEN_TRAINING_INT4_FAKE_QAT_FLAG=1`, `OPEN_TRAINING_INT4_GROUP_SIZE=32`), a long NCCL timeout (`NCCL_TIMEOUT=3600`), `CUDA_DEVICE_MAX_CONNECTIONS=1`, and NVLink-gated NVLS (`NCCL_NVLS_ENABLE` follows the script's NVLink autodetection).
 

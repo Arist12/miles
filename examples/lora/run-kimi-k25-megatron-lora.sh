@@ -145,7 +145,9 @@ MISC_ARGS=(
    # should be good for model performance
    --accumulate-allreduce-grads-in-fp32
    --attention-softmax-in-fp32
-   --attention-backend flash
+   # not flash: that also disables the fused and unfused backends, and FA2 rejects this
+   # model's asymmetric MLA head dims, so it leaves TE nothing to select without FA3
+   --attention-backend auto
    --no-check-for-nan-in-loss-and-grad
 )
 

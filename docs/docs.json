@@ -33,12 +33,7 @@
     "type": "github",
     "href": "https://github.com/radixark/miles"
    }
-  ],
-  "primary": {
-   "type": "button",
-   "label": "Contact",
-   "href": "mailto:miles@radixark.ai"
-  }
+  ]
  },
  "navigation": {
   "tabs": [
@@ -192,19 +187,19 @@
        "user-guide/monitoring",
        "user-guide/dashboard",
        "user-guide/customization",
-       "user-guide/rollout-endpoints",
-       "user-guide/agentic-chat-template",
+       "user-guide/generate-endpoint",
+       "user-guide/agentic-rollout",
+       {
+        "group": "Agentic Environments",
+        "root": "user-guide/environments",
+        "pages": [
+         "user-guide/harbor",
+         "user-guide/openenv",
+         "user-guide/nemo-gym",
+         "user-guide/verifiers"
+        ]
+       },
        "user-guide/cli-reference"
-      ]
-     },
-     {
-      "group": "Environments",
-      "root": "user-guide/environments",
-      "pages": [
-       "user-guide/harbor",
-       "user-guide/openenv",
-       "user-guide/nemo-gym",
-       "user-guide/verifiers"
       ]
      }
     ]
@@ -339,6 +334,14 @@
   ]
  },
  "redirects": [
+  {
+   "source": "/user-guide/rollout-endpoints",
+   "destination": "/user-guide/generate-endpoint"
+  },
+  {
+   "source": "/user-guide/agentic-chat-template",
+   "destination": "/user-guide/agentic-rollout"
+  },
   {
    "source": "/user-guide/usage",
    "destination": "/user-guide/training-backend"

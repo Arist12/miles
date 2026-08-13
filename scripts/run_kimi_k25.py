@@ -211,7 +211,9 @@ def _execute_train(args: ScriptArgs):
         # should be good for model performance
         "--accumulate-allreduce-grads-in-fp32 "
         "--attention-softmax-in-fp32 "
-        "--attention-backend flash "
+        # not flash: that also sets NVTE_FUSED_ATTN=0 and NVTE_UNFUSED_ATTN=0, and FA2 rejects
+        # this model's asymmetric MLA head dims, so it leaves TE nothing to select without FA3
+        "--attention-backend auto "
         "--no-check-for-nan-in-loss-and-grad "
         "--colocate "
         f"--update-weight-buffer-size {4 * 512 * 1024 * 1024} "

@@ -277,12 +277,23 @@ def test_custom_megatron_post_save_hook_path_requires_save():
         miles_validate_args(args)
 
 
-def test_debug_rollout_only_without_colocate_requires_rollout_num_gpus():
+@pytest.mark.parametrize("rollout_num_gpus", [None, "0", "-1"])
+def test_debug_rollout_only_without_colocate_requires_positive_rollout_num_gpus(rollout_num_gpus):
     parser = argparse.ArgumentParser()
     get_miles_extra_args_provider()(parser)
-    args = parser.parse_args(["--debug-rollout-only", "--num-rollout", "1"] + REQUIRED_ARGS)
+    extra = [] if rollout_num_gpus is None else ["--rollout-num-gpus", rollout_num_gpus]
+    args = parser.parse_args(["--debug-rollout-only", "--num-rollout", "1"] + extra + REQUIRED_ARGS)
 
     with pytest.raises(AssertionError, match="'--rollout-num-gpus' is required"):
+        miles_validate_args(args)
+
+
+def test_debug_modes_report_mutual_exclusion_before_missing_gpu_count():
+    parser = argparse.ArgumentParser()
+    get_miles_extra_args_provider()(parser)
+    args = parser.parse_args(["--debug-rollout-only", "--debug-train-only", "--num-rollout", "1"] + REQUIRED_ARGS)
+
+    with pytest.raises(AssertionError, match="cannot be set at the same time"):
         miles_validate_args(args)
 
 

@@ -24,7 +24,7 @@ rollout API, and pass `--fully-async`:
 
 ```diff
 - python3 train.py ...
-+ MILES_EXPERIMENTAL_ROLLOUT_REFACTOR=1 python3 train_async.py ...
++ python3 train_async.py ...
 +   --fully-async
 ```
 
@@ -35,9 +35,8 @@ Four launch scripts show the mode end to end, from a single-node smoke test to a
 
 | Script | What it covers |
 |---|---|
-| [`run-qwen3-4b-fully_async.sh`](https://github.com/radixark/miles/blob/main/examples/fully_async/run-qwen3-4b-fully_async.sh) | The smallest complete run: Qwen3-4B on one engine per GPU, with `--max-weight-staleness` shown as a commented-out option |
-| [`run_qwen3_30b_a3b_fully_async.py`](https://github.com/radixark/miles/blob/main/examples/fully_async/run_qwen3_30b_a3b_fully_async.py) | The same pattern on a 30B MoE, with `tp=8`, `ep=8`, and one 8-GPU rollout engine |
-| [`run_qwen3_5_4b_fully_async_eval.py`](https://github.com/radixark/miles/blob/main/examples/fully_async/run_qwen3_5_4b_fully_async_eval.py) | Both checkpoint eval backends behind one flag, `--eval-backend fleet` or `--eval-backend external` |
+| [`run_qwen3_30b_a3b_fully_async.py`](https://github.com/radixark/miles/blob/main/examples/infra_features/fully_async/run_qwen3_30b_a3b_fully_async.py) | The same pattern on a 30B MoE, with `tp=8`, `ep=8`, and one 8-GPU rollout engine |
+| [`run_qwen3_5_4b_fully_async_eval.py`](https://github.com/radixark/miles/blob/main/examples/infra_features/fully_async/run_qwen3_5_4b_fully_async_eval.py) | Both checkpoint eval backends behind one flag, `--eval-backend fleet` or `--eval-backend external` |
 | [`run_glm5_2_744b_a40b_daytona.py`](https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/run_glm5_2_744b_a40b_daytona.py) | GLM-5.2 744B-A40B on 16 GB300 nodes, split 8 training and 8 inference, with multi-turn terminal-bench-2 episodes in per-task Daytona sandboxes. It runs 128 in-flight trajectories against a 64-sample train batch and evaluates on the shared rollout engines |
 
 ### Customizations
@@ -247,7 +246,7 @@ them explicitly with `--eval-sglang-*` if the fleet is large enough to want them
 ### Mode 3: External backend
 
 The contract lives in [`miles/rollout/checkpoint_eval.py`](https://github.com/radixark/miles/blob/main/miles/rollout/checkpoint_eval.py), with a
-reference implementation in [`examples/fully_async/external_eval_fn.py`](https://github.com/radixark/miles/blob/main/examples/fully_async/external_eval_fn.py).
+reference implementation in [`examples/infra_features/fully_async/external_eval_fn.py`](https://github.com/radixark/miles/blob/main/examples/infra_features/fully_async/external_eval_fn.py).
 
 Subclass `CheckpointEvalFn` and implement `evaluate_checkpoint(checkpoint_dir, input)`.
 The trainer hands over a snapshot path per eval point and owns dispatch, logging, and
@@ -293,8 +292,8 @@ it lets the trainer export further ahead at the cost of one more snapshot on dis
 
 ### Async rollout metrics
 
-The buffer reports these metrics to wandb and the dashboard on every training step,
-alongside the standard rollout metrics:
+The buffer reports these metrics to wandb on every training step, alongside the
+standard rollout metrics:
 
 ```text
 rollout/fully_async/queue_size
@@ -327,9 +326,8 @@ Every skipped point is logged at the step it would have landed on, with the reas
 | `eval/skipped_busy` | At `--eval-max-in-flight` under `--eval-overflow-policy skip` |
 | `eval/skipped_export_failed` | The snapshot export raised |
 | `eval/skipped_ckpt_missing` | No `.complete` marker in the snapshot directory |
-| `eval/skipped_unhealthy` | The fleet or its router was unreachable |
-| `eval/skipped_pin_violation` | The engines did not all report the expected weight version |
 | `eval/skipped_crashed` | Anything else the eval raised |
+| `eval/skipped_<reason>` | A `CheckpointEvalFn` raised `EvalSkip(reason)` |
 
 For a point that did run, `eval/{dataset}/weight_version/mean == eval/step` and
 `eval/{dataset}/weight_version/mixed_version_ratio == 0` together confirm it measured
@@ -340,10 +338,7 @@ last-broadcast version, which equals the actor's current weights when
 
 ### Performance metrics
 
-For performance work, the [Miles dashboard](/user-guide/dashboard) is the recommended
-view: its [Compute Utilization view](/user-guide/dashboard#compute-utilization) draws
-the rollout and training phases against per-engine SGLang state on one time axis. The
-metrics below are a basic reference for where to start:
+For performance work, use the metrics below as a basic reference:
 
 1. **Engine concurrency.** Watch `sglang_num_running_reqs` across engines. If some
    engines sit far below the others, or concurrency collapses without a weight update to
@@ -352,9 +347,8 @@ metrics below are a basic reference for where to start:
    `prefix_cache_hit_rate` in the rollout metrics. A coding-agent workload should stay
    above 90%, since every turn re-prefills its session prefix. If it is low, suspect the
    KV cache memory (`--sglang-mem-fraction-static`) and the router configuration.
-3. **Where the time goes.** Compare rollout time, train time, and the staleness metrics,
-   and check the timeline for bubbles where rollout and training do not overlap. If
-   rollout is slower, consider more GPUs for rollout, a higher
+3. **Where the time goes.** Compare rollout time, train time, and the staleness metrics.
+   If rollout is slower, consider more GPUs for rollout, a higher
    `--async-max-concurrent-samples`, and throughput-oriented SGLang settings. If
    training is slower, consider more GPUs for training, a lower concurrency, and
    latency-oriented SGLang settings.

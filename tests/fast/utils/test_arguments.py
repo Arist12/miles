@@ -278,10 +278,15 @@ def test_custom_megatron_post_save_hook_path_requires_save():
 
 
 @pytest.mark.parametrize("rollout_num_gpus", [None, "0", "-1"])
-def test_debug_rollout_only_without_colocate_requires_positive_rollout_num_gpus(rollout_num_gpus):
+@pytest.mark.parametrize("rollout_external", [False, True])
+def test_debug_rollout_only_without_colocate_requires_positive_rollout_num_gpus(
+    rollout_num_gpus, rollout_external
+):
     parser = argparse.ArgumentParser()
     get_miles_extra_args_provider()(parser)
     extra = [] if rollout_num_gpus is None else ["--rollout-num-gpus", rollout_num_gpus]
+    if rollout_external:
+        extra.append("--rollout-external")
     args = parser.parse_args(["--debug-rollout-only", "--num-rollout", "1"] + extra + REQUIRED_ARGS)
 
     with pytest.raises(AssertionError, match="'--rollout-num-gpus' is required"):

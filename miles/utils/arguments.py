@@ -3240,16 +3240,15 @@ def miles_validate_args(args):
     ), "debug_rollout_only and debug_train_only cannot be set at the same time, please set only one of them."
 
     if args.debug_rollout_only:
-        if not args.rollout_external:
-            if args.colocate and not args.rollout_num_gpus:
-                args.rollout_num_gpus = args.actor_num_gpus_per_node * args.actor_num_nodes
-            else:
-                assert args.rollout_num_gpus is not None and args.rollout_num_gpus > 0, (
-                    "'--rollout-num-gpus' is required with '--debug-rollout-only' unless '--colocate' "
-                    "or '--rollout-external' is set: provide a positive count."
-                )
-                args.actor_num_gpus_per_node = min(8, args.rollout_num_gpus)
-                args.actor_num_nodes = args.rollout_num_gpus // args.actor_num_gpus_per_node
+        if args.colocate and not args.rollout_num_gpus:
+            args.rollout_num_gpus = args.actor_num_gpus_per_node * args.actor_num_nodes
+        else:
+            assert args.rollout_num_gpus is not None and args.rollout_num_gpus > 0, (
+                "'--rollout-num-gpus' is required with '--debug-rollout-only' unless '--colocate' "
+                "is set: provide a positive count."
+            )
+            args.actor_num_gpus_per_node = min(8, args.rollout_num_gpus)
+            args.actor_num_nodes = args.rollout_num_gpus // args.actor_num_gpus_per_node
         args.colocate = False
         args.offload_train = args.offload_rollout = False
         if args.train_memory_margin_bytes > 0:

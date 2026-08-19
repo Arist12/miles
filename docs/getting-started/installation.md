@@ -28,7 +28,7 @@ versions of SGLang, Megatron-LM, and a few CUDA kernels.
     # Pick the tag that matches your GPU and ROCm version:
     #   miles-rocm720-mi35x   MI350X / MI355X, ROCm 7.2
     #   miles-rocm700-mi35x   MI350X / MI355X, ROCm 7.0
-    #   miles-rocm700-mi30x   MI300X / MI325,  ROCm 7.0
+    #   miles-rocm700-mi30x   MI300X           ROCm 7.0
     docker pull rocm/sgl-dev:miles-rocm720-mi35x
 
     docker run --rm \

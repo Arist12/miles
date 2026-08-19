@@ -311,6 +311,16 @@ def test_rollout_external_requires_positive_logical_fleet_size(rollout_num_gpus)
         miles_validate_args(args)
 
 
+def test_rollout_external_colocate_derives_logical_fleet_size():
+    parser = argparse.ArgumentParser()
+    get_miles_extra_args_provider()(parser)
+    args = parser.parse_args(["--rollout-external", "--colocate", "--num-rollout", "1"] + REQUIRED_ARGS)
+
+    miles_validate_args(args)
+
+    assert args.rollout_num_gpus == args.actor_num_gpus_per_node * args.actor_num_nodes
+
+
 def test_debug_train_only_external_does_not_require_rollout_fleet_size():
     parser = argparse.ArgumentParser()
     get_miles_extra_args_provider()(parser)

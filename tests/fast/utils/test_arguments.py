@@ -300,6 +300,17 @@ def test_debug_modes_report_mutual_exclusion_before_missing_gpu_count():
         miles_validate_args(args)
 
 
+@pytest.mark.parametrize("rollout_num_gpus", [None, "0", "-1"])
+def test_rollout_external_requires_positive_logical_fleet_size(rollout_num_gpus):
+    parser = argparse.ArgumentParser()
+    get_miles_extra_args_provider()(parser)
+    extra = [] if rollout_num_gpus is None else ["--rollout-num-gpus", rollout_num_gpus]
+    args = parser.parse_args(["--rollout-external", "--num-rollout", "1"] + extra + REQUIRED_ARGS)
+
+    with pytest.raises(AssertionError, match="'--rollout-num-gpus' is required with '--rollout-external'"):
+        miles_validate_args(args)
+
+
 def test_dynamic_global_batch_size_requires_dynamic_batch_size():
     parser = argparse.ArgumentParser()
     get_miles_extra_args_provider()(parser)

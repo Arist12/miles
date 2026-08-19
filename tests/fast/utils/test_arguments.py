@@ -311,6 +311,14 @@ def test_rollout_external_requires_positive_logical_fleet_size(rollout_num_gpus)
         miles_validate_args(args)
 
 
+def test_debug_train_only_external_does_not_require_rollout_fleet_size():
+    parser = argparse.ArgumentParser()
+    get_miles_extra_args_provider()(parser)
+    args = parser.parse_args(["--rollout-external", "--debug-train-only", "--num-rollout", "1"] + REQUIRED_ARGS)
+
+    miles_validate_args(args)
+
+
 def test_dynamic_global_batch_size_requires_dynamic_batch_size():
     parser = argparse.ArgumentParser()
     get_miles_extra_args_provider()(parser)

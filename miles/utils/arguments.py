@@ -3239,7 +3239,7 @@ def miles_validate_args(args):
         args.debug_rollout_only and args.debug_train_only
     ), "debug_rollout_only and debug_train_only cannot be set at the same time, please set only one of them."
 
-    if args.rollout_external:
+    if args.rollout_external and not args.debug_train_only:
         assert (
             args.rollout_num_gpus is not None and args.rollout_num_gpus > 0
         ), "'--rollout-num-gpus' is required with '--rollout-external': provide a positive logical fleet size."

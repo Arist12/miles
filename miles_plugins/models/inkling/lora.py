@@ -90,7 +90,10 @@ def _grouped_linear(inputs: torch.Tensor, weights: torch.Tensor, tokens_per_expe
         offsets = torch.as_tensor(list(tokens_per_expert), device=inputs.device, dtype=torch.int32).cumsum(
             0, dtype=torch.int32
         )
-        return F.grouped_mm(inputs, weights.transpose(1, 2), offs=offsets)
+        grouped_mm = getattr(F, "grouped_mm", None)
+        if grouped_mm is None:
+            grouped_mm = torch._grouped_mm
+        return grouped_mm(inputs, weights.transpose(1, 2), offs=offsets)
     segments = torch.split(inputs, list(tokens_per_expert), dim=0)
     return torch.cat([F.linear(segment, weights[idx]) for idx, segment in enumerate(segments)], dim=0)
 

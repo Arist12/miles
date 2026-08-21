@@ -67,6 +67,7 @@ import typer
 import miles.utils.external_utils.command_utils as U
 
 app = typer.Typer()
+_IS_ROCM = os.getenv("MILES_HARDWARE_PLATFORM") == "rocm"
 
 # model name -> scripts/models/<type>.py; the 4-layer slices reuse the base
 # definition with MODEL_ARGS_NUM_LAYERS=4 (set in ScriptArgs.__post_init__)
@@ -348,14 +349,16 @@ def _train(args: ScriptArgs):
         if args.rollout_num_gpus_per_engine >= 16:
             sglang_args += "--no-offload-rollout --no-offload-train "
 
+    attention_backend = "triton" if _IS_ROCM else "fa4"
     sglang_args += (
-        "--sglang-attention-backend fa4 "
+        f"--sglang-attention-backend {attention_backend} "
         "--sglang-moe-runner-backend triton "
         "--sglang-mamba-scheduler-strategy extra_buffer "
-        "--sglang-enable-multimodal "
         f"--sglang-context-length {args.sglang_context_length} "
         "--sglang-disable-custom-all-reduce "
     )
+    if args.is_mm or not _IS_ROCM:
+        sglang_args += "--sglang-enable-multimodal "
 
     inkling_args = ""
     if args.is_mm:

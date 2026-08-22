@@ -1,8 +1,11 @@
 """Eight-GPU multi-LoRA E2E with two independently stepped adapters.
 
-Exercises the current disaggregated Bridge path end to end: concurrent rollout,
-per-slot optimization, a selective post-step SGLang upsert, automatic retirement,
-and both native and HF checkpoint export.
+Drives the disaggregated Bridge path end to end with adapters of unequal lifetime,
+then asserts that each one produced exact TP2 native shards, a finite PEFT export,
+and a trained (nonzero, mutually distinct) set of B factors.
+
+Run by hand: `python tests/e2e/lora/multi_lora_qwen3_4B.py`. Deliberately outside the
+`test_*.py` discovery glob, so choosing a CI suite for it stays a reviewer decision.
 """
 
 import os
@@ -13,11 +16,8 @@ import torch
 
 from examples.multi_lora import run_multi_lora
 from safetensors.torch import load_file
-from tests.ci.ci_register import register_cuda_ci
 
 import miles.utils.external_utils.command_utils as U
-
-register_cuda_ci(est_time=500, suite="stage-c-8-gpu-h100", labels=["lora", "fully-async"])
 
 MODEL_DIR = Path("/root/models/Qwen3-4B")
 CONFIG_DIR = Path("/tmp/multi_lora_ci")
@@ -107,7 +107,10 @@ def execute() -> None:
 
     common_keys = set.intersection(*(set(state) for state in adapter_b_states.values()))
     assert common_keys
-    assert any(torch.count_nonzero(value) > 0 for value in adapter_b_states["gsm8k"].values())
+    # Every adapter must have trained: B starts at zero, so an untrained slot would
+    # still satisfy the distinctness check below against a trained one.
+    for name, state in adapter_b_states.items():
+        assert any(torch.count_nonzero(value) > 0 for value in state.values()), name
     assert any(
         not torch.equal(adapter_b_states["gsm8k"][key], adapter_b_states["dapo_math"][key]) for key in common_keys
     )

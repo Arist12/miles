@@ -162,10 +162,20 @@ Useful per-step metrics are:
   32 without compaction and rises when episodes produce extra retained leaves.
 - `rollout/episode_raw_reward`: terminal reward averaged once per original
   rollout, so compacted episodes are not over-weighted.
+- `rollout/episode_response_length/{mean,median,max,min}`: total trainable
+  model-output tokens per original rollout after applying loss masks. Compacted
+  sibling samples are summed without double-counting their shared prefixes.
+- `rollout/episode_total_response_length/mean`: masked plus unmasked response
+  tokens summed across every sample in each original rollout, then averaged
+  across rollouts. Shared prefixes count each time they occur in a sample.
 - `rollout/raw_reward`: reward averaged over flattened samples; this can differ
   from the episode-level metric when rollouts produce different sample counts.
 - `rollout/truncated_ratio`: should stay low. A high value usually means a
   per-turn or total-context cap is too small.
+
+The per-rollout response-length metrics are not emitted for Multi-LoRA
+workloads because rollout identifiers are local to each adapter's data source.
+Multi-LoRA training itself is unaffected.
 
 Inspect `rollout_data/<step>.pt` or the dashboard's sample view to confirm that:
 

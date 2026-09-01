@@ -127,7 +127,7 @@ class UpdateWeightFromDistributed(DistBucketedWeightUpdateMixin):
             pbar.update(1)
 
     def _update_lora_weight_implementation(self, named_tensors: list[tuple[str, torch.Tensor]]) -> None:
-        """Send adapter metadata over Ray, then broadcast the tensors (src=0).
+        """Upsert adapter metadata over Ray, then broadcast the tensors (src=0).
 
         Reuses the base broadcast group (``self._model_update_groups`` /
         ``self._group_name``); base and adapter syncs are strictly sequential, so
@@ -147,6 +147,7 @@ class UpdateWeightFromDistributed(DistBucketedWeightUpdateMixin):
                 dtypes=dtypes,
                 shapes=shapes,
                 group_name=self._group_name,
+                upsert=True,
             )
             for engine in self.rollout_engines
         ]

@@ -24,7 +24,7 @@ from miles.ray.ray_actor import RayActor
 from miles.ray.rollout.sglang_server_actor import SGLangServerActor
 from miles.utils.env_report import collect_and_print_node_env_report
 from miles.utils.http_utils import get_host_info
-from miles.utils.lora import LORA_ADAPTER_NAME, lora_rollout_enabled
+from miles.utils.lora import lora_rollout_enabled
 from miles.utils.multi_lora import is_multi_lora_enabled
 
 logger = logging.getLogger(__name__)
@@ -844,10 +844,11 @@ def _compute_server_args(
         else:
             kwargs["lora_target_modules"] = convert_target_modules_to_hf(args.target_modules)
 
-        if args.lora_adapter_path is not None and kwargs.get("load_format") != "dummy":
-            kwargs["lora_paths"] = {LORA_ADAPTER_NAME: args.lora_adapter_path}
-        elif args.lora_adapter_path is not None:
-            logger.info("dummy base load: skipping startup lora_paths; adapter comes via weight-sync")
+        # Both drivers publish the trainer's current adapter before the first rollout.
+        # Starting from the base model avoids treating a partial best-effort PEFT export
+        # as preloadable and gives native-only and PEFT-producing resumes one path.
+        if args.lora_adapter_path is not None:
+            logger.info("skipping startup lora_paths; adapter comes via initial weight-sync")
         else:
             logger.info("No pre-trained LoRA adapter_path provided, will use random initial weights")
 

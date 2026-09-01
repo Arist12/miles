@@ -76,3 +76,32 @@ class TestSglangOverridePrecedence:
         assert server_args["dtype"] == "float16"
         assert server_args["enable_lora"] is True
         assert server_args["mem_fraction_static"] == 0.7
+
+
+class TestLoraAdapterStartup:
+    """The mandatory initial weight sync is the only resume loading path."""
+
+    def test_skips_a_complete_peft_export(self, tmp_path):
+        (tmp_path / "adapter_config.json").write_text("{}")
+        (tmp_path / "adapter_model.safetensors").write_bytes(b"weights")
+        args = make_args(lora_rank=8, lora_adapter_path=str(tmp_path))
+
+        server_args = compute(args)
+
+        assert "lora_paths" not in server_args
+
+    def test_skips_a_partial_peft_export(self, tmp_path):
+        (tmp_path / "adapter_config.json").write_text("{}")
+        args = make_args(lora_rank=8, lora_adapter_path=str(tmp_path))
+
+        server_args = compute(args)
+
+        assert "lora_paths" not in server_args
+
+    def test_skips_a_native_only_checkpoint(self, tmp_path):
+        (tmp_path / "adapter_megatron_tp0_pp0_ep0.pt").write_bytes(b"")
+        args = make_args(lora_rank=8, lora_adapter_path=str(tmp_path))
+
+        server_args = compute(args)
+
+        assert "lora_paths" not in server_args

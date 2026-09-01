@@ -8,6 +8,7 @@ Verifies that silent failures are caught:
 - Distributed (disaggregate) sync broadcasts the adapter over NCCL (no CUDA IPC)
 """
 
+import hashlib
 from argparse import Namespace
 from dataclasses import dataclass
 from types import SimpleNamespace
@@ -54,6 +55,7 @@ class _FakeEngineResult:
 
     success: bool
     error_message: str | None = None
+    checksums_verified: bool = False
 
 
 def _make_args(**overrides):
@@ -462,12 +464,13 @@ class TestBroadcastLoraImplementation:
     """
 
     @staticmethod
-    def _make_self(*, engines):
+    def _make_self(*, engines, check_equal=False):
         return SimpleNamespace(
             rollout_engines=engines,
             _lora_config={"peft_type": "LORA", "r": 32, "lora_alpha": 32},
             _group_name="miles-pp_0",
             _model_update_groups=MagicMock(name="base_nccl_group"),
+            args=Namespace(check_lora_weight_equal=check_equal),
         )
 
     @staticmethod
@@ -500,6 +503,40 @@ class TestBroadcastLoraImplementation:
         for call in dist_mock.broadcast.call_args_list:
             assert call.args[1] == 0
             assert call.kwargs["group"] is fake_self._model_update_groups
+
+    def test_checker_sends_checksums_and_requires_acknowledgement(self):
+        engines = [
+            _FakeEngine(
+                load_result=_FakeEngineResult(
+                    success=True,
+                    checksums_verified=True,
+                )
+            )
+        ]
+        fake_self = self._make_self(engines=engines, check_equal=True)
+
+        self._run(fake_self, SAMPLE_LORA_WEIGHTS)
+
+        checksums = engines[0].load_lora_adapter_from_distributed.calls[0]["expected_checksums"]
+        assert set(checksums) == {name for name, _ in SAMPLE_LORA_WEIGHTS}
+        name, tensor = SAMPLE_LORA_WEIGHTS[0]
+        assert (
+            checksums[name]
+            == hashlib.sha256(
+                tensor.detach().cpu().contiguous().flatten().view(torch.uint8).numpy().tobytes()
+            ).hexdigest()
+        )
+
+    @pytest.mark.parametrize(
+        "load_result",
+        [_FakeEngineResult(success=True), {"success": True}],
+        ids=["attrs", "mapping"],
+    )
+    def test_checker_rejects_sglang_without_checksum_acknowledgement(self, load_result):
+        fake_self = self._make_self(engines=[_FakeEngine(load_result=load_result)], check_equal=True)
+
+        with pytest.raises(RuntimeError, match="requires an SGLang build"):
+            self._run(fake_self, SAMPLE_LORA_WEIGHTS)
 
     def test_each_engine_gets_one_rpc(self):
         engines = [_FakeEngine(), _FakeEngine()]

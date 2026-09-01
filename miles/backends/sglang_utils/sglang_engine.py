@@ -476,6 +476,7 @@ class SGLangEngine(RayActor):
         pinned: bool = False,
         added_tokens_config: dict | None = None,
         upsert: bool = False,
+        expected_checksums: dict[str, str] | None = None,
     ):
         """Load a LoRA adapter: only metadata is sent; weights arrive via NCCL broadcast over ``group_name``.
         With ``upsert``, the already-loaded ``lora_name`` is overwritten in place (no unload/register)."""
@@ -491,6 +492,8 @@ class SGLangEngine(RayActor):
         }
         if added_tokens_config is not None:
             payload["added_tokens_config"] = added_tokens_config
+        if expected_checksums is not None:
+            payload["expected_checksums"] = expected_checksums
 
         return self._make_request(
             "load_lora_adapter_from_distributed",

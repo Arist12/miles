@@ -1,4 +1,5 @@
 import dataclasses
+import hashlib
 import inspect
 import logging
 import re
@@ -16,6 +17,16 @@ from miles.backends.training_utils.parallel import get_parallel_state
 from miles.utils.types import ParamInfo
 
 logger = logging.getLogger(__name__)
+
+
+def lora_source_checksums(named_tensors: Sequence[tuple[str, torch.Tensor]]) -> dict[str, str]:
+    """Per-tensor sha256 of the adapter as sent; SGLang hashes what it received the same way."""
+    return {
+        name: hashlib.sha256(
+            tensor.detach().cpu().contiguous().flatten().view(torch.uint8).numpy().tobytes()
+        ).hexdigest()
+        for name, tensor in named_tensors
+    }
 
 
 @dataclasses.dataclass(frozen=True)

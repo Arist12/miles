@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import math
 import os
@@ -22,7 +21,13 @@ from miles.utils.distributed_utils import get_gloo_group
 from miles.utils.lora import LORA_ADAPTER_NAME
 
 from ..sglang import FlattenedTensorBucket, MultiprocessingSerializer
-from .common import _check_weight_sync_results, begin_weight_update, end_weight_update, weight_update_selector
+from .common import (
+    _check_weight_sync_results,
+    begin_weight_update,
+    end_weight_update,
+    lora_source_checksums,
+    weight_update_selector,
+)
 from .hf_weight_iterator_base import HfWeightIteratorBase
 
 from .update_weight_from_distributed.broadcast import (
@@ -511,14 +516,7 @@ def _send_to_colocated_engine(
             except Exception as _unload_err:
                 logger.debug("lora unload before load skipped: %s", _unload_err)
 
-            expected_checksums = None
-            if check_equal:
-                expected_checksums = {
-                    n: hashlib.sha256(
-                        t.detach().cpu().contiguous().flatten().view(torch.uint8).numpy().tobytes()
-                    ).hexdigest()
-                    for n, t in hf_named_tensors
-                }
+            expected_checksums = lora_source_checksums(hf_named_tensors) if check_equal else None
 
             refs.append(
                 ipc_engine.load_lora_adapter_from_tensors.remote(

@@ -14,8 +14,22 @@ from miles.backends.training_utils.parallel import get_parallel_state
 from miles.utils.distributed_utils import init_process_group
 
 from miles.utils.lora import LORA_ADAPTER_NAME
-from ..common import _check_weight_sync_results
+from ..common import _check_weight_sync_results, lora_source_checksums
 from .mixin import DistBucketedWeightUpdateMixin
+
+
+def _require_checksum_acknowledgement(results: list) -> None:
+    """An SGLang build without the check ignores the manifest and still reports success."""
+    for result in results:
+        verified = (
+            result.get("checksums_verified", False)
+            if isinstance(result, Mapping)
+            else getattr(result, "checksums_verified", False)
+        )
+        if not verified:
+            raise RuntimeError(
+                "--check-lora-weight-equal requires an SGLang build that verifies distributed LoRA checksums"
+            )
 
 
 class UpdateWeightFromDistributed(DistBucketedWeightUpdateMixin):
@@ -138,6 +152,8 @@ class UpdateWeightFromDistributed(DistBucketedWeightUpdateMixin):
         names = [name for name, _ in named_tensors]
         dtypes = [param.dtype for _, param in named_tensors]
         shapes = [list(param.shape) for _, param in named_tensors]
+        check_equal = self.args.check_lora_weight_equal
+        expected_checksums = lora_source_checksums(named_tensors) if check_equal else None
 
         refs = [
             engine.load_lora_adapter_from_distributed.remote(
@@ -147,6 +163,7 @@ class UpdateWeightFromDistributed(DistBucketedWeightUpdateMixin):
                 dtypes=dtypes,
                 shapes=shapes,
                 group_name=self._group_name,
+                expected_checksums=expected_checksums,
             )
             for engine in self.rollout_engines
         ]
@@ -159,7 +176,10 @@ class UpdateWeightFromDistributed(DistBucketedWeightUpdateMixin):
         for handle in handles:
             handle.wait()
 
-        _check_weight_sync_results(ray.get(refs), is_lora=True)
+        results = ray.get(refs)
+        _check_weight_sync_results(results, is_lora=True)
+        if check_equal:
+            _require_checksum_acknowledgement(results)
 
     def _update_multi_lora_weight_implementation(
         self,

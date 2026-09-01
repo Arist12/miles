@@ -112,7 +112,6 @@ class UpdateWeightFromTensor:
         if self.is_lora:
             self._lora_config = build_lora_sync_config(args)
             self._lora_loaded = False
-            self._lora_base_synced = False
 
         self._mm_tower_cache: list[tuple[str, torch.Tensor]] | None = None
 
@@ -242,14 +241,16 @@ class UpdateWeightFromTensor:
 
         rank = dist.get_rank()
 
-        # TODO: implement lora weight checker
         colocate_base_persistent = getattr(self.args, "colocate", False) and not getattr(
             self.args, "offload_rollout", True
+        )
+        checker_needs_base_restore = (
+            self.is_lora and getattr(self.args, "check_weight_update_equal", False) and self.weight_version == 1
         )
         skip_base_sync = (
             self.is_lora
             and (self.use_distribute or lora_base_cpu_backup_enabled(self.args) or colocate_base_persistent)
-            and not getattr(self.args, "check_weight_update_equal", False)
+            and not checker_needs_base_restore
         )
 
         if rank == 0:
@@ -307,9 +308,6 @@ class UpdateWeightFromTensor:
             del accumulated_named_tensors
             torch.cuda.ipc_collect()
             torch.cuda.empty_cache()
-
-            if not self._lora_base_synced:
-                self._lora_base_synced = True
 
         dist.barrier(group=get_gloo_group())
 

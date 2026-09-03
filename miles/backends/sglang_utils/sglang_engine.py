@@ -15,16 +15,12 @@ from sglang.srt.server_args import ServerArgs
 from sglang.srt.utils import kill_process_tree
 from urllib3.exceptions import NewConnectionError
 
-from miles.backends.megatron_utils.lora_utils import (
-    convert_target_modules_to_hf,
-    lora_base_cpu_backup_enabled,
-    sglang_lora_target_all_sentinel,
-)
+from miles.backends.megatron_utils.lora_utils import convert_target_modules_to_hf, sglang_lora_target_all_sentinel
 from miles.ray.ray_actor import RayActor
 from miles.ray.rollout.sglang_server_actor import SGLangServerActor
 from miles.utils.env_report import collect_and_print_node_env_report
 from miles.utils.http_utils import get_host_info
-from miles.utils.lora import LORA_ADAPTER_NAME, lora_rollout_enabled
+from miles.utils.lora import LORA_ADAPTER_NAME, lora_base_cpu_backup_enabled, lora_rollout_enabled
 from miles.utils.multi_lora import is_multi_lora_enabled
 
 logger = logging.getLogger(__name__)

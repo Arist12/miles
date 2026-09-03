@@ -9,15 +9,20 @@ import torch
 import torch.distributed as dist
 from ray import ObjectRef
 from ray.actor import ActorHandle
+from sglang.srt.utils import MultiprocessingSerializer
 
-from miles.backends.megatron_utils.lora_utils import lora_base_cpu_backup_enabled
 from miles.backends.training_utils.parallel import ParallelState
 from miles.backends.training_utils.weight_update.hf_weight_iterator import WeightUpdatePlacement
 from miles.backends.training_utils.weight_update.protocol import WeightTransferProtocol
 from miles.backends.training_utils.weight_update.session import check_weight_sync_results
+from miles.utils.lora import lora_base_cpu_backup_enabled
 
-from ..sglang import FlattenedTensorBucket, MultiprocessingSerializer
-from .update_weight_from_distributed.broadcast import (
+try:
+    from sglang.srt.weight_sync.tensor_bucket import FlattenedTensorBucket  # type: ignore[import]
+except ImportError:
+    from sglang.srt.model_executor.model_runner import FlattenedTensorBucket  # type: ignore[import]
+
+from .broadcast import (
     connect_rollout_engines_from_distributed,
     disconnect_rollout_engines_from_distributed,
     update_weights_from_distributed,

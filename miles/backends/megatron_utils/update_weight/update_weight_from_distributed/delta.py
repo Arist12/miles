@@ -20,11 +20,11 @@ from ray.actor import ActorHandle
 from tqdm import tqdm
 
 from miles.backends.training_utils.parallel import get_parallel_state
+from miles.backends.training_utils.weight_update.session import check_weight_sync_results
 from miles.backends.training_utils.weight_update.utils import get_data_replica_rank_and_size
 from miles.utils.disk_delta import NUM_WORKERS, checksum, make_tensor_reader, overwrite_encode
 from miles.utils.distributed_utils import get_gloo_group
 
-from ..common import _check_weight_sync_results
 from .mixin import DistBucketedWeightUpdateMixin
 
 logger = logging.getLogger(__name__)
@@ -224,7 +224,7 @@ class UpdateWeightFromDiskDelta(DistBucketedWeightUpdateMixin):
             raise error
 
         if dist.get_rank() == 0:
-            _check_weight_sync_results(ray.get(pulls), is_lora=False)
+            check_weight_sync_results(ray.get(pulls), is_lora=False)
             if self.args.check_weight_update_equal:
                 # The weights checker resets engine tensors at startup and compares after the
                 # first sync, expecting it to rewrite every tensor. The baseline publishes
@@ -239,7 +239,7 @@ class UpdateWeightFromDiskDelta(DistBucketedWeightUpdateMixin):
                         for engine in self.rollout_engines
                     ]
                 )
-                _check_weight_sync_results(results, is_lora=False)
+                check_weight_sync_results(results, is_lora=False)
             logger.info(
                 "[disk delta] captured baseline snapshot of %d tensors from %s",
                 len(self._snapshot),
@@ -327,7 +327,7 @@ class UpdateWeightFromDiskDelta(DistBucketedWeightUpdateMixin):
         dist.barrier(group=get_gloo_group())
         if dist.get_rank() == 0:
             pulls = ray.get([engine.pull_weights.remote(self.weight_version) for engine in self.rollout_engines])
-            _check_weight_sync_results(pulls, is_lora=False)
+            check_weight_sync_results(pulls, is_lora=False)
             mode = self.args.pause_generation_mode
             ray.get([engine.pause_generation.remote(mode=mode) for engine in self.rollout_engines])
             if mode != "in_place":
@@ -341,7 +341,7 @@ class UpdateWeightFromDiskDelta(DistBucketedWeightUpdateMixin):
                     for engine in self.rollout_engines
                 ]
             )
-            _check_weight_sync_results(results, is_lora=False)
+            check_weight_sync_results(results, is_lora=False)
             ray.get([engine.continue_generation.remote() for engine in self.rollout_engines])
         dist.barrier(group=get_gloo_group())
 

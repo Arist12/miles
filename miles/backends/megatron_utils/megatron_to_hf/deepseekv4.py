@@ -2,47 +2,6 @@ import re
 
 import torch
 
-from ..update_weight.common import AtomicUpdateGroup
-
-
-def get_deepseek_v4_atomic_update_groups():
-    return [
-        AtomicUpdateGroup(key, suffixes)
-        for key, suffixes in [
-            ("wqkv_a", (".self_attention.linear_q_down_proj.weight", ".self_attention.linear_kv_proj.weight")),
-            (
-                "self_attention_hc_alphas",
-                (
-                    ".self_attention_hyper_connection.alpha_pre",
-                    ".self_attention_hyper_connection.alpha_post",
-                    ".self_attention_hyper_connection.alpha_res",
-                ),
-            ),
-            (
-                "mlp_hc_alphas",
-                (
-                    ".mlp_hyper_connection.alpha_pre",
-                    ".mlp_hyper_connection.alpha_post",
-                    ".mlp_hyper_connection.alpha_res",
-                ),
-            ),
-            (
-                "compressor_wkv_gate",
-                (
-                    ".self_attention.core_attention.compressor.linear_wkv.weight",
-                    ".self_attention.core_attention.compressor.linear_wgate.weight",
-                ),
-            ),
-            (
-                "indexer_compressor_wkv_gate",
-                (
-                    ".self_attention.core_attention.indexer.compressor.linear_wkv.weight",
-                    ".self_attention.core_attention.indexer.compressor.linear_wgate.weight",
-                ),
-            ),
-        ]
-    ]
-
 
 _PENDING_ALPHAS: dict[str, dict[str, torch.Tensor]] = {}
 

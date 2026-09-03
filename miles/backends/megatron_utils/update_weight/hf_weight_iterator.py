@@ -1,6 +1,7 @@
 """Megatron implementations' shared base and factory for the backend-neutral
 HF weight iterator API."""
 
+import logging
 import math
 from abc import abstractmethod
 from argparse import Namespace
@@ -8,6 +9,7 @@ from collections.abc import Sequence
 
 import torch
 import torch.distributed as dist
+from megatron.core.utils import unwrap_model
 
 from miles.backends.training_utils.parallel import get_parallel_state
 from miles.backends.training_utils.weight_update.atomic_groups import get_hf_atomic_update_groups
@@ -18,8 +20,17 @@ from miles.backends.training_utils.weight_update.hf_weight_iterator import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 class MegatronHfWeightIteratorBase(HfWeightIteratorBase):
     forced_placement = WeightUpdatePlacement(gather_pp=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        trainer_has_mtp = bool(unwrap_model(self.model)[0].config.mtp_num_layers)
+        if self.args.sglang_speculative_algorithm and not trainer_has_mtp:
+            self.weight_update_selector = "target"
 
     def _hf_atomic_update_groups(self):
         return get_hf_atomic_update_groups(self.model_name, q_lora_rank=self.args.q_lora_rank)
@@ -95,3 +106,46 @@ def _gather_pp_full_adapter(
                 merged[n] = flat[off : off + k].view(shape)
                 off += k
     return sorted(merged.items())
+
+
+_MM_TOWER_CACHE: list[tuple[str, "torch.Tensor"]] | None = None
+
+
+def _iter_mm_tower_units(args, *, materialize):
+    """Transitional: Inkling MM trains only the language model; the frozen
+    vision/audio towers are deliberately unregistered trainer-side (ckpt
+    compat) and exist only on pre_process ranks, so the boot checkpoint is the
+    uniform source every rank can re-send from (loads are idempotent).
+    Goes away when the towers become real megatron params (Kimi-style) or the
+    engine keeps them across offload."""
+    global _MM_TOWER_CACHE
+    if "inkling_mm_model_provider" not in (args.custom_model_provider_path or ""):
+        return
+    if not materialize:
+        return
+    if _MM_TOWER_CACHE is None:
+        import json
+        import os
+
+        from safetensors import safe_open
+
+        ckpt_dir = args.hf_checkpoint
+        with open(os.path.join(ckpt_dir, "model.safetensors.index.json"), encoding="utf-8") as f:
+            weight_map = json.load(f)["weight_map"]
+        tower_keys = sorted(
+            k
+            for k in weight_map
+            if ".visual." in f".{k}" or ".audio." in f".{k}" or k.startswith(("visual.", "audio."))
+        )
+        by_shard: dict[str, list[str]] = {}
+        for k in tower_keys:
+            by_shard.setdefault(weight_map[k], []).append(k)
+        cache = []
+        for shard, keys in by_shard.items():
+            with safe_open(os.path.join(ckpt_dir, shard), framework="pt", device="cpu") as f:
+                for k in keys:
+                    cache.append((k, f.get_tensor(k)))
+        logger.info("mm tower sync: caching %d tower tensors from %s", len(cache), ckpt_dir)
+        _MM_TOWER_CACHE = cache
+    for name, tensor in _MM_TOWER_CACHE:
+        yield [(name, tensor.to(torch.cuda.current_device()))]

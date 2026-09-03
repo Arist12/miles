@@ -12,7 +12,7 @@ from ray.actor import ActorHandle
 from miles.backends.training_utils.parallel import ParallelState
 from miles.backends.training_utils.weight_update.hf_weight_iterator import WeightUpdatePlacement
 from miles.backends.training_utils.weight_update.protocol import WeightTransferProtocol
-from miles.backends.training_utils.weight_update.session import check_weight_sync_results, weight_update_selector
+from miles.backends.training_utils.weight_update.session import check_weight_sync_results, unload_lora_adapter
 from miles.backends.training_utils.weight_update.utils import get_data_replica_rank_and_size
 from miles.utils.distributed_utils import init_process_group
 
@@ -28,7 +28,7 @@ class UpdateWeightFromDistributed(WeightTransferProtocol):
     def __init__(self, args: Namespace) -> None:
         super().__init__(args)
         self._model_update_groups = None
-        self._selector = weight_update_selector(args)
+        self._lora_loaded = False
 
     def connect(
         self,
@@ -38,12 +38,14 @@ class UpdateWeightFromDistributed(WeightTransferProtocol):
         engine_gpu_offsets: Sequence[int] | None,
         parallel_state: ParallelState,
         placement: WeightUpdatePlacement,
+        selector: str,
     ) -> None:
         """
         Create NCCL "miles-pp_{pp_rank}" if PP source (DP=TP=0). Lock prevents concurrent broadcasts.
         """
         self.rollout_engines = rollout_engines
         self._connection_stale = False
+        self._selector = selector
         self.rollout_engine_lock = rollout_engine_lock
         self._engine_gpu_counts = engine_gpu_counts
 
@@ -91,8 +93,12 @@ class UpdateWeightFromDistributed(WeightTransferProtocol):
         sharing the NCCL communicator is safe. No CUDA IPC, so it works across
         nodes: the engine allocates buffers from the metadata and broadcast-receives
         in order. ``upsert`` maps to the engine's in-place insert-or-overwrite RPC
-        (multi-LoRA slots); without it the caller unloads the old adapter first.
+        (multi-LoRA slots); without it a stale adapter is unloaded first, since the
+        engine rejects a duplicate name.
         """
+        if not upsert and self._lora_loaded:
+            unload_lora_adapter(self.rollout_engines, lora_name)
+
         names = [name for name, _ in named_tensors]
         dtypes = [param.dtype for _, param in named_tensors]
         shapes = [list(param.shape) for _, param in named_tensors]
@@ -121,6 +127,8 @@ class UpdateWeightFromDistributed(WeightTransferProtocol):
             handle.wait()
 
         check_weight_sync_results(ray.get(refs), is_lora=True)
+        if not upsert:
+            self._lora_loaded = True
 
 
 def connect_rollout_engines_from_distributed(

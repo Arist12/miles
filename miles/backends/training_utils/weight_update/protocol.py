@@ -23,6 +23,7 @@ class WeightTransferProtocol(ABC):
     required_placement: ClassVar[WeightUpdatePlacement] = WeightUpdatePlacement(gather_pp=False)
     supports_lora: ClassVar[bool] = False
     use_weight_update_session: ClassVar[bool] = True
+    needs_base_resync_for_lora: bool = False
 
     def __init__(self, args: Namespace) -> None:
         self.args = args
@@ -42,6 +43,7 @@ class WeightTransferProtocol(ABC):
         engine_gpu_offsets: Sequence[int] | None,
         parallel_state: ParallelState,
         placement: WeightUpdatePlacement,
+        selector: str,
     ) -> None: ...
 
     def begin_sync(
@@ -77,6 +79,10 @@ class WeightTransferProtocol(ABC):
 
 
 def get_weight_transfer_protocol(args: Namespace) -> WeightTransferProtocol:
+    if args.colocate and args.update_weight_transfer_mode != "rdt":
+        from miles.backends.megatron_utils.update_weight.update_weight_from_tensor import UpdateWeightFromTensor
+
+        return UpdateWeightFromTensor(args)
     if args.update_weight_transfer_mode == "broadcast":
         from miles.backends.megatron_utils.update_weight.update_weight_from_distributed.broadcast import (
             UpdateWeightFromDistributed,

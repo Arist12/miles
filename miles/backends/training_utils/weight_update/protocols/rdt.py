@@ -137,7 +137,6 @@ class UpdateWeightFromRDT(WeightTransferProtocol):
         self.rollout_engines = rollout_engines
         self._connection_stale = False
         self.is_sender = self.transfer_plan._gathered_dp_rank < self.transfer_plan._rollout_num_gpus
-        self.is_lora_sender = False
         self._staged_tensors.clear()
         self._tensor_update_pending.clear()
         self._shared_params_dict = {}
@@ -323,7 +322,7 @@ class UpdateWeightFromRDT(WeightTransferProtocol):
             self._tensor_update_pending.pop(param_name, None)
         return ready
 
-    def send_bucket(self, converted_named_tensors: list[tuple[str, torch.Tensor]], weight_version: int) -> None:
+    def send_bucket(self, converted_named_tensors: list[tuple[str, torch.Tensor]]) -> None:
         """Stage incoming tensors; once a param is complete, load it into each engine
         rank's bucket and pull via RDT.
 

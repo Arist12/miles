@@ -15,9 +15,10 @@ from miles.backends.training_utils.weight_update.hf_weight_iterator import Weigh
 class WeightTransferProtocol(ABC):
     """Moves HF-named weight buckets from training ranks to rollout engines.
 
-    ``connect`` makes every pairing decision once: it sets ``is_sender``,
-    ``is_lora_sender``, and whatever send channels the protocol needs. The
-    updater then drives ``send_bucket`` on sender ranks only.
+    ``connect`` makes every pairing decision once: it sets ``is_sender`` and
+    whatever send channels the protocol needs. The updater then drives
+    ``send_bucket`` on sender ranks only; streamed adapter tensors are ordinary
+    bucket entries (``{lora_name}:{hf_key}`` names).
     """
 
     required_placement: ClassVar[WeightUpdatePlacement] = WeightUpdatePlacement(gather_pp=False)
@@ -32,7 +33,6 @@ class WeightTransferProtocol(ABC):
         self.is_sender: bool | None = None
         self.group_name = "miles"
         self.update_weight_metrics: dict[str, float] = {}
-        self.is_lora_sender = False
 
     @abstractmethod
     def connect(
@@ -56,16 +56,13 @@ class WeightTransferProtocol(ABC):
         return True
 
     @abstractmethod
-    def send_bucket(self, bucket: list[tuple[str, torch.Tensor]], weight_version: int) -> None: ...
+    def send_bucket(self, bucket: list[tuple[str, torch.Tensor]]) -> None: ...
 
     def after_base_weights(self) -> None:  # noqa: B027 — optional hook
         """Hook after the base-weight stream completes (e.g. await in-flight writes)."""
 
     def finalize(self, weight_version: int) -> None:  # noqa: B027 — optional hook
         """Hook after all sends (e.g. publish + engine reload)."""
-
-    def send_adapter(self, named_tensors, *, lora_name: str, lora_config: dict, upsert: bool) -> None:
-        raise NotImplementedError(f"{type(self).__name__} does not support LoRA weight sync")
 
     def is_fresh(self) -> bool:
         return self.rollout_engines is not None and not self._connection_stale

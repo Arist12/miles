@@ -116,7 +116,6 @@ class UpdateWeightFromDiskDelta(WeightTransferProtocol):
         self.group_name = "miles-disk-delta"
         replica_rank, _ = get_data_replica_rank_and_size(parallel_state, placement)
         self.is_sender = replica_rank == 0
-        self.is_lora_sender = self.is_sender and (placement.gather_pp or parallel_state.pp.rank == 0)
 
     def begin_sync(self, weight_version: int, iter_buckets) -> bool:
         # The first call only captures the baseline snapshot the next sync diffs against.
@@ -127,7 +126,7 @@ class UpdateWeightFromDiskDelta(WeightTransferProtocol):
         self._begin_encode(weight_version)
         return True
 
-    def send_bucket(self, bucket: list[tuple[str, torch.Tensor]], weight_version: int) -> None:
+    def send_bucket(self, bucket: list[tuple[str, torch.Tensor]]) -> None:
         """Submit each tensor of the bucket to the diff/compress pool (pipelined with the gather)."""
         for name, tensor in bucket:
             flat = tensor.detach().contiguous().view(torch.uint8).reshape(-1)

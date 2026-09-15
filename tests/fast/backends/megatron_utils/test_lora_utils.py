@@ -21,6 +21,7 @@ from miles.backends.megatron_utils.lora_utils import (
     convert_target_modules_to_hf,
     convert_target_modules_to_megatron,
     is_lora_enabled,
+    load_lora_adapter,
     parse_exclude_modules,
     save_lora_checkpoint,
 )
@@ -469,4 +470,51 @@ class TestLoadTrainingState:
 
         assert lora_utils._load_training_state(tmp_path, optimizer, scheduler) == 3
         assert optimizer_loads == [{"step": 7}]
+        assert scheduler_loads == [{"lr": 0.5}]
+
+
+class TestLoadTrainingStateOptimizerGate:
+    """--no-load-optim must keep the fresh optimizer without losing the step or the LR schedule."""
+
+    @staticmethod
+    def _recorder():
+        loaded = []
+        return loaded, SimpleNamespace(load_state_dict=loaded.append)
+
+    @staticmethod
+    def _write_training_state(tmp_path):
+        torch.save(
+            {"iteration": 11, "optimizer": {"step": 7}, "opt_param_scheduler": {"lr": 0.5}},
+            tmp_path / "training_state_rank0.pt",
+        )
+
+    def test_no_load_optim_skips_the_optimizer_and_keeps_the_rest(self, tmp_path):
+        self._write_training_state(tmp_path)
+        optimizer_loads, optimizer = self._recorder()
+        scheduler_loads, scheduler = self._recorder()
+
+        assert lora_utils._load_training_state(tmp_path, optimizer, scheduler, load_optimizer=False) == 11
+        assert optimizer_loads == []
+        assert scheduler_loads == [{"lr": 0.5}]
+
+    def test_load_lora_adapter_forwards_the_flag(self, tmp_path, monkeypatch):
+        rank0 = SimpleNamespace(rank=0)
+        monkeypatch.setattr(lora_utils, "get_parallel_state", lambda: SimpleNamespace(tp=rank0, pp=rank0))
+        name = "layers.0.self_attention.lora_A.weight"
+        torch.save({name: torch.ones(2)}, tmp_path / "adapter_megatron_rank0.pt")
+        self._write_training_state(tmp_path)
+        model = [SimpleNamespace(named_parameters=lambda: [(name, torch.nn.Parameter(torch.zeros(2)))])]
+        optimizer_loads, optimizer = self._recorder()
+        scheduler_loads, scheduler = self._recorder()
+
+        loaded, iteration = load_lora_adapter(
+            model,
+            str(tmp_path),
+            optimizer=optimizer,
+            opt_param_scheduler=scheduler,
+            load_optimizer=False,
+        )
+
+        assert (loaded, iteration) == (True, 11)
+        assert optimizer_loads == []
         assert scheduler_loads == [{"lr": 0.5}]

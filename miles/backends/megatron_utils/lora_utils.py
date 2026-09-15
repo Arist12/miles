@@ -519,6 +519,7 @@ def load_lora_adapter(
     *,
     optimizer: Any | None = None,
     opt_param_scheduler: Any | None = None,
+    load_optimizer: bool = True,
 ) -> tuple[bool, int | None]:
     """Load LoRA adapter weights from a saved checkpoint into the model.
 
@@ -536,6 +537,8 @@ def load_lora_adapter(
         adapter_path: Path to the adapter checkpoint directory.
         optimizer: If provided, restore optimizer state for training resume.
         opt_param_scheduler: If provided, restore LR scheduler state.
+        load_optimizer: False (``--no-load-optim``) keeps the freshly initialized
+            optimizer while still restoring the iteration and the LR scheduler.
 
     Returns:
         ``(loaded, iteration)`` — *loaded* is True if adapter weights were
@@ -568,7 +571,7 @@ def load_lora_adapter(
                     loaded += 1
         logger.info(f"Loaded {loaded} adapter tensors from Megatron-native checkpoint: {native_path}")
 
-        iteration = _load_training_state(adapter_dir, optimizer, opt_param_scheduler)
+        iteration = _load_training_state(adapter_dir, optimizer, opt_param_scheduler, load_optimizer)
         return True, iteration
 
     # ---- HF PEFT format (future work) ----
@@ -589,6 +592,7 @@ def _load_training_state(
     adapter_dir: Path,
     optimizer: Any | None,
     opt_param_scheduler: Any | None,
+    load_optimizer: bool = True,
 ) -> int | None:
     """Restore optimizer/scheduler state saved alongside a LoRA adapter checkpoint."""
     if optimizer is None:
@@ -603,7 +607,9 @@ def _load_training_state(
     # param group metadata), so full unpickling is required here.
     training_state = torch.load(state_path, map_location="cpu", weights_only=False)
 
-    if training_state.get("optimizer") is not None:
+    if not load_optimizer:
+        logger.info("--no-load-optim: keeping the freshly initialized optimizer")
+    elif training_state.get("optimizer") is not None:
         optimizer.load_state_dict(training_state["optimizer"])
         logger.info("Restored optimizer state from LoRA checkpoint")
 

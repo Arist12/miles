@@ -7,7 +7,7 @@ import pytest
 import torch
 from megatron.core.optimizer.distrib_optimizer import DistributedOptimizer
 
-import miles.backends.megatron_utils.lora_utils as lora_utils
+import miles.backends.megatron_utils.lora.utils as lora_utils
 
 
 class _Child(DistributedOptimizer):

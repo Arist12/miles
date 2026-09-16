@@ -106,25 +106,26 @@ class TestLoadTrainingStateScheduler:
     def test_scheduler_is_restored_regardless_of_no_load_optim(self, tmp_path, no_load_optim):
         import torch
 
-        from miles.backends.megatron_utils.lora_utils import _load_training_state
+        from miles.backends.megatron_utils.lora.utils import _load_training_state
 
         self._write_state(tmp_path, torch)
-        args = Namespace(finetune=False, no_load_optim=no_load_optim, lora_scheduler_loaded=False)
+        args = Namespace(finetune=False, lora_scheduler_loaded=False)
         scheduler = MagicMock()
 
-        iteration = _load_training_state(tmp_path, args, MagicMock(), scheduler)
+        iteration = _load_training_state(tmp_path, MagicMock(), scheduler, load_optimizer=not no_load_optim, args=args)
 
         assert iteration == 3
         scheduler.load_state_dict.assert_called_once_with({"num_steps": 256})
         assert args.lora_scheduler_loaded is True
 
-    def test_missing_args_keeps_load_weight_only(self, tmp_path):
+    def test_non_resume_adapter_keeps_load_weight_only(self, tmp_path):
         import torch
 
-        from miles.backends.megatron_utils.lora_utils import _load_training_state
+        from miles.backends.megatron_utils.lora.utils import _load_training_state
 
         self._write_state(tmp_path, torch)
+        args = Namespace(finetune=False, lora_training_state_resume_enabled=False)
         scheduler = MagicMock()
 
-        assert _load_training_state(tmp_path, None, MagicMock(), scheduler) is None
+        assert _load_training_state(tmp_path, MagicMock(), scheduler, args=args) is None
         scheduler.load_state_dict.assert_not_called()

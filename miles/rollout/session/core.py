@@ -19,7 +19,7 @@ from miles.rollout.generate_utils.sample_utils import merge_samples
 from miles.rollout.session.config import SessionServerConfig
 from miles.rollout.session.errors import SessionNotFoundError, TokenizationError, UpstreamResponseError
 from miles.rollout.session.linear_trajectory import SessionRegistry
-from miles.rollout.session.request_args import parse_chat_request
+from miles.rollout.session.request_args import filter_turn_args, parse_chat_request
 from miles.rollout.session.samples.codec import encode_samples
 from miles.rollout.session.samples.merge import (
     compute_samples_from_openai_records,
@@ -249,6 +249,7 @@ class SessionCore:
             metadata["tito_session_mismatch"] = mismatch
         metadata["accumulated_token_ids"] = session.token_ids
         metadata["max_trim_tokens"] = self.registry.tito_tokenizer.max_trim_tokens
+        metadata["turn_args"] = filter_turn_args(session.turn_args)
         return metadata
 
     async def get_session(self, session_id: str) -> Response:
@@ -386,6 +387,7 @@ class SessionCore:
                 prompt_token_ids=prompt_token_ids,
                 completion_token_ids=completion_token_ids,
                 max_trim_tokens=self.registry.tito_tokenizer.max_trim_tokens,
+                turn_args=request_body,
             )
 
             record = SessionRecord(

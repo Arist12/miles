@@ -68,6 +68,7 @@ def _set_rocm_environment() -> None:
     os.environ.setdefault("RAY_EXPERIMENTAL_NOSET_CUDA_VISIBLE_DEVICES", "1")
     if hip_visible_devices := os.environ.get("HIP_VISIBLE_DEVICES"):
         os.environ["CUDA_VISIBLE_DEVICES"] = hip_visible_devices
+    # Avoid execute_train's NVIDIA topology probe and disable unsupported NVLink SHARP.
     os.environ.setdefault("NCCL_NVLS_ENABLE", "0")
 
 
@@ -154,7 +155,7 @@ def _execute(args: ScriptArgs) -> None:
         f"--sglang-mem-fraction-static {args.sglang_mem_fraction_static} "
         "--sglang-dtype bfloat16 "
         "--sglang-decode-log-interval 1000 "
-        "--sglang-max-lora-rank 32 "
+        f"--sglang-max-lora-rank {args.lora_rank} "
         "--sglang-lora-backend triton "
         "--sglang-moe-runner-backend triton "
         "--sglang-attention-backend triton "

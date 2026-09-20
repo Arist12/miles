@@ -71,6 +71,7 @@ _HARDWARE_A_RECORDING_REPRESENTS = {
     "scripts/amd/run_gpt_oss_20b_lora.py": "MI355X",
     "scripts/amd/run_qwen3_30b_a3b.py": "MI355X",
     "scripts/amd/run_qwen3_4b.py": "MI355X",
+    "scripts/amd/run_qwen3_4b_lora.py": "MI355X",
     "scripts/run_deepseek_v32.py": "B200",
     "scripts/run_glm45_355b_a32b.py": "GB200",
     "scripts/run_joy_ai_llm_flash.py": "B200",

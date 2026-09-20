@@ -254,6 +254,17 @@ ENV HIP_FORCE_DEV_KERNARG=1
 ENV HSA_ENABLE_IPC_MODE_LEGACY=1
 ENV HSA_NO_SCRATCH_RECLAIM=1
 ENV SGLANG_USE_AITER=1
+# AITER builds its CK-tile attention kernels with a TRUNCATING FP32->BF16 store:
+# aiter/jit/optCompilerConfig.json passes -DCK_TILE_FLOAT_TO_BFLOAT16_DEFAULT and defaults
+# it to 2 (ck_tile bf16_rounding_mode::truncate) for every mha module. Truncation can only
+# move a magnitude toward zero, so it biases attention output rather than adding noise, and
+# training and rollout disagree wherever they land on different kernels. 0 is round-to-
+# nearest-even, which is what the ASM paths and the training side already use.
+# gfx942 feels this most: aiter/ops/mha.py tries a gfx950-only OPUS branch and then
+# `can_impl_fmha_v3_fwd() and seqlen_q > 128` before falling through to the CK-tile kernel,
+# so on MI300X every decode step and every short extend chunk takes the truncating path.
+ARG CK_TILE_FLOAT_TO_BFLOAT16_DEFAULT=0
+ENV CK_TILE_FLOAT_TO_BFLOAT16_DEFAULT=${CK_TILE_FLOAT_TO_BFLOAT16_DEFAULT}
 ENV SGLANG_ALLOW_OVERWRITE_LONGER_CONTEXT_LEN=1
 ENV SGLANG_MOE_PADDING=1
 ENV SGLANG_SET_CPU_AFFINITY=1
@@ -263,6 +274,19 @@ ENV TORCHINDUCTOR_MAX_AUTOTUNE=1
 ENV TORCHINDUCTOR_MAX_AUTOTUNE_POINTWISE=1
 # Keep GPUs visible to Ray num_gpus=0 coordinators so Megatron device checks do not crash.
 ENV RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+
+# The macro above is read by the compiler, not at import, so an AITER module that the base
+# image already compiled keeps whatever rounding it was built with and the ENV is a silent
+# no-op for it. `rocm/sgl-dev` ships the CK-tile mha kernels prebuilt, so drop them here and
+# let the first attention call rebuild them under this environment. AITER_REBUILD does not
+# cover these: the mha modules go through a `gen_func`, which short-circuits that branch in
+# aiter/jit/core.py. Only the CK-tile mha family is removed -- the ASM v3 and paged-attention
+# modules do not take their rounding from this macro and stay prebuilt.
+RUN AITER_JIT="$(python3 -c 'import aiter, os; print(os.path.join(os.path.dirname(aiter.__file__), "jit"))')" \
+    && rm -fv "$AITER_JIT"/mha_fwd_*.so "$AITER_JIT"/mha_varlen_fwd_*.so \
+              "$AITER_JIT"/mha_batch_prefill_*.so \
+    && rm -rf "$AITER_JIT"/build/mha_fwd_* "$AITER_JIT"/build/mha_varlen_fwd_* \
+              "$AITER_JIT"/build/mha_batch_prefill_*
 
 RUN rm -rf /root/.cache/pip /root/TransformerEngine /tmp/amd_patch
 

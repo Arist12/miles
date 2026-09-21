@@ -2870,7 +2870,8 @@ def _resolve_checkpoint_resume(args) -> None:
     adapter_path = getattr(args, "lora_adapter_path", None)
     checkpoint_root = _lora_checkpoint_root(adapter_path)
     args.rollout_data_load = checkpoint_root if getattr(args, "rollout_global_dataset", True) else None
-    args.lora_training_state_resume_enabled = adapter_path is None or args.rollout_data_load is not None
+    resuming = adapter_path is not None and args.rollout_data_load is not None
+    args.lora_training_state_resume_enabled = adapter_path is None or resuming
     if not args.lora_training_state_resume_enabled:
         if checkpoint_root is None:
             logger.warning(
@@ -2894,7 +2895,7 @@ def _resolve_checkpoint_resume(args) -> None:
         # weights (loaded via the HF bridge) instead of asserting in load_checkpoint.
         # Mirrors the non-bridge branch below.
         args.load = args.ref_load or args.hf_checkpoint
-        if args.start_rollout_id is None and adapter_path is None:
+        if args.start_rollout_id is None and not resuming:
             args.start_rollout_id = 0
 
 

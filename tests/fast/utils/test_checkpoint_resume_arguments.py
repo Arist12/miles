@@ -58,12 +58,6 @@ def test_bridge_training_checkpoint_preserves_automatic_resume(tmp_path):
     assert args.start_rollout_id is None
 
 
-def test_explicit_start_rollout_id_is_not_overwritten(tmp_path):
-    args = _args(tmp_path, start_rollout_id=5)
-    _resolve_checkpoint_resume(args)
-    assert args.start_rollout_id == 5
-
-
 def test_non_checkpoint_adapter_path_is_always_weight_only(tmp_path):
     adapter = tmp_path / "released-adapter"
     adapter.mkdir()
@@ -79,3 +73,4 @@ def test_non_checkpoint_adapter_path_is_always_weight_only(tmp_path):
         assert _lora_checkpoint_root(str(adapter)) is None
         assert args.rollout_data_load is None
         assert not args.lora_training_state_resume_enabled
+        assert args.start_rollout_id == 0

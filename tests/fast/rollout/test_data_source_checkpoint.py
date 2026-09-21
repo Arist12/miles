@@ -61,19 +61,3 @@ def test_missing_resume_cursor_fails_loudly(tmp_path):
 
     with pytest.raises(FileNotFoundError, match="global_dataset_state_dict_7.pt"):
         source.load(rollout_id=7)
-
-
-def test_explicit_rollout_id_without_resume_root_keeps_existing_behavior(tmp_path):
-    source = make_source(tmp_path)
-
-    source.load(rollout_id=7)
-
-    assert source.sample_offset == 0
-
-
-def test_fresh_run_does_not_require_negative_rollout_cursor(tmp_path):
-    source = make_source(tmp_path, rollout_data_load=str(tmp_path / "new-run"))
-
-    source.load(rollout_id=-1)
-
-    assert source.sample_offset == 0

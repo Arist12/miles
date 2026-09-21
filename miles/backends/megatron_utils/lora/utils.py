@@ -611,6 +611,8 @@ def _load_training_state(
     rank = dist.get_rank() if dist.is_initialized() else 0
     state_path = adapter_dir / f"training_state_rank{rank}.pt"
     if not state_path.exists():
+        if args is not None and getattr(args, "lora_training_state_resume_enabled", False):
+            raise FileNotFoundError(f"Expected training state for an exact resume: {state_path}")
         return None
 
     # Optimizer state dicts may contain non-tensor objects (e.g. step counts,

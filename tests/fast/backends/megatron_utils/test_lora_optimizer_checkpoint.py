@@ -28,9 +28,9 @@ class _Child(DistributedOptimizer):
         self.training_state = state_dict
 
 
-def _write_training_state(directory, optimizer_state={"step": 3}):
+def _write_training_state(directory, optimizer_state=None):
     torch.save(
-        {"iteration": 3, "optimizer": optimizer_state, "opt_param_scheduler": {"num_steps": 8}},
+        {"iteration": 3, "optimizer": optimizer_state or {"step": 3}, "opt_param_scheduler": {"num_steps": 8}},
         directory / "training_state_rank0.pt",
     )
 

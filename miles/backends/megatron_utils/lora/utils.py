@@ -465,7 +465,7 @@ def _load_optimizer_training_state_dict(optimizer: Any, state: Any) -> None:
 
     active = [
         (child, child_state)
-        for child, child_state in zip(optimizer.chained_optimizers, state)
+        for child, child_state in zip(optimizer.chained_optimizers, state, strict=True)
         if child_state is not None
     ]
     for child, child_state in active:

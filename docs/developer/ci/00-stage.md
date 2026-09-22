@@ -72,7 +72,7 @@ A test normally runs at its home stage. A [dispatch label](/developer/ci/01-labe
 
 Without a dispatch label nothing leaves its home stage, so scheduled and called runs are unaffected. Whatever stage actually executes a run is also the stage its performance baseline is keyed on, keeping the generations' numbers apart.
 
-**Dependency boundary.** CUDA stages start from dependencies baked into `radixark/miles`, reconcile Miles runtime dependencies from `requirements.txt`, update the SGLang and Megatron-LM checkouts to the selected refs, and expose all three source trees through `PYTHONPATH`; they do not rebuild or install the Miles, SGLang, or Megatron-LM source trees after the container starts. The hosted CPU stages install dependencies from `requirements.txt` and the fully pinned `tests/ci/requirements-ci-cpu.txt`, then expose the Miles, SGLang, and Megatron-LM source trees through `PYTHONPATH` without editable installs or inline package lists. The ROCm stage instead uses the SGLang and Megatron-LM versions baked into `rocm/sgl-dev`, unless the run names a ref for either.
+**Dependency boundary.** CUDA stages start from dependencies baked into `radixark/miles`, install CUDA test dependencies from `examples/multi_lora/requirements.txt`, override them with Miles runtime dependencies from `requirements.txt`, restore the image’s cuDNN pins, update the SGLang and Megatron-LM checkouts to the selected refs, and expose all three source trees through `PYTHONPATH`; they do not rebuild or install the Miles, SGLang, or Megatron-LM source trees after the container starts. The hosted CPU stages install dependencies from `requirements.txt` and the fully pinned `tests/ci/requirements-ci-cpu.txt`, then expose the Miles, SGLang, and Megatron-LM source trees through `PYTHONPATH` without editable installs or inline package lists. The ROCm stage instead uses the SGLang and Megatron-LM versions baked into `rocm/sgl-dev`, unless the run names a ref for either.
 
 CUDA and CPU dependency refs resolve in this order: explicit dispatch input or PR-body directive, committed `release-lock.json`, then the moving `sglang-miles` / `miles-main` branch heads. A called release run therefore checks out its requested Miles `ref` and consumes the lockfile on that ref unless an explicit override exists. ROCm checks out the requested Miles ref but keeps the dependencies baked into its image unless the run names a ref for one.
 
@@ -90,7 +90,7 @@ Weekly runs keep the same shards but set each GPU matrix's `max-parallel` to one
 
 `pr-test-rocm.yml` exposes `pull_request`, exact nightly and weekly crons, `workflow_dispatch`, and `workflow_call`. PR runs use the same low-trust merge-commit model as `pr-test.yml`. It runs `stage-c-4-gpu-mi350` through `_run-ci-rocm.yml` on two 4-GPU MI350 runners and splits tests into two `est_time`-balanced shards; weekly alone limits the matrix to one runner at a time. It runs no CPU tests.
 
-A called release run checks out the supplied Miles `ref` with `cadence=release` but resolves the same undated `rocm/sgl-dev:miles-rocm720-mi35x` image as the other automatic paths. SGLang and Megatron-LM remain baked into that image, so release ROCm is a smoke signal and manual dispatch exposes no dependency-ref inputs.
+A called release run checks out the supplied Miles `ref` with `cadence=release` but resolves the same undated `rocm/sgl-dev:miles-rocm720-mi35x` image as the other automatic paths. SGLang and Megatron-LM remain baked into that image, so release ROCm is a smoke signal.
 
 Only tests registered with `register_rocm_ci(suite="stage-c-4-gpu-mi350", ...)` run; the `nightly-` prefixed suites and CUDA registrations are not inherited. PR, nightly, weekly, and release runs consume the shared cadence and label policy: `run-ci-amd` selects the `amd`-labelled subset, other `run-ci-*` labels select matching subsets, nightly admits regular plus `nightly=True` registrations, and weekly or release selects every enabled registration.
 
@@ -102,7 +102,7 @@ An 8-GPU CUDA case needs a separate 4-GPU `test_amd_<name>.py` variant rather th
 
 Both runner containers can see all eight host GPUs through `/dev/dri`. Each runner restricts itself to four GPUs with `HIP_VISIBLE_DEVICES`, which `_run-ci-rocm.yml` forwards into the container.
 
-**External MI350 nightly.** Miles declares `nightly-stage-c-2-gpu-mi350`, `nightly-stage-c-4-gpu-mi350`, and `nightly-stage-c-8-gpu-mi350` in `CI_SUITES` for the external nightly, and keeps the unprefixed `stage-c-4-gpu-mi350` for its own `pr-test-rocm.yml`. The three prefixed suites are run by the external [`sgl-project/sglang` ROCm 7.2 nightly workflow](https://github.com/sgl-project/sglang/blob/main/.github/workflows/nightly-test-amd-miles-rocm720.yml).
+**External MI350 nightly.** Miles declares `nightly-stage-c-2-gpu-mi350`, `nightly-stage-c-4-gpu-mi350`, and `nightly-stage-c-8-gpu-mi350` in `CI_SUITES` for the external nightly, and keeps the unprefixed `stage-c-4-gpu-mi350` for its own `pr-test-rocm.yml`. The three prefixed suites are run by the external [`sgl-project/sglang` ROCm 10 nightly workflow](https://github.com/sgl-project/sglang/blob/main/.github/workflows/nightly-test-amd-miles-rocm10.yml).
 
 ## Assumptions
 

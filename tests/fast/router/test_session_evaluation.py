@@ -127,6 +127,10 @@ async def test_creation_selects_policy_and_defaults_to_training(env, body):
         b'{"evaluation": "false"}',
         b'{"evalution": true}',
         b'{"unexpected": 1}',
+        b'{"temperature": "0.6"}',
+        b'{"top_p": [0.9]}',
+        b'{"top_k": 20.5}',
+        b'{"top_k": true}',
     ],
 )
 async def test_invalid_creation_is_rejected_before_allocation(env, body, monkeypatch):
@@ -177,6 +181,75 @@ async def test_concurrent_train_and_eval_do_not_share_policy(env):
     await asyncio.gather(_chat(env, train, [USER]), _chat(env, evaluation, [USER]))
     assert sorted(request["return_routed_experts"] for request in env.backend.requests) == [False, True]
     assert sorted(request["return_indexer_topk"] for request in env.backend.requests) == [False, True]
+
+
+SAMPLING = {"temperature": 0.6, "top_p": 0.9, "top_k": 20}
+
+
+@pytest.mark.parametrize("evaluation", [False, True])
+async def test_creation_sampling_defaults_fill_only_omitted_fields(env, evaluation):
+    sid = await _create(env, json.dumps({**SAMPLING, "evaluation": evaluation}).encode())
+    await _chat(env, sid, [USER])
+    temperature = 0.1 if evaluation else SAMPLING["temperature"]
+    await _chat(env, sid, [USER, ASSISTANT, TOOL], temperature=temperature, top_p=None, top_k=-1)
+    omitted, explicit = env.backend.requests[-2:]
+    assert {key: omitted[key] for key in SAMPLING} == SAMPLING
+    assert {key: explicit[key] for key in SAMPLING} == {**SAMPLING, "temperature": temperature, "top_k": -1}
+
+
+@pytest.mark.parametrize("saved,requested", [(0.6, 0.1), (0.6, 0.0), (0.0, 0.6)])
+async def test_training_temperature_mismatch_is_rejected_before_forwarding(env, saved, requested):
+    sid = await _create(env, json.dumps({**SAMPLING, "temperature": saved}).encode())
+    turns = [[USER], [USER, ASSISTANT, TOOL], [USER, ASSISTANT, TOOL]]
+    for messages in turns:
+        request_count = len(env.backend.requests)
+        response = await env.client.post(
+            f"/sessions/{sid}/v1/chat/completions",
+            json={"messages": messages, "temperature": requested},
+        )
+        assert response.status_code == 400
+        assert response.json()["error"] == (
+            f"temperature={requested!r} does not match the training session temperature={saved!r}"
+        )
+        assert len(env.backend.requests) == request_count
+        await _chat(env, sid, messages, temperature=saved, top_p=0.5, top_k=-1)
+        wire = env.backend.requests[-1]
+        assert (wire["temperature"], wire["top_p"], wire["top_k"]) == (saved, 0.5, -1)
+
+
+async def test_training_null_temperature_uses_registered_value(env):
+    sid = await _create(env, json.dumps(SAMPLING).encode())
+    await _chat(env, sid, [USER], temperature=None)
+    assert env.backend.requests[-1]["temperature"] == SAMPLING["temperature"]
+
+
+async def test_creation_without_sampling_defaults_leaves_omitted_fields_unset(env):
+    sid = await _create(env)
+    await _chat(env, sid, [USER])
+    assert not set(SAMPLING) & set(env.backend.requests[-1])
+    await _chat(env, sid, [USER, ASSISTANT, TOOL], temperature=0.4)
+    assert env.backend.requests[-1]["temperature"] == 0.4
+
+
+async def test_an_integer_temperature_is_accepted_as_a_float_default(env):
+    sid = await _create(env, b'{"temperature": 0}')
+    await _chat(env, sid, [USER])
+    assert env.backend.requests[-1]["temperature"] == 0
+    assert "top_p" not in env.backend.requests[-1]
+
+
+async def test_an_integral_float_top_k_is_stored_as_an_int(env):
+    """An eval dataset YAML can spell top_k as 40.0; the engine must still receive an integer."""
+    sid = await _create(env, b'{"top_k": 40.0}')
+    await _chat(env, sid, [USER])
+    top_k = env.backend.requests[-1]["top_k"]
+    assert top_k == 40 and isinstance(top_k, int)
+
+
+async def test_concurrent_sessions_keep_their_own_sampling_defaults(env):
+    first, second = await asyncio.gather(_create(env, b'{"temperature": 0.2}'), _create(env, b'{"temperature": 0.8}'))
+    await asyncio.gather(_chat(env, first, [USER]), _chat(env, second, [USER]))
+    assert sorted(request["temperature"] for request in env.backend.requests) == [0.2, 0.8]
 
 
 @pytest.mark.parametrize("field", ["input_ids", "logprob_start_len", "lora_path"])

@@ -107,7 +107,10 @@ def setup_session_routes(app, backend, config: SessionServerConfig, *, use_addit
             params = CreateSessionRequest.model_validate_json(await request.body() or b"{}")
         except ValidationError as exc:
             return JSONResponse(status_code=400, content={"error": str(exc)})
-        return await core.create_session(evaluation=params.evaluation)
+        return await core.create_session(
+            evaluation=params.evaluation,
+            sampling_defaults=params.model_dump(exclude={"evaluation"}, exclude_none=True),
+        )
 
     @app.get("/sessions/{session_id}")
     async def get_session(session_id: str):

@@ -140,10 +140,10 @@ def load_checkpoint(ddp_model, optimizer, opt_param_scheduler, checkpointing_con
             loaded, iteration = load_lora_adapter(
                 ddp_model,
                 adapter_path,
-                args=args,
                 optimizer=optimizer,
                 opt_param_scheduler=opt_param_scheduler,
                 load_optimizer=not args.no_load_optim,
+                resume=getattr(args, "lora_resume_root", None) is not None,
             )
             if loaded:
                 logger.info(f"Successfully loaded LoRA adapter from {adapter_path}")

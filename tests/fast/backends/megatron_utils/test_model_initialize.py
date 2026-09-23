@@ -156,7 +156,7 @@ def _patch_initialize_side_effects(stack: ExitStack) -> None:
     "scheduler_resume_args",
     [
         {"use_checkpoint_opt_param_scheduler": True},
-        {"use_checkpoint_opt_param_scheduler": False, "lora_scheduler_loaded": True},
+        {"use_checkpoint_opt_param_scheduler": False, "lora_resume_root": "/run"},
     ],
     ids=["checkpoint", "lora-checkpoint"],
 )

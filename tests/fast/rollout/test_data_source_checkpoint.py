@@ -9,7 +9,7 @@ from miles.rollout.data_source import RolloutDataSource
 def make_source(tmp_path, **overrides):
     args = {
         "rollout_global_dataset": True,
-        "rollout_data_load": None,
+        "lora_resume_root": None,
         "load": str(tmp_path / "base-model"),
         "save": str(tmp_path / "run"),
         "rollout_shuffle": False,
@@ -43,7 +43,7 @@ def test_lora_resume_loads_dataset_cursor_from_adapter_run_root(tmp_path):
 
     source = make_source(
         tmp_path,
-        rollout_data_load=str(run_root),
+        lora_resume_root=str(run_root),
         load=str(tmp_path / "base-model"),
     )
 
@@ -57,7 +57,7 @@ def test_lora_resume_loads_dataset_cursor_from_adapter_run_root(tmp_path):
 
 
 def test_missing_resume_cursor_fails_loudly(tmp_path):
-    source = make_source(tmp_path, rollout_data_load=str(tmp_path / "missing-run"))
+    source = make_source(tmp_path, lora_resume_root=str(tmp_path / "missing-run"))
 
     with pytest.raises(FileNotFoundError, match="global_dataset_state_dict_7.pt"):
         source.load(rollout_id=7)

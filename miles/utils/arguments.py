@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -2859,43 +2860,32 @@ def _lora_checkpoint_root(adapter_path: str | None) -> str | None:
     if adapter_path is None:
         return None
     path = Path(adapter_path)
-    iteration = path.parent.name
-    if path.name != "adapter" or not iteration.startswith("iter_"):
+    if path.name != "adapter" or not re.fullmatch(r"iter_\d{7}", path.parent.name):
         return None
-    step = iteration.removeprefix("iter_")
-    return str(path.parent.parent) if len(step) == 7 and step.isdigit() else None
+    return str(path.parent.parent)
 
 
 def _resolve_checkpoint_resume(args) -> None:
-    adapter_path = getattr(args, "lora_adapter_path", None)
-    checkpoint_root = _lora_checkpoint_root(adapter_path)
-    args.rollout_data_load = checkpoint_root if getattr(args, "rollout_global_dataset", True) else None
-    resuming = adapter_path is not None and args.rollout_data_load is not None
-    args.lora_training_state_resume_enabled = adapter_path is None or resuming
-    if not args.lora_training_state_resume_enabled:
-        if checkpoint_root is None:
-            logger.warning(
-                "Cannot infer the dataset checkpoint root from --lora-adapter-path=%s; "
-                "loading adapter weights as a new-run warm start.",
-                adapter_path,
-            )
-        else:
-            logger.warning(
-                "Exact LoRA resume currently requires the built-in global dataset; "
-                "loading adapter weights as a new-run warm start."
-            )
+    # Resuming also restores the global-dataset cursor, which only the built-in data source saves.
+    resumable = args.rollout_global_dataset and not getattr(args, "finetune", False)
+    args.lora_resume_root = _lora_checkpoint_root(args.lora_adapter_path) if resumable else None
+    if args.lora_adapter_path is not None and args.lora_resume_root is None:
+        logger.warning(
+            "--lora-adapter-path=%s is not an iter_*/adapter checkpoint resumable with the built-in global "
+            "dataset; loading adapter weights as a new-run warm start.",
+            args.lora_adapter_path,
+        )
 
-    has_training_checkpoint = (
-        args.load is not None
-        and os.path.exists(args.load)
-        and os.path.exists(os.path.join(args.load, "latest_checkpointed_iteration.txt"))
-    )
-    if not has_training_checkpoint:
+    if (
+        args.load is None
+        or not os.path.exists(args.load)
+        or not os.path.exists(os.path.join(args.load, "latest_checkpointed_iteration.txt"))
+    ):
         # Fresh runs pass a not-yet-created `--load` dir; fall back to the reference
         # weights (loaded via the HF bridge) instead of asserting in load_checkpoint.
         # Mirrors the non-bridge branch below.
         args.load = args.ref_load or args.hf_checkpoint
-        if args.start_rollout_id is None and not resuming:
+        if args.lora_resume_root is None:
             args.start_rollout_id = 0
 
 

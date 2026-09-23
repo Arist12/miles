@@ -497,24 +497,36 @@ class TestLoadTrainingStateOptimizerGate:
         assert optimizer_loads == []
         assert scheduler_loads == [{"lr": 0.5}]
 
-    def test_load_lora_adapter_forwards_the_flag(self, tmp_path, monkeypatch):
+    def _load_adapter(self, tmp_path, monkeypatch, **kwargs):
         rank0 = SimpleNamespace(rank=0)
         monkeypatch.setattr(lora_utils, "get_parallel_state", lambda: SimpleNamespace(tp=rank0, pp=rank0))
         name = "layers.0.self_attention.lora_A.weight"
         torch.save({name: torch.ones(2)}, tmp_path / "adapter_megatron_rank0.pt")
-        self._write_training_state(tmp_path)
         model = [SimpleNamespace(named_parameters=lambda: [(name, torch.nn.Parameter(torch.zeros(2)))])]
         optimizer_loads, optimizer = self._recorder()
         scheduler_loads, scheduler = self._recorder()
+        result = load_lora_adapter(model, str(tmp_path), optimizer=optimizer, opt_param_scheduler=scheduler, **kwargs)
+        return result, optimizer_loads, scheduler_loads
 
-        loaded, iteration = load_lora_adapter(
-            model,
-            str(tmp_path),
-            optimizer=optimizer,
-            opt_param_scheduler=scheduler,
-            load_optimizer=False,
+    def test_load_lora_adapter_forwards_the_flag(self, tmp_path, monkeypatch):
+        self._write_training_state(tmp_path)
+
+        result, optimizer_loads, scheduler_loads = self._load_adapter(
+            tmp_path, monkeypatch, load_optimizer=False, resume=True
         )
 
-        assert (loaded, iteration) == (True, 11)
+        assert result == (True, 11)
         assert optimizer_loads == []
         assert scheduler_loads == [{"lr": 0.5}]
+
+    def test_weight_only_adapter_ignores_its_training_state(self, tmp_path, monkeypatch):
+        self._write_training_state(tmp_path)
+
+        result, optimizer_loads, scheduler_loads = self._load_adapter(tmp_path, monkeypatch)
+
+        assert result == (True, None)
+        assert optimizer_loads == scheduler_loads == []
+
+    def test_resume_without_training_state_fails(self, tmp_path, monkeypatch):
+        with pytest.raises(FileNotFoundError, match="training_state_rank0.pt"):
+            self._load_adapter(tmp_path, monkeypatch, resume=True)

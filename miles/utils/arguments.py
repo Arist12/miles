@@ -225,6 +225,19 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                 ),
             )
             parser.add_argument(
+                "--moe-ep-p2p-alltoall",
+                action="store_true",
+                default=False,
+                help=(
+                    "Megatron backend: serve the MoE expert-parallel all-to-all as an ordered ring of "
+                    "matched isend/irecv pairs, one peer at a time, on a dedicated communicator "
+                    "that is rebuilt after every colocate wake-up. Works around the RCCL 2.27.7 "
+                    "AllToAll kernel deadlocking on GLM-5.2's dispatch payload under colocate on "
+                    "ROCm. Slower than a native all-to-all; do not widen the per-peer batching, "
+                    "which deadlocked on real training splits."
+                ),
+            )
+            parser.add_argument(
                 "--stream-optimizer-state-to-disk",
                 action="store_true",
                 help=(

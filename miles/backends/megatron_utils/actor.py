@@ -52,6 +52,7 @@ from ..training_utils.loss import (
 )
 from ..training_utils.parallel import get_parallel_state
 from ..training_utils.replay_data import fill_replay_data, register_replay_list_sequential
+from . import ep_p2p_alltoall
 from .checkpoint import load_checkpoint
 from .ft.checkpoint_transfer import recv_ckpt
 from .ft.checkpoint_transfer import send_ckpt as _send_ckpt
@@ -318,6 +319,7 @@ class MegatronTrainRayActor(TrainRayActor):
         print_memory("before offload model")
         should_log_cpu_memory = is_first_replica_megatron_main_rank() and hasattr(self, "_last_rollout_id")
 
+        ep_p2p_alltoall.mark_transport_stale()
         destroy_process_groups()
 
         if self.args.rematerialize_param_from_master_weight and self.role == "actor":
@@ -359,6 +361,7 @@ class MegatronTrainRayActor(TrainRayActor):
         if not self._asleep:
             logger.info("wake_up() called while already resident; ensuring process groups only")
             reload_process_groups()
+            ep_p2p_alltoall.create_transport()
             return
         print_memory("before wake_up model")
 
@@ -371,6 +374,7 @@ class MegatronTrainRayActor(TrainRayActor):
 
         clear_memory()
         reload_process_groups()
+        ep_p2p_alltoall.create_transport()
         self._asleep = False
         print_memory("after wake_up model")
 
@@ -420,7 +424,10 @@ class MegatronTrainRayActor(TrainRayActor):
         store_prefix: str = "",
     ) -> dict[str, list[torch.Tensor]]:
 
-        with timer(f"{store_prefix}log_probs"):
+        # Activations need not survive a pause; under the ROCm P2P EP exchange they are
+        # kept out of the memory saver so no allocation waits on it mid-forward.
+        outside_region = self.args.offload_train and ep_p2p_alltoall.is_installed()
+        with timer(f"{store_prefix}log_probs"), torch_memory_saver.disable() if outside_region else nullcontext():
             return forward_only(
                 get_log_probs_and_entropy,
                 self.args,

@@ -3,7 +3,8 @@
 import logging
 import os
 from argparse import Namespace
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -424,82 +425,37 @@ def _optimizer_param_state_entries(optimizer: Any, directory: Path) -> list[tupl
     ]
 
 
-def _has_stub_child(optimizer: Any) -> bool:
-    children = getattr(optimizer, "chained_optimizers", None) or []
-    return any(getattr(child, "is_stub_optimizer", False) for child in children)
-
-
-def _optimizer_training_state_dict(optimizer: Any) -> Any:
-    """Keep Megatron's positional shape, with ``None`` where a stub child sits."""
-    if not _has_stub_child(optimizer):
-        return optimizer.state_dict()
-    return [
-        None if getattr(child, "is_stub_optimizer", False) else child.state_dict()
-        for child in optimizer.chained_optimizers
-    ]
-
-
-def _synchronize_active_optimizer_steps(children: list[Any]) -> None:
-    """Mirror Megatron's ``_synchronize_steps`` without dereferencing stub children."""
-    steps = {
-        param_group["step"]
-        for child in children
-        for param_group in child.optimizer.param_groups
-        if param_group["params"] and "step" in param_group
-    }
-    assert len(steps) <= 1, f"steps: {steps}"
-    step = steps.pop() if steps else None
-    for child in children:
-        for param_group in child.optimizer.param_groups:
-            if param_group["params"] and "step" in param_group:
-                param_group["step"] = step
-
-
-def _load_optimizer_training_state_dict(optimizer: Any, state: Any) -> None:
-    """Megatron's load_state_dict would hand the stub entry to the stub child.
-
-    Dispatching on the optimizer rather than the payload is safe: saving with a
-    stub present raises, so a checkpoint for this layout can only be one of ours.
-    """
-    if not _has_stub_child(optimizer):
-        optimizer.load_state_dict(state)
+@contextmanager
+def _without_stub_optimizers(optimizer: Any) -> Iterator[None]:
+    """Megatron's chained ``state_dict``/``load_state_dict`` dereference every child, stubs included."""
+    children = getattr(optimizer, "chained_optimizers", None)
+    if children is None:
+        yield
         return
-
-    active = [
-        (child, child_state)
-        for child, child_state in zip(optimizer.chained_optimizers, state, strict=True)
-        if child_state is not None
-    ]
-    for child, child_state in active:
-        child.load_state_dict(child_state)
-    _synchronize_active_optimizer_steps([child for child, _ in active])
+    optimizer.chained_optimizers = [child for child in children if not getattr(child, "is_stub_optimizer", False)]
+    try:
+        yield
+    finally:
+        optimizer.chained_optimizers = children
 
 
-def _save_optimizer_param_state(optimizer: Any, directory: Path) -> None:
-    """``save_parameter_state`` gathers over the data-parallel group: every rank must call it."""
-    for child, path in _optimizer_param_state_entries(optimizer, directory):
-        child.save_parameter_state(str(path))
+def _load_optimizer_state(optimizer: Any, directory: Path, state_dict: Any) -> None:
+    """Resume from a complete optimizer state, keep the fresh optimizer without one, reject a partial one.
 
-
-def _restore_optimizer_param_state(optimizer: Any, directory: Path) -> None:
-    """Resume exactly from a complete parameter state, warm-start from none, reject a partial one."""
+    ``DistributedOptimizer.load_state_dict`` allocates the Adam moments with ``torch.empty`` and
+    relies on ``load_parameter_state`` to fill them, so it must never run on its own.
+    """
     entries = _optimizer_param_state_entries(optimizer, directory)
-    # Only the data-parallel root holds the gathered state, so only it reads it.
+    # Only the data-parallel root of each child writes its parameter state.
     present = [path.exists() for child, path in entries if child.data_parallel_group.rank() == 0]
-    all_present = _all_ranks_true(all(present))
-    none_present = _all_ranks_true(not any(present))
-    if all_present:
+    if _all_ranks_true(state_dict is not None and all(present)):
+        with _without_stub_optimizers(optimizer):
+            optimizer.load_state_dict(state_dict)
         for child, path in entries:
-            state = None
-            if child.data_parallel_group.rank() == 0:
-                state = torch.load(path, map_location="cpu", weights_only=True)
-            child.load_parameter_state_from_dp_zero(state)
+            child.load_parameter_state(str(path))
         logger.info("Restored optimizer state from LoRA checkpoint")
-    elif none_present:
-        logger.warning(
-            "No optimizer parameter state next to the LoRA adapter; master weights and Adam "
-            "moments warm-start from the adapter instead of resuming exactly."
-        )
+    elif _all_ranks_true(state_dict is None or not any(present)):
+        logger.warning("No optimizer state next to the LoRA adapter; keeping the freshly initialized optimizer")
     else:
         raise RuntimeError(
             "Optimizer parameter state is incomplete: some optimizer_param_state_rank*.pt shards are "
@@ -609,16 +565,22 @@ def save_lora_checkpoint(
     if optimizer is not None:
         save_optimizer = not getattr(args, "no_save_optim", False)
         rank = dist.get_rank() if dist.is_initialized() else 0
+        optimizer_state = None
+        if save_optimizer:
+            with _without_stub_optimizers(optimizer):
+                optimizer_state = optimizer.state_dict()
         torch.save(
             {
                 "iteration": iteration,
-                "optimizer": _optimizer_training_state_dict(optimizer) if save_optimizer else None,
+                "optimizer": optimizer_state,
                 "opt_param_scheduler": opt_param_scheduler.state_dict() if opt_param_scheduler else None,
             },
             save_path / f"training_state_rank{rank}.pt",
         )
         if save_optimizer:
-            _save_optimizer_param_state(optimizer, save_path)
+            # save_parameter_state gathers over the data-parallel group, so every rank calls it.
+            for child, path in _optimizer_param_state_entries(optimizer, save_path):
+                child.save_parameter_state(str(path))
         logger.info(f"Saved {'optimizer/scheduler' if save_optimizer else 'scheduler'} state to {save_path}")
 
     if dist.is_initialized():
@@ -739,11 +701,9 @@ def _load_training_state(
     # Optimizer state dicts may contain non-tensor objects (e.g. step counts,
     # param group metadata), so full unpickling is required here.
     training_state = torch.load(state_path, map_location="cpu", weights_only=False)
-    if load_optimizer and training_state.get("optimizer") is not None:
-        _load_optimizer_training_state_dict(optimizer, training_state["optimizer"])
 
     if load_optimizer:
-        _restore_optimizer_param_state(optimizer, adapter_dir)
+        _load_optimizer_state(optimizer, adapter_dir, training_state.get("optimizer"))
     else:
         logger.info("--no-load-optim: keeping the freshly initialized optimizer")
 

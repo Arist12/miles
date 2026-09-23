@@ -331,7 +331,7 @@ def _execute(args: ScriptArgs) -> None:
         "--attention-softmax-in-fp32 --attention-backend flash --calculate-per-token-loss "
         # The RCCL 2.27.7 AllToAll kernel deadlocks on this model's EP dispatch payload
         # under colocate; the same exchange as ordered isend/irecv pairs completes.
-        "--moe-token-dispatcher-type alltoall --moe-ep-p2p-alltoall --colocate "
+        "--moe-token-dispatcher-type alltoall --colocate "
         f"--rollout-cell-tick-timeout {args.rollout_cell_tick_timeout} "
         f"--rollout-cell-init-timeout {args.rollout_cell_init_timeout} "
         f"--actor-num-nodes {args.num_nodes} --actor-num-gpus-per-node {num_gpus} "

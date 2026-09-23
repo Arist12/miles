@@ -54,10 +54,8 @@ class MegatronHfWeightIteratorBase(HfWeightIteratorBase):
         if not materialize:
             return
         if not named_tensors:
-            raise RuntimeError(
-                f"LoRA weight sync failed: the adapter export produced zero tensors{f' for adapter {adapter!r}' if adapter is not None else ''}. This usually means the Megatron-Bridge or SGLang version is incompatible."
-            )
-        if not any(is_lora_weight_name(name) for name, _tensor in named_tensors):
+            raise RuntimeError("LoRA weight sync failed: the adapter export produced zero tensors")
+        if not any(is_lora_weight_name(name) for name, _ in named_tensors):
             raise RuntimeError("LoRA weight sync failed: the adapter export contains no lora_A/lora_B names.")
         while named_tensors:
             hf_name, tensor = named_tensors.pop(0)

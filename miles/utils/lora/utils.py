@@ -1,10 +1,15 @@
 import json
 from argparse import Namespace
 from dataclasses import dataclass
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
 LORA_ADAPTER_NAME = "miles_lora"
+
+
+def matches_lora_target(module: str, target: str) -> bool:
+    return fnmatchcase(module if "." in target else module.rsplit(".", 1)[-1], target)
 
 
 def is_lora_weight_name(name: str) -> bool:
@@ -46,6 +51,22 @@ def save_adapter_to_disk(out_dir, config: dict, tensors: dict) -> None:
     safetensors.torch.save_file(tensors, str(out / "adapter_model.safetensors"))
 
 
+def build_lora_config(args, *, target_modules):
+    return {
+        "peft_type": "LORA",
+        "r": args.lora_rank,
+        "lora_alpha": args.lora_alpha,
+        "target_modules": target_modules if isinstance(target_modules, str) else list(target_modules),
+        "lora_dropout": args.lora_dropout,
+        "bias": "none",
+        "task_type": "CAUSAL_LM",
+    }
+
+
+def get_adapter_target_modules(weight_names):
+    return sorted({name.removeprefix("base_model.model.").rsplit(".lora_", 1)[0] for name in weight_names})
+
+
 @dataclass(frozen=True)
 class AdapterSpec:
     """The slot and scaling needed to export one adapter."""
@@ -61,7 +82,7 @@ def is_multi_lora_enabled(args: Any) -> bool:
 
 # Leaf module names that can live inside MoE experts (they also name the dense MLP
 # projections); the bulk aliases expand to them during target-module resolution.
-_EXPERT_LEAF_NAMES = frozenset({"linear_fc1", "linear_fc2", "gate_proj", "up_proj", "down_proj"})
+_EXPERT_LEAF_NAMES = frozenset({"linear_fc1", "linear_fc2", "gate_proj", "up_proj", "gate_up_proj", "down_proj"})
 _ALL_MODULE_ALIASES = frozenset({"all", "all-linear", "all_linear"})
 
 

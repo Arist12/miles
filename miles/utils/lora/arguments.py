@@ -2,6 +2,19 @@ import logging
 from typing import Any
 
 from miles.utils.hf_utils.config import load_hf_config
+from miles.utils.hf_utils.weight_mapping import HfWeightMapping
+from miles.utils.lora.hf_lora_targets import (
+    LORA_TARGET_GROUPS,
+    exclude_hf_lora_targets,
+    expand_hf_lora_targets,
+    expand_packed_hf_lora_targets,
+    get_hf_lora_targets,
+    parse_lora_targets,
+    resolve_hf_lora_targets,
+)
+from miles.utils.lora.utils import is_lora_enabled, matches_lora_target, targets_expert_leaves
+from miles_plugins.models.inkling.lora import resolve_inkling_adapter_targets
+from miles_plugins.models.kimi_k3.lora import resolve_kimi_k3_adapter_targets
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +50,9 @@ def add_lora_arguments(parser):
         "--target-modules",
         type=str,
         default=None,
-        help="Target modules for LoRA. Use 'all-linear' or comma-separated module names "
-        "(e.g., 'q_proj,k_proj,v_proj,o_proj' for HF naming or 'linear_qkv,linear_proj' for Megatron naming)",
+        help="LoRA targets: omit or use 'all-linear' for the HF model defaults, or provide "
+        "comma-separated groups (attn,mlp,unembed), HF targets, or a mix of both. "
+        "Megatron module names are also accepted by the Bridge backend.",
     )
     parser.add_argument(
         "--exclude-modules",
@@ -65,10 +79,7 @@ def add_lora_arguments(parser):
         help=(
             "LoRA + colocate: keep SGLang-side CPU mirror of base weights "
             "and skip per-step base sync. Trades host RAM for faster "
-            "onload/offload. Ignored unless --colocate and LoRA are both on. "
-            "Also needs 'weight' in --offload-rollout-level: SGLang populates "
-            "the mirror during release_weights_occupation, so with the weights "
-            "never released the mirror is never built and the flag does nothing."
+            "onload/offload. Ignored unless --colocate and LoRA are both on."
         ),
     )
     parser.add_argument(
@@ -123,53 +134,86 @@ def add_lora_arguments(parser):
 
 
 def validate_lora_args(args):
-    # Parse LoRA target modules
-    if args.lora_rank > 0:
-        assert args.target_modules is not None, "'--target-modules' is required when LoRA is enabled."
-
-        if args.target_modules == "all-linear":
-            # MLA projections are HF-config-gated (SGLang sizes LoRA buffers per module name;
-            # listing them on a dense model crashes the engine). The DSA indexer stays excluded.
-            modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-            hf_config = load_hf_config(args.hf_checkpoint)
-            if getattr(hf_config, "kv_lora_rank", None):
-                modules += ["kv_a_proj_with_mqa", "kv_b_proj"]
-                if getattr(hf_config, "q_lora_rank", None):
-                    modules += ["q_a_proj", "q_b_proj"]
-        elif "," in args.target_modules:
-            modules = [m.strip() for m in args.target_modules.split(",")]
-        else:
-            modules = [args.target_modules]
-
-        if args.exclude_modules:
-            exclude_set = (
-                set(m.strip() for m in args.exclude_modules.split(","))
-                if "," in args.exclude_modules
-                else {args.exclude_modules}
-            )
-            modules = [m for m in modules if m not in exclude_set]
-
-        args.target_modules = modules
-
-        # Training and serving must agree on shared-outer grouped-expert LoRA
-        # (expert_dim=1 buffers in SGLang).
-        if args.experts_shared_outer_loras and hasattr(args, "sglang_experts_shared_outer_loras"):
-            args.sglang_experts_shared_outer_loras = True
-        assert args.experts_shared_outer_loras == bool(
-            getattr(args, "sglang_experts_shared_outer_loras", args.experts_shared_outer_loras)
-        ), "experts_shared_outer_loras and sglang_experts_shared_outer_loras must agree"
-
-        # the two MoE-expert adapter layouts are not checkpoint-compatible; say which one runs
-        _expert_leaves = ("linear_fc1", "linear_fc2", "gate_proj", "up_proj", "down_proj")
-        if any(leaf in str(tm) for tm in modules for leaf in _expert_leaves):
-            logger.warning(
-                "MoE-expert LoRA layout: %s (--experts-shared-outer-loras).",
-                "shared-outer" if args.experts_shared_outer_loras else "per-expert",
-            )
-
-    # Sets args.multi_lora, then validates/defaults the multi-LoRA arg surface
-    # (adapter configs themselves are loaded later by the controller).
     validate_multi_lora_args(args)
+    if not is_lora_enabled(args):
+        return
+    assert args.train_backend == "megatron", "LoRA injection is not implemented for FSDP; use --train-backend megatron"
+    assert args.lora_rank > 0, "LoRA requires a positive --lora-rank, including when loading an adapter"
+    hf_config = load_hf_config(args.hf_checkpoint)
+    args.hf_lora_targets, args.lora_adapter_targets = _resolve_lora_targets(args, hf_config)
+
+    # Training and serving must agree on shared-outer grouped-expert LoRA (expert_dim=1).
+    if args.experts_shared_outer_loras and hasattr(args, "sglang_experts_shared_outer_loras"):
+        args.sglang_experts_shared_outer_loras = True
+    assert args.experts_shared_outer_loras == bool(
+        getattr(args, "sglang_experts_shared_outer_loras", args.experts_shared_outer_loras)
+    ), "experts_shared_outer_loras and sglang_experts_shared_outer_loras must agree"
+    if targets_expert_leaves(args.hf_lora_targets):
+        logger.warning(
+            "MoE-expert LoRA layout: %s (--experts-shared-outer-loras).",
+            "shared-outer" if args.experts_shared_outer_loras else "per-expert",
+        )
+
+
+def _resolve_lora_targets(args, hf_config):
+    """Return final HF and adapter targets without changing the CLI selectors in `args`."""
+    hf_mapping = HfWeightMapping.from_config(hf_config)
+    hf_modules = [name.removesuffix(".weight") for name in hf_mapping.parameter_names]
+    targets = parse_lora_targets(args.target_modules)
+    exclusions = parse_lora_targets(args.exclude_modules) or []
+    explicit_targets = []
+    if targets is not None:
+        expanded = expand_packed_hf_lora_targets(targets, hf_modules)
+        explicit_targets = [
+            target for target in dict.fromkeys(targets + expanded) if target not in (*LORA_TARGET_GROUPS, "all-linear")
+        ]
+        targets = expanded
+    if exclusions:
+        conflicts = {
+            module
+            for module in hf_modules + explicit_targets + exclusions
+            if any(matches_lora_target(module, target) for target in explicit_targets)
+            and any(matches_lora_target(module, exclude) for exclude in exclusions)
+        }
+        assert not conflicts, f"Explicit LoRA targets overlap --exclude-modules: {sorted(conflicts)}"
+    if targets is None and args.multi_lora:
+        targets = list(LORA_TARGET_GROUPS)
+    targets = resolve_hf_lora_targets(hf_config.to_dict(), target_modules=targets)
+    targets = exclude_hf_lora_targets(targets, exclusions)
+
+    if all(any(matches_lora_target(module, target) for module in hf_modules) for target in targets + exclusions):
+        hf_targets = targets
+        if exclusions:
+            selected = [
+                module for module in hf_modules if any(matches_lora_target(module, target) for target in targets)
+            ]
+            hf_targets = exclude_hf_lora_targets(selected, exclusions)
+    elif args.megatron_to_hf_mode == "bridge":
+        # Only legacy Megatron selectors need Bridge before trainer creation.
+        from miles.backends.megatron_utils.lora.target_modules import normalize_lora_targets_to_hf
+
+        hf_targets = normalize_lora_targets_to_hf(
+            args.hf_checkpoint,
+            targets,
+            canonical=args.lora_type == "canonical_lora",
+            exclude_modules=exclusions,
+            explicit_targets=explicit_targets,
+        )
+    else:
+        layout = get_hf_lora_targets(hf_config.to_dict())
+        hf_targets = exclude_hf_lora_targets(expand_hf_lora_targets(targets, layout), exclusions)
+
+    adapter_targets = list(hf_targets)
+    if args.megatron_to_hf_mode == "raw":
+        if hf_config.model_type in ("inkling_model", "inkling_mm_model", "inkling_text"):
+            adapter_targets = resolve_inkling_adapter_targets(hf_config.to_dict(), hf_targets)
+        elif hf_config.model_type == "kimi_k3":
+            adapter_targets = resolve_kimi_k3_adapter_targets(
+                hf_targets,
+                canonical=args.lora_type == "canonical_lora",
+                experts_shared_outer_loras=args.experts_shared_outer_loras,
+            )
+    return hf_targets, adapter_targets
 
 
 def validate_multi_lora_args(args: Any) -> None:
@@ -180,7 +224,6 @@ def validate_multi_lora_args(args: Any) -> None:
         return
 
     assert args.lora_rank > 0, "--lora-rank must be set when --multi-lora-n-adapters > 0"
-    assert args.target_modules is not None, "--target-modules must be set when --multi-lora-n-adapters > 0"
     assert args.train_backend == "megatron", "Multi-LoRA currently requires --train-backend megatron"
     # Adapter routing is only recompute-safe without pipelining; enforce at launch.
     assert getattr(args, "context_parallel_size", 1) == 1, (

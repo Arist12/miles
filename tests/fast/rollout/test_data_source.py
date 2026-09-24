@@ -32,6 +32,7 @@ def test_load_reads_nothing_without_a_global_dataset(tmp_path: Path) -> None:
 
 
 def _global_dataset_source(**overrides) -> RolloutDataSource:
+    """Enable the cursor without building a dataset; load() only touches the dataset to shuffle it."""
     source = RolloutDataSource(_make_args(**overrides))
     source.args.rollout_global_dataset = True
     return source

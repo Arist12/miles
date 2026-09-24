@@ -2784,27 +2784,34 @@ def _lora_checkpoint_root(adapter_path: str | None) -> str | None:
 
 
 def _resolve_checkpoint_resume(args) -> None:
-    # Resuming also restores the global-dataset cursor, which only the built-in data source saves.
-    resumable = args.rollout_global_dataset and not getattr(args, "finetune", False)
-    args.lora_resume_root = _lora_checkpoint_root(args.lora_adapter_path) if resumable else None
+    args.lora_resume_root = _lora_checkpoint_root(args.lora_adapter_path)
     if args.lora_adapter_path is not None and args.lora_resume_root is None:
         logger.warning(
-            "--lora-adapter-path=%s is not an iter_*/adapter checkpoint resumable with the built-in global "
-            "dataset; loading adapter weights as a new-run warm start.",
+            "--lora-adapter-path=%s is not an iter_*/adapter checkpoint; loading adapter weights as a new-run "
+            "warm start.",
             args.lora_adapter_path,
         )
 
     if (
-        args.load is None
-        or not os.path.exists(args.load)
-        or not os.path.exists(os.path.join(args.load, "latest_checkpointed_iteration.txt"))
+        args.load is not None
+        and os.path.exists(args.load)
+        and os.path.exists(os.path.join(args.load, "latest_checkpointed_iteration.txt"))
     ):
+        return
+    if args.megatron_to_hf_mode == "bridge":
         # Fresh runs pass a not-yet-created `--load` dir; fall back to the reference
         # weights (loaded via the HF bridge) instead of asserting in load_checkpoint.
-        # Mirrors the non-bridge branch below.
         args.load = args.ref_load or args.hf_checkpoint
-        if args.lora_resume_root is None:
-            args.start_rollout_id = 0
+    else:
+        args.no_load_optim = True
+        args.no_load_rng = True
+        args.finetune = True
+        args.load = args.ref_load
+        if args.ref_ckpt_step is not None:
+            args.ckpt_step = args.ref_ckpt_step
+    # LoRA saves never write a Megatron checkpoint; a resume takes its rollout from the adapter.
+    if args.lora_resume_root is None:
+        args.start_rollout_id = 0
 
 
 def miles_validate_args(args):
@@ -3027,21 +3034,7 @@ def miles_validate_args(args):
         if args.opd_teacher_urls:
             raise ValueError("--opd-teacher-urls is set but --use-opd is not enabled. Please add --use-opd flag.")
 
-    if args.megatron_to_hf_mode == "bridge":
-        _resolve_checkpoint_resume(args)
-    else:
-        if (
-            args.load is None
-            or not os.path.exists(args.load)
-            or not os.path.exists(os.path.join(args.load, "latest_checkpointed_iteration.txt"))
-        ):
-            args.no_load_optim = True
-            args.no_load_rng = True
-            args.finetune = True
-            args.load = args.ref_load
-            if args.ref_ckpt_step is not None:
-                args.ckpt_step = args.ref_ckpt_step
-            args.start_rollout_id = 0
+    _resolve_checkpoint_resume(args)
 
     if args.eval_interval is not None:
         assert args.eval_datasets, "Evaluation datasets must be configured when eval_interval is set."

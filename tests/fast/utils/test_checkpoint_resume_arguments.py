@@ -7,28 +7,30 @@ from miles.utils.arguments import _resolve_checkpoint_resume
 
 def _args(tmp_path, **overrides):
     values = {
+        "megatron_to_hf_mode": "bridge",
         "load": None,
-        "ref_load": None,
+        "ref_load": str(tmp_path / "ref"),
+        "ref_ckpt_step": None,
         "hf_checkpoint": str(tmp_path / "base"),
         "start_rollout_id": None,
         "lora_adapter_path": None,
-        "rollout_global_dataset": True,
     }
     values.update(overrides)
     return Namespace(**values)
 
 
-def test_fresh_bridge_run_starts_at_zero(tmp_path):
-    args = _args(tmp_path)
+@pytest.mark.parametrize("mode", ["bridge", "raw"])
+def test_fresh_run_starts_at_zero(tmp_path, mode):
+    args = _args(tmp_path, megatron_to_hf_mode=mode)
     _resolve_checkpoint_resume(args)
-    assert args.load == args.hf_checkpoint
     assert args.start_rollout_id == 0
     assert args.lora_resume_root is None
 
 
-def test_lora_checkpoint_resumes_its_run(tmp_path):
+@pytest.mark.parametrize("mode", ["bridge", "raw"])
+def test_lora_checkpoint_resumes_its_run(tmp_path, mode):
     adapter = tmp_path / "run" / "iter_0000007" / "adapter"
-    args = _args(tmp_path, lora_adapter_path=str(adapter))
+    args = _args(tmp_path, megatron_to_hf_mode=mode, lora_adapter_path=str(adapter))
 
     _resolve_checkpoint_resume(args)
 
@@ -36,18 +38,9 @@ def test_lora_checkpoint_resumes_its_run(tmp_path):
     assert args.start_rollout_id is None
 
 
-@pytest.mark.parametrize(
-    "adapter, overrides",
-    [
-        ("released-adapter", {}),
-        ("run/iter_7/adapter", {}),
-        ("run/iter_0000007/adapter", {"rollout_global_dataset": False}),
-        ("run/iter_0000007/adapter", {"finetune": True}),
-    ],
-    ids=["not-a-checkpoint", "bad-iteration-dir", "custom-data-source", "finetune"],
-)
-def test_other_adapters_are_weight_only_warm_starts(tmp_path, adapter, overrides):
-    args = _args(tmp_path, lora_adapter_path=str(tmp_path / adapter), **overrides)
+@pytest.mark.parametrize("adapter", ["released-adapter", "run/iter_7/adapter"])
+def test_other_adapters_are_weight_only_warm_starts(tmp_path, adapter):
+    args = _args(tmp_path, lora_adapter_path=str(tmp_path / adapter))
 
     _resolve_checkpoint_resume(args)
 

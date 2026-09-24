@@ -17,8 +17,8 @@ class _Child(DistributedOptimizer):
         self.is_stub_optimizer = stub
         self.data_parallel_group = SimpleNamespace(rank=lambda: dp_rank)
         self.optimizer = None if stub else SimpleNamespace(param_groups=[])
-        self.training_state = "not called"
-        self.loaded = "not called"
+        self.loaded_state_dict = "not called"
+        self.param_state = "not called"
 
     def state_dict(self):
         assert not self.is_stub_optimizer
@@ -26,13 +26,13 @@ class _Child(DistributedOptimizer):
 
     def load_state_dict(self, state_dict):
         assert not self.is_stub_optimizer
-        self.training_state = state_dict
+        self.loaded_state_dict = state_dict
 
     def get_parameter_state_dp_zero(self):
         return {"master": 1} if self.data_parallel_group.rank() == 0 else None
 
     def load_parameter_state(self, filename):
-        self.loaded = torch.load(filename) if self.data_parallel_group.rank() == 0 else None
+        self.param_state = torch.load(filename) if self.data_parallel_group.rank() == 0 else None
 
 
 def _chain(*children):
@@ -58,8 +58,8 @@ def test_round_trip_skips_stub_children_and_reads_through_the_data_parallel_root
     scheduler = MagicMock()
     assert lora_utils._load_training_state(tmp_path, _chain(root, stub, peer), scheduler) == (3, True)
 
-    assert (root.training_state, peer.training_state) == ({"step": 3}, {"step": 3})
-    assert (root.loaded, peer.loaded, stub.loaded) == ({"master": 1}, None, "not called")
+    assert (root.loaded_state_dict, peer.loaded_state_dict) == ({"step": 3}, {"step": 3})
+    assert (root.param_state, peer.param_state, stub.param_state) == ({"master": 1}, None, "not called")
     scheduler.load_state_dict.assert_called_once_with({"num_steps": 8})
 
 
@@ -84,7 +84,7 @@ def test_checkpoint_without_parameter_state_keeps_the_fresh_optimizer(tmp_path):
     torch.save({"iteration": 3, "optimizer": [{"step": 3}]}, tmp_path / "training_state_rank0.pt")
 
     assert lora_utils._load_training_state(tmp_path, _chain(child), None) == (3, False)
-    assert (child.training_state, child.loaded) == ("not called", "not called")
+    assert (child.loaded_state_dict, child.param_state) == ("not called", "not called")
 
 
 def test_partial_parameter_state_is_rejected(tmp_path):

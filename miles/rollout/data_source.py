@@ -148,7 +148,8 @@ class RolloutDataSource(DataSource):
 
         path = os.path.join(load_root, f"rollout/global_dataset_state_dict_{rollout_id}.pt")
         if not os.path.exists(path):
-            if resume_root is not None:
+            # Rollout -1 is the run starting at rollout 0, which has no cursor to restore.
+            if resume_root is not None and rollout_id >= 0:
                 raise FileNotFoundError(f"Expected data-source checkpoint for the LoRA resume does not exist: {path}")
             logger.info(f"Checkpoint {path} does not exist.")
             return

@@ -162,6 +162,8 @@ def test_resume_requires_the_training_state(tmp_path, monkeypatch):
 
     with pytest.raises(FileNotFoundError, match="training_state_rank0.pt"):
         lora_utils.load_lora_adapter([_AdapterModel()], str(tmp_path), optimizer=MagicMock(), resume=True)
+    # Reference and teacher models load the adapter without an optimizer.
+    assert lora_utils.load_lora_adapter([_AdapterModel()], str(tmp_path), resume=True) == (True, None, False)
 
 
 class TestSaveLoraCheckpointTrainingState:

@@ -2771,20 +2771,15 @@ def _resolve_mini_ft_controller_enable(args: argparse.Namespace) -> bool:
     return bool(args.ft_components) and args.api_server_port != 0
 
 
-def _resolve_checkpoint_resume(args) -> None:
+def _resolve_checkpoint_resume(args: argparse.Namespace) -> None:
     args.lora_resume_root = lora_resume_root(args.lora_adapter_path)
     if args.lora_adapter_path is not None and args.lora_resume_root is None:
         logger.warning(
-            "--lora-adapter-path=%s is not an iter_*/adapter checkpoint; loading adapter weights as a new-run "
-            "warm start.",
+            "--lora-adapter-path=%s is not an iter_*/adapter checkpoint; loading its adapter weights only.",
             args.lora_adapter_path,
         )
 
-    if (
-        args.load is not None
-        and os.path.exists(args.load)
-        and os.path.exists(os.path.join(args.load, "latest_checkpointed_iteration.txt"))
-    ):
+    if args.load is not None and os.path.exists(os.path.join(args.load, "latest_checkpointed_iteration.txt")):
         return
     if args.megatron_to_hf_mode == "bridge":
         # Fresh runs pass a not-yet-created `--load` dir; fall back to the reference

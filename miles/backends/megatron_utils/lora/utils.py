@@ -226,7 +226,7 @@ def load_lora_adapter(
     load_optimizer: bool = True,
     resume: bool = False,
 ) -> tuple[bool, int | None, bool]:
-    """Restore native adapter shards, plus optimizer/scheduler state when ``resume`` is set.
+    """Restore native adapter shards, plus the saved iteration and optimizer/scheduler state when ``resume`` is set.
 
     HF adapters cannot be loaded into Bridge models through this path.
     """
@@ -302,7 +302,7 @@ def _load_training_state(
     rank = dist.get_rank() if dist.is_initialized() else 0
     state_path = adapter_dir / f"training_state_rank{rank}.pt"
     if not state_path.exists():
-        raise FileNotFoundError(f"Expected training state for an exact LoRA resume: {state_path}")
+        raise FileNotFoundError(f"A LoRA resume needs the training state saved with the adapter: {state_path}")
 
     # Optimizer state dicts may contain non-tensor objects (e.g. step counts,
     # param group metadata), so full unpickling is required here.

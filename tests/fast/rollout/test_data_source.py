@@ -54,3 +54,4 @@ def test_lora_resume_without_a_cursor_fails(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError, match="global_dataset_state_dict_7.pt"):
         source.load(rollout_id=7)
+    source.load(rollout_id=-1)  # a run that starts at rollout 0 has no cursor to restore

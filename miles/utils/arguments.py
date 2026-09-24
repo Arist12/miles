@@ -2,8 +2,6 @@ import argparse
 import json
 import logging
 import os
-import re
-from pathlib import Path
 from string import Formatter
 from typing import Any
 
@@ -23,7 +21,7 @@ from miles.utils.function_registry import load_function
 from miles.utils.hf_utils.config import is_dsa, load_hf_config
 from miles.utils.logging_utils import configure_logger_raw
 from miles.utils.lora.arguments import add_lora_arguments, validate_lora_args
-from miles.utils.lora.utils import is_lora_enabled
+from miles.utils.lora.utils import is_lora_enabled, lora_resume_root
 from miles.utils.megatron_args_utils import compute_megatron_world_size_except_dp
 from miles.utils.object_store import ObjectStoreBackend
 from miles.utils.run_uuid import RUN_UUID_LENGTH, generate_run_uuid, validate_run_uuid
@@ -2773,18 +2771,8 @@ def _resolve_mini_ft_controller_enable(args: argparse.Namespace) -> bool:
     return bool(args.ft_components) and args.api_server_port != 0
 
 
-def _lora_checkpoint_root(adapter_path: str | None) -> str | None:
-    """The run root of a `<root>/iter_XXXXXXX/adapter` path, or None if it is not one."""
-    if adapter_path is None:
-        return None
-    path = Path(adapter_path)
-    if path.name != "adapter" or not re.fullmatch(r"iter_\d{7}", path.parent.name):
-        return None
-    return str(path.parent.parent)
-
-
 def _resolve_checkpoint_resume(args) -> None:
-    args.lora_resume_root = _lora_checkpoint_root(args.lora_adapter_path)
+    args.lora_resume_root = lora_resume_root(args.lora_adapter_path)
     if args.lora_adapter_path is not None and args.lora_resume_root is None:
         logger.warning(
             "--lora-adapter-path=%s is not an iter_*/adapter checkpoint; loading adapter weights as a new-run "

@@ -34,7 +34,7 @@ def test_lora_checkpoint_resumes_its_run(tmp_path, mode):
 
     _resolve_checkpoint_resume(args)
 
-    assert args.lora_resume_root == str(tmp_path / "run")
+    assert args.lora_resume_root == str((tmp_path / "run").resolve())
     assert args.start_rollout_id is None
 
 

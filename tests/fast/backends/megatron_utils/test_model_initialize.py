@@ -158,7 +158,7 @@ def _patch_initialize_side_effects(stack: ExitStack) -> None:
         {"use_checkpoint_opt_param_scheduler": True},
         {"use_checkpoint_opt_param_scheduler": False, "lora_resume_root": "/run"},
     ],
-    ids=["checkpoint", "lora-checkpoint"],
+    ids=["checkpoint", "lora-resume"],
 )
 def test_initialize_does_not_step_scheduler_restored_from_checkpoint(scheduler_resume_args):
     from miles.backends.megatron_utils.model import initialize_model_and_optimizer

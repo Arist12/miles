@@ -13,10 +13,10 @@ import miles.backends.megatron_utils.lora.utils as lora_utils
 
 
 class _Child(DistributedOptimizer):
-    def __init__(self, *, stub=False, dp_rank=0):
+    def __init__(self, *, stub=False, dp_rank=0, stepped=True):
         self.is_stub_optimizer = stub
         self.data_parallel_group = SimpleNamespace(rank=lambda: dp_rank)
-        self.optimizer = None if stub else SimpleNamespace(param_groups=[])
+        self.optimizer = None if stub else SimpleNamespace(param_groups=[], state={"param": {}} if stepped else {})
         self.loaded_state_dict = "not called"
         self.param_state = "not called"
 
@@ -73,10 +73,20 @@ def test_parameter_state_is_gathered_before_a_local_write_can_fail(tmp_path, mon
         events.append("write")
         raise OSError("disk full")
 
-    monkeypatch.setattr(lora_utils.torch, "save", failing_save)
+    monkeypatch.setattr(torch, "save", failing_save)
     with pytest.raises(OSError, match="disk full"):
         _save(tmp_path, _chain(child))
     assert events == ["gather", "write"]
+
+
+def test_an_optimizer_that_never_stepped_saves_no_parameter_state(tmp_path):
+    child = _Child(stepped=False)
+    child.get_parameter_state_dp_zero = MagicMock()
+
+    _save(tmp_path, _chain(child))
+
+    child.get_parameter_state_dp_zero.assert_not_called()
+    assert not list(tmp_path.glob("optimizer_param_state*"))
 
 
 def test_checkpoint_without_parameter_state_keeps_the_fresh_optimizer(tmp_path):
@@ -102,7 +112,9 @@ def test_loading_adapter_weights_refreshes_the_masters(tmp_path, monkeypatch):
     param = torch.nn.Parameter(torch.zeros(2))
     model = [SimpleNamespace(named_parameters=lambda: iter([("adapter.lora_A.weight", param)]))]
     torch.save({"adapter.lora_A.weight": torch.ones(2)}, tmp_path / "adapter_megatron_rank0.pt")
+    refreshed_from = []
     optimizer = MagicMock()
+    optimizer.reload_model_params.side_effect = lambda: refreshed_from.append(param.detach().clone())
 
     assert lora_utils.load_lora_adapter(model, str(tmp_path), optimizer=optimizer) == (True, None, False)
-    optimizer.reload_model_params.assert_called_once_with()
+    assert len(refreshed_from) == 1 and torch.equal(refreshed_from[0], torch.ones(2))

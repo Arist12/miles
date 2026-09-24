@@ -177,7 +177,7 @@ def _all_ranks_true(value: bool) -> bool:
 
 
 def _optimizer_param_state_entries(optimizer: Any, directory: Path) -> list[tuple[Any, Path]]:
-    """Return distributed optimizer children and their parameter-state files."""
+    """Non-stub ``DistributedOptimizer`` children, with files indexed by position in the chain."""
     from megatron.core.optimizer.distrib_optimizer import DistributedOptimizer
 
     rank = dist.get_rank() if dist.is_initialized() else 0
@@ -187,6 +187,15 @@ def _optimizer_param_state_entries(optimizer: Any, directory: Path) -> list[tupl
         for index, child in enumerate(children)
         if isinstance(child, DistributedOptimizer) and not child.is_stub_optimizer
     ]
+
+
+def _gather_optimizer_param_states(optimizer: Any, directory: Path) -> list[tuple[Path, Any]]:
+    """Gather each child's parameter state onto its data-parallel root; other ranks get None."""
+    entries = _optimizer_param_state_entries(optimizer, directory)
+    # Before its first step an optimizer has no parameter state, and resuming it fresh is equivalent.
+    if _all_ranks_true(not any(child.optimizer.state for child, _ in entries)):
+        return []
+    return [(path, child.get_parameter_state_dp_zero()) for child, path in entries]
 
 
 @contextmanager
@@ -240,8 +249,11 @@ def save_lora_checkpoint(
 ) -> str:
     """Collectively save native adapter shards, training state, and optional HF adapter weights."""
     global_rank = dist.get_rank() if dist.is_initialized() else 0
+    save_optimizer = optimizer is not None and not getattr(args, "no_save_optim", False)
 
     def write_shards(checkpoint_dir: Path):
+        # write_checkpoint_dir requires every rank to finish these collectives before any local error.
+        param_states = _gather_optimizer_param_states(optimizer, checkpoint_dir) if save_optimizer else []
         adapter_state = {
             name: param.detach().cpu()
             for model_chunk in model
@@ -249,21 +261,13 @@ def save_lora_checkpoint(
             if _is_adapter_param_name(name)
         }
         training_state = None
-        param_states = []
         if optimizer is not None:
-            save_optimizer = not getattr(args, "no_save_optim", False)
             with _without_stub_optimizers(optimizer):
                 training_state = {
                     "iteration": iteration,
                     "optimizer": optimizer.state_dict() if save_optimizer else None,
                     "opt_param_scheduler": opt_param_scheduler.state_dict() if opt_param_scheduler else None,
                 }
-            if save_optimizer:
-                # Data-parallel gathers; every rank finishes them before a local write can raise.
-                param_states = [
-                    (path, child.get_parameter_state_dp_zero())
-                    for child, path in _optimizer_param_state_entries(optimizer, checkpoint_dir)
-                ]
 
         if args.megatron_to_hf_mode == "raw":
             if global_rank == 0:

@@ -69,15 +69,21 @@ _MEGATRON_MODEL_TYPE = {
 # of the two gaps to begin with. Add it back only with --target-modules.
 _TARGET_MODULES = "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,q_a_proj,kv_a_proj_with_mqa,q_b_proj,kv_b_proj"
 
-# (seq_length, rollout_max_response_len); the difference is the prompt budget. These match
-# the CUDA *multi-node* preset (run_glm5_lora_multinode_full.sh), not the single-node
-# launcher's 8192/4096 -- the multi-node preset is the configuration the published 64-GPU
-# run used. Its sweep on the full 744B put raw_reward at 0.0 for seq 1024 (everything
-# truncated), 0.125 at 2048, 0.25 at 4096 and 0.3125 at 8192, and picked 4096: 8192 buys
-# +0.06 reward for double the rollout time.
+# (seq_length, rollout_max_response_len); the difference is the prompt budget. dapo-math is
+# the CUDA recipe's 8192/4096, used by both scripts/run_glm5_2_744b_a40b_lora.py and the
+# 64-GPU multi-node preset. That preset's response-length sweep on the full 744B put
+# raw_reward at 0.0 for 1024 (everything truncated), 0.125 at 2048, 0.25 at 4096 and 0.3125
+# at 8192, and picked 4096: 8192 buys +0.06 reward for double the rollout time.
 # gsm8k answers are short; its seq is set explicitly rather than left at the model's 1 Mi
 # native context, which would size SGLang's req_to_token pool at 2.1 GiB.
-_TASK_SEQ = {"dapo-math": (4096, 3584), "gsm8k": (1024, 512)}
+_TASK_SEQ = {"dapo-math": (8192, 4096), "gsm8k": (1024, 512)}
+
+# miles pads every training micro-batch to a multiple of tp_size * data_pad_size_multiplier
+# (default 128, i.e. 1024 tokens at TP8), so a ~360-token gsm8k sample trained as 1024 and
+# the TileLang sparse-MLA backward paid for all of it: 16 cut a 2-node optimizer step from
+# 2,333 s to ~930 s with train/rollout abs_diff unchanged (0.0123 vs 0.0121). dapo-math keeps
+# miles' default until it is measured there.
+_TASK_PAD_MULTIPLIER = {"dapo-math": 0, "gsm8k": 16}  # 0 => miles' default
 
 # The SGLang TileLang NSA decode kernel tiles at least 4 attention heads per rank, and
 # the engine's attention TP is its GPU count: GLM-5.2's 64 heads allow at most 16. A
@@ -120,6 +126,8 @@ class ScriptArgs(U.ExecuteTrainConfig):
     # 0 => the task default above
     seq_length: int = 0
     rollout_max_response_len: int = 0
+    # -1 => the task default above; 0 => miles' default
+    data_pad_size_multiplier: int = -1
     lr: float = 1e-5
 
     # 0 => min(world, _MAX_ENGINE_GPUS). Under colocate + LoRA the engine mirrors its
@@ -172,6 +180,8 @@ class ScriptArgs(U.ExecuteTrainConfig):
             self.seq_length = seq
         if self.rollout_max_response_len == 0:
             self.rollout_max_response_len = resp
+        if self.data_pad_size_multiplier < 0:
+            self.data_pad_size_multiplier = _TASK_PAD_MULTIPLIER[self.task]
         if not self.offload_train_disk_dir:
             self.offload_train_disk_dir = f"{self.save_dir}/train_offload"
         if self.sglang_context_length == 0:
@@ -291,6 +301,8 @@ def _execute(args: ScriptArgs) -> None:
         f"--seq-length {args.seq_length} --rollout-max-context-len {args.seq_length} "
         f"--rollout-max-response-len {args.rollout_max_response_len} "
     )
+    if args.data_pad_size_multiplier > 0:
+        rollout_args += f"--data-pad-size-multiplier {args.data_pad_size_multiplier} "
 
     optimizer_args = (
         f"--optimizer adam --lr {args.lr} --lr-decay-style constant --weight-decay 0.1 "

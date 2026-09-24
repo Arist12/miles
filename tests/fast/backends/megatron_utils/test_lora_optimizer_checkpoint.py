@@ -1,10 +1,8 @@
 """LoRA checkpoint coverage for distributed optimizer parameter state."""
 
-import sys
-import types
 from argparse import Namespace
 from types import SimpleNamespace
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 import pytest
 import torch
@@ -49,23 +47,19 @@ def _rank0_parallel_state():
     return SimpleNamespace(effective_dp=rank0, cp=rank0, tp=rank0, pp=rank0)
 
 
-def test_round_trip_skips_stub_children_and_reads_through_the_data_parallel_root(tmp_path, monkeypatch):
-    monkeypatch.setattr(lora_utils, "get_parallel_state", _rank0_parallel_state)
-    # the HF PEFT export is best-effort and needs a real bridge; fail it fast
-    bridge = types.ModuleType("megatron.bridge")
-    bridge.AutoBridge = SimpleNamespace(from_hf_pretrained=Mock(side_effect=RuntimeError("no bridge in this test")))
-    monkeypatch.setitem(sys.modules, "megatron.bridge", bridge)
-    args = Namespace(hf_checkpoint="/nonexistent", megatron_to_hf_mode="bridge", no_save_optim=False)
+def test_round_trip_skips_stub_children_and_reads_through_the_data_parallel_root(tmp_path):
+    args = Namespace(megatron_to_hf_mode="bridge", no_save_optim=False)
+    publisher = SimpleNamespace(write_adapter=lambda *_: None)
     scheduler = SimpleNamespace(state_dict=lambda: {"num_steps": 8})
     optimizer = _chain(_Child(dp_rank=0), _Child(stub=True), _Child(dp_rank=1))
     lora_utils.save_lora_checkpoint(
-        [], args, str(tmp_path), optimizer=optimizer, opt_param_scheduler=scheduler, iteration=3
+        [], args, str(tmp_path), publisher=publisher, optimizer=optimizer, opt_param_scheduler=scheduler, iteration=3
     )
     assert [p.name for p in tmp_path.glob("optimizer_param_state*")] == ["optimizer_param_state_rank0_optimizer0.pt"]
 
     root, stub, peer = _Child(dp_rank=0), _Child(stub=True), _Child(dp_rank=1)
     scheduler = MagicMock()
-    assert lora_utils._load_training_state(tmp_path, _chain(root, stub, peer), scheduler) == 3
+    assert lora_utils._load_training_state(tmp_path, _chain(root, stub, peer), scheduler) == (3, True)
 
     assert (root.training_state, peer.training_state) == ({"step": 3}, {"step": 3})
     assert (root.loaded, peer.loaded, stub.loaded) == ({"master": 1}, None, "not called")
@@ -76,7 +70,7 @@ def test_checkpoint_without_parameter_state_keeps_the_fresh_optimizer(tmp_path):
     child = _Child(dp_rank=0)
     torch.save({"iteration": 3, "optimizer": [{"step": 3}]}, tmp_path / "training_state_rank0.pt")
 
-    assert lora_utils._load_training_state(tmp_path, _chain(child), None) == 3
+    assert lora_utils._load_training_state(tmp_path, _chain(child), None) == (3, False)
     assert (child.training_state, child.loaded) == ("not called", "not called")
 
 
@@ -96,7 +90,5 @@ def test_masters_are_refreshed_whenever_adapter_weights_are_written(tmp_path, mo
     torch.save({"adapter.lora_A.weight": torch.ones(2)}, tmp_path / "adapter_megatron_rank0.pt")
     optimizer = MagicMock(chained_optimizers=[_Child(dp_rank=0)])
 
-    loaded, iteration = lora_utils.load_lora_adapter(model, str(tmp_path), optimizer=optimizer)
-
-    assert (loaded, iteration) == (True, None)
+    assert lora_utils.load_lora_adapter(model, str(tmp_path), optimizer=optimizer) == (True, None, False)
     optimizer.reload_model_params.assert_called_once_with()

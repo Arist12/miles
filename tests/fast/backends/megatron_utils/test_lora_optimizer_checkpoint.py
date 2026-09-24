@@ -28,9 +28,8 @@ class _Child(DistributedOptimizer):
         assert not self.is_stub_optimizer
         self.training_state = state_dict
 
-    def save_parameter_state(self, filename):
-        if self.data_parallel_group.rank() == 0:
-            torch.save({"master": 1}, filename)
+    def get_parameter_state_dp_zero(self):
+        return {"master": 1} if self.data_parallel_group.rank() == 0 else None
 
     def load_parameter_state(self, filename):
         self.loaded = torch.load(filename) if self.data_parallel_group.rank() == 0 else None
@@ -42,14 +41,17 @@ def _chain(*children):
     return chain
 
 
-def test_round_trip_skips_stub_children_and_reads_through_the_data_parallel_root(tmp_path):
+def _save(tmp_path, optimizer, scheduler=None):
     args = Namespace(megatron_to_hf_mode="bridge", no_save_optim=False)
     publisher = SimpleNamespace(write_adapter=lambda *_: None)
-    scheduler = SimpleNamespace(state_dict=lambda: {"num_steps": 8})
-    optimizer = _chain(_Child(dp_rank=0), _Child(stub=True), _Child(dp_rank=1))
     lora_utils.save_lora_checkpoint(
         [], args, str(tmp_path), publisher=publisher, optimizer=optimizer, opt_param_scheduler=scheduler, iteration=3
     )
+
+
+def test_round_trip_skips_stub_children_and_reads_through_the_data_parallel_root(tmp_path):
+    scheduler = SimpleNamespace(state_dict=lambda: {"num_steps": 8})
+    _save(tmp_path, _chain(_Child(dp_rank=0), _Child(stub=True), _Child(dp_rank=1)), scheduler)
     assert [p.name for p in tmp_path.glob("optimizer_param_state*")] == ["optimizer_param_state_rank0_optimizer0.pt"]
 
     root, stub, peer = _Child(dp_rank=0), _Child(stub=True), _Child(dp_rank=1)
@@ -59,6 +61,22 @@ def test_round_trip_skips_stub_children_and_reads_through_the_data_parallel_root
     assert (root.training_state, peer.training_state) == ({"step": 3}, {"step": 3})
     assert (root.loaded, peer.loaded, stub.loaded) == ({"master": 1}, None, "not called")
     scheduler.load_state_dict.assert_called_once_with({"num_steps": 8})
+
+
+def test_parameter_state_is_gathered_before_a_local_write_can_fail(tmp_path, monkeypatch):
+    """write_checkpoint_dir requires every rank to finish its collectives before raising."""
+    events = []
+    child = _Child(dp_rank=1)
+    monkeypatch.setattr(child, "get_parameter_state_dp_zero", lambda: events.append("gather"))
+
+    def failing_save(*_):
+        events.append("write")
+        raise OSError("disk full")
+
+    monkeypatch.setattr(lora_utils.torch, "save", failing_save)
+    with pytest.raises(OSError, match="disk full"):
+        _save(tmp_path, _chain(child))
+    assert events == ["gather", "write"]
 
 
 def test_checkpoint_without_parameter_state_keeps_the_fresh_optimizer(tmp_path):

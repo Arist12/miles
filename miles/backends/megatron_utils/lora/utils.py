@@ -249,14 +249,21 @@ def save_lora_checkpoint(
             if _is_adapter_param_name(name)
         }
         training_state = None
-        save_optimizer = optimizer is not None and not getattr(args, "no_save_optim", False)
+        param_states = []
         if optimizer is not None:
+            save_optimizer = not getattr(args, "no_save_optim", False)
             with _without_stub_optimizers(optimizer):
                 training_state = {
                     "iteration": iteration,
                     "optimizer": optimizer.state_dict() if save_optimizer else None,
                     "opt_param_scheduler": opt_param_scheduler.state_dict() if opt_param_scheduler else None,
                 }
+            if save_optimizer:
+                # Data-parallel gathers; every rank finishes them before a local write can raise.
+                param_states = [
+                    (path, child.get_parameter_state_dp_zero())
+                    for child, path in _optimizer_param_state_entries(optimizer, checkpoint_dir)
+                ]
 
         if args.megatron_to_hf_mode == "raw":
             if global_rank == 0:
@@ -274,10 +281,9 @@ def save_lora_checkpoint(
         torch.save(adapter_state, checkpoint_dir / f"adapter_megatron_rank{global_rank}.pt")
         if training_state is not None:
             torch.save(training_state, checkpoint_dir / f"training_state_rank{global_rank}.pt")
-        if save_optimizer:
-            # save_parameter_state gathers over the data-parallel group, so every rank calls it.
-            for child, path in _optimizer_param_state_entries(optimizer, checkpoint_dir):
-                child.save_parameter_state(str(path))
+        for path, state in param_states:
+            if state is not None:  # only the data-parallel root holds the gathered state
+                torch.save(state, path)
 
     write_checkpoint_dir(save_dir, write_shards)
     return str(save_dir)

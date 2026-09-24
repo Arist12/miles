@@ -251,15 +251,12 @@ def save_lora_checkpoint(
         training_state = None
         save_optimizer = optimizer is not None and not getattr(args, "no_save_optim", False)
         if optimizer is not None:
-            optimizer_state = None
-            if save_optimizer:
-                with _without_stub_optimizers(optimizer):
-                    optimizer_state = optimizer.state_dict()
-            training_state = {
-                "iteration": iteration,
-                "optimizer": optimizer_state,
-                "opt_param_scheduler": opt_param_scheduler.state_dict() if opt_param_scheduler else None,
-            }
+            with _without_stub_optimizers(optimizer):
+                training_state = {
+                    "iteration": iteration,
+                    "optimizer": optimizer.state_dict() if save_optimizer else None,
+                    "opt_param_scheduler": opt_param_scheduler.state_dict() if opt_param_scheduler else None,
+                }
 
         if args.megatron_to_hf_mode == "raw":
             if global_rank == 0:
@@ -372,7 +369,7 @@ def _load_training_state(
     state_path = adapter_dir / f"training_state_rank{rank}.pt"
     if not _all_ranks_true(state_path.exists()):
         if state_path.exists():
-            logger.warning(f"{state_path.name} is missing on some ranks; skipping the optimizer restore")
+            logger.warning(f"{state_path.name} is missing on some ranks; skipping the training-state restore")
         return None, False
 
     # Optimizer state dicts may contain non-tensor objects (e.g. step counts,

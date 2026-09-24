@@ -42,11 +42,6 @@ def _chain(*children):
     return chain
 
 
-def _rank0_parallel_state():
-    rank0 = SimpleNamespace(rank=0)
-    return SimpleNamespace(effective_dp=rank0, cp=rank0, tp=rank0, pp=rank0)
-
-
 def test_round_trip_skips_stub_children_and_reads_through_the_data_parallel_root(tmp_path):
     args = Namespace(megatron_to_hf_mode="bridge", no_save_optim=False)
     publisher = SimpleNamespace(write_adapter=lambda *_: None)
@@ -83,12 +78,13 @@ def test_partial_parameter_state_is_rejected(tmp_path):
         lora_utils._load_training_state(tmp_path, optimizer, None)
 
 
-def test_masters_are_refreshed_whenever_adapter_weights_are_written(tmp_path, monkeypatch):
-    monkeypatch.setattr(lora_utils, "get_parallel_state", _rank0_parallel_state)
+def test_loading_adapter_weights_refreshes_the_masters(tmp_path, monkeypatch):
+    rank0 = SimpleNamespace(rank=0)
+    monkeypatch.setattr(lora_utils, "get_parallel_state", lambda: SimpleNamespace(tp=rank0, pp=rank0))
     param = torch.nn.Parameter(torch.zeros(2))
     model = [SimpleNamespace(named_parameters=lambda: iter([("adapter.lora_A.weight", param)]))]
     torch.save({"adapter.lora_A.weight": torch.ones(2)}, tmp_path / "adapter_megatron_rank0.pt")
-    optimizer = MagicMock(chained_optimizers=[_Child(dp_rank=0)])
+    optimizer = MagicMock()
 
     assert lora_utils.load_lora_adapter(model, str(tmp_path), optimizer=optimizer) == (True, None, False)
     optimizer.reload_model_params.assert_called_once_with()

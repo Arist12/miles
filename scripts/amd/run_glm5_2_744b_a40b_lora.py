@@ -69,6 +69,9 @@ _MEGATRON_MODEL_TYPE = {
 # of the two gaps to begin with. Add it back only with --target-modules.
 _TARGET_MODULES = "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,q_a_proj,kv_a_proj_with_mqa,q_b_proj,kv_b_proj"
 
+# Decoder layers: three dense, then MoE.
+_NUM_LAYERS = {"GLM-5.2": 78, "GLM-5.2_5layer": 5}
+
 # (seq_length, rollout_max_response_len); the difference is the prompt budget. dapo-math is
 # the CUDA recipe's 8192/4096, used by both scripts/run_glm5_2_744b_a40b_lora.py and the
 # 64-GPU multi-node preset. That preset's response-length sweep on the full 744B put
@@ -114,6 +117,13 @@ class ScriptArgs(U.ExecuteTrainConfig):
     lora_alpha: int = 32
     lora_dropout: float = 0.0
     target_modules: str = _TARGET_MODULES
+    # gate_proj/up_proj (linear_fc1 of the dense MLP and the shared and routed experts) are
+    # adapted on the last N decoder layers only, as in the published CUDA run; 0 => every
+    # layer. 2-node gsm8k, rollouts 9-12 at reward 0.73-0.94: train/rollout abs_diff was
+    # 0.019-0.028 with them on all 75 MoE layers (and 0.041 by rollout 13), 0.011-0.016 on
+    # the last 10. The gap grows with the adapter, which the step-0 value cannot show: the
+    # B matrices start at zero.
+    moe_lora_last_n: int = 10
     # Required for true on-policy under colocate (OFF -> KL ~1.0 vs ~1e-4).
     lora_base_cpu_backup: bool = True
     # MoE-expert LoRA layout: shared-outer when True, per-expert when False.
@@ -230,6 +240,21 @@ def _parallel_args(args: ScriptArgs, num_gpus: int) -> str:
     )
 
 
+def _target_modules(args: ScriptArgs) -> str:
+    """args.target_modules with gate_proj/up_proj narrowed to the last moe_lora_last_n layers.
+
+    Megatron-Bridge matches the layer wildcards; SGLang is handed only the leaf names, which
+    size its adapter buffers by module type.
+    """
+    modules = args.target_modules.split(",")
+    if args.moe_lora_last_n <= 0 or not {"gate_proj", "up_proj"} & set(modules):
+        return args.target_modules
+    num_layers = _NUM_LAYERS[args.model_name]
+    kept = [m for m in modules if m not in ("gate_proj", "up_proj")]
+    first = max(0, num_layers - args.moe_lora_last_n)
+    return ",".join(kept + [f"*.layers.{n}.*.linear_fc1" for n in range(first, num_layers)])
+
+
 def _download_inputs(args: ScriptArgs) -> None:
     U.exec_command_cpu(f"mkdir -p {args.data_dir} {args.model_dir}")
     U.exec_command_cpu(f"hf download {_HF_REPO[args.model_name]} --local-dir {args.model_dir}/{args.model_name}")
@@ -280,7 +305,7 @@ def _execute(args: ScriptArgs) -> None:
 
     lora_args = (
         f"--lora-rank {args.lora_rank} --lora-alpha {args.lora_alpha} --lora-dropout {args.lora_dropout} "
-        f'--target-modules "{args.target_modules}" --no-gradient-accumulation-fusion '
+        f'--target-modules "{_target_modules(args)}" --no-gradient-accumulation-fusion '
     )
     if args.experts_shared_outer_loras:
         lora_args += "--experts-shared-outer-loras "

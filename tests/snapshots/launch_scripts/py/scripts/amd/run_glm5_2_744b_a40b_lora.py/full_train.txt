@@ -72,7 +72,7 @@ export no_proxy=127.0.0.1 && export PYTHONUNBUFFERED=1 && ray job submit
   --lora-rank 16
   --lora-alpha 32
   --lora-dropout 0.0
-  --target-modules "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,q_a_proj,kv_a_proj_with_mqa,q_b_proj,kv_b_proj"
+  --target-modules "q_proj,k_proj,v_proj,o_proj,q_a_proj,kv_a_proj_with_mqa,q_b_proj,kv_b_proj,*.layers.68.*.linear_fc1,*.layers.69.*.linear_fc1,*.layers.70.*.linear_fc1,*.layers.71.*.linear_fc1,*.layers.72.*.linear_fc1,*.layers.73.*.linear_fc1,*.layers.74.*.linear_fc1,*.layers.75.*.linear_fc1,*.layers.76.*.linear_fc1,*.layers.77.*.linear_fc1"
   --no-gradient-accumulation-fusion
   --experts-shared-outer-loras
   --lora-base-cpu-backup

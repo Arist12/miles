@@ -125,7 +125,7 @@ replaceable component with three methods:
 |---|---|---|
 | `put()` | The rollout worker, once per finished group | Store the group, or reject it |
 | `get()` | The trainer, once per group it needs | Return the next group to train on, waiting if none is available |
-| `get_metrics()` | The trainer, once per step | Report what the buffer did since the previous step |
+| `get_metrics(trainer_model_id)` | The trainer, once per step | Report what the buffer did since the previous step. The trainer model id is always passed, and is `None` in a run of one policy |
 
 Those three methods are the whole interface: the worker and the trainer see nothing
 else, and everything inside the box below is the built-in `DefaultDataBuffer`.
@@ -279,6 +279,11 @@ The fleet and an external backend both evaluate a checkpoint, so both need
 | A fresh export per eval point | `--eval-hf-dir`, pointed at tmpfs | `eval/export_time_seconds` per point, plus staging space |
 | The periodic HF checkpoints | `--eval-hf-dir` unset and `--save-hf` set | None, but `eval_interval` must be a multiple of `save_interval` |
 
+When snapshot eval reuses `--save-hf`, a fixed path such as `/checkpoints/hf`
+automatically becomes `/checkpoints/hf/step_{rollout_id}`. Existing rollout ID
+format fields, including `{rollout_id:06d}`, keep their original layout. Save paths
+are unchanged when eval uses `--eval-hf-dir` or shared engines, or eval is disabled.
+
 On a real run you are persisting checkpoints anyway, so reuse costs nothing. A test run
 that saves no checkpoints needs the export, and a tmpfs staging directory keeps it off
 disk.
@@ -308,13 +313,33 @@ rollout/fully_async/queue_size
 rollout/fully_async/aborted_groups_filtered
 rollout/fully_async/stale_groups_filtered
 rollout/fully_async/avg_staleness, rollout/fully_async/max_staleness
+rollout/fully_async/avg_post_generation_staleness, rollout/fully_async/max_post_generation_staleness
+rollout/fully_async/avg_generation_version_span, rollout/fully_async/max_generation_version_span
+rollout/fully_async/token_weighted_staleness
+rollout/fully_async/weight_version_sample_coverage
 rollout/fully_async/buffer_avg_staleness, rollout/fully_async/buffer_max_staleness
 rollout/dynamic_filter/drop_<reason>
 ```
 
-The `avg_staleness` and `max_staleness` pair covers the groups training actually
-consumed, while the `buffer_` pair covers the groups still sitting in the buffer when
-the step drained it.
+Staleness is measured in published rollout weight versions: with
+`--update-weights-interval 1`, one version normally corresponds to one optimizer step;
+otherwise it does not. The metrics separate three parts of policy provenance:
+
+- `avg_staleness` and `max_staleness` are the gap from the current version to the
+  oldest version in each selected group. `stale_groups_filtered` counts groups that
+  exceeded `--max-weight-staleness`; rejected groups do not enter these averages.
+- `post_generation_staleness` is the gap from the current version to the newest version
+  in each selected group. `generation_version_span` is the newest minus oldest version
+  within the group. Together they distinguish aging after generation from updates that
+  landed while a trajectory was being generated.
+- `token_weighted_staleness` averages `current_version - span.version`, weighting each
+  numeric version span by its number of generated tokens. It therefore describes the
+  typical version gap of stamped generation tokens rather than the oldest token only.
+
+`weight_version_sample_coverage` is the fraction of selected samples with at least one
+numeric version span. Missing provenance is excluded from lag averages, not treated as
+zero. The `buffer_` pair covers groups still sitting in the buffer when the step drained
+it.
 
 A `queue_size` pinned at zero means rollout is the bottleneck, so scale rollout capacity
 or lower per-sample generation cost. A `queue_size` pinned at capacity means training is

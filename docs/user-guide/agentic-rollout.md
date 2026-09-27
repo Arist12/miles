@@ -133,6 +133,12 @@ sequence, trims model-specific boundary tokens, and builds the training sample.
 
 ### Choose the session behavior
 
+Use `{"evaluation": true}` in `POST /sessions` for evaluation; omitting it defaults to training. The agentic generator sets this automatically, and the purpose stays fixed across turns, retries, and branches.
+
+`temperature`, `top_p`, and `top_k` in `POST /sessions` provide defaults for omitted or `null` chat fields. Training requests must match the registered temperature or receive HTTP 400; eval temperature and `top_p`/`top_k` remain overridable. The agentic generator registers the sample's resolved values automatically.
+
+Evaluation forces `return_sampling_mask`, `return_routed_experts`, and `return_indexer_topk` off and ignores `routed_experts_start_len`. TITO, logprobs, and sample collection still apply; engine-internal capture may remain enabled.
+
 History handling depends on the selected server version:
 
 - **v1 is linear.** Each request must extend the previous messages at the tail.
@@ -142,7 +148,10 @@ History handling depends on the selected server version:
 - **v2 (Experimental) is an append-only tree.** A request attaches to the deepest checkpoint
   whose complete message path prefixes the request. Any unmatched suffix creates
   a branch, and existing branches are never deleted. A path whose last generation
-  ended with `finish_reason=length` cannot be extended.
+  ended with `finish_reason=length` cannot be extended. By default, a leaf becomes
+  no sample when a later request re-sent its exact prompt tokens; a later request
+  that differs is a separate branch and its own sample
+  (`--session-sample-picker-path`).
 
 Whether a replayed message counts as "the same" as the stored one is decided by
 `--session-message-matcher` (default `strict`); see

@@ -1,5 +1,7 @@
 import os
 import shlex
+import signal
+import sys
 import threading
 import time
 from pathlib import Path
@@ -11,6 +13,20 @@ from miles.utils.misc import get_current_node_ip
 from miles.utils.test_utils import fault_injector
 from miles.utils.workers import process_utils
 from miles.utils.workers.command_actor import CommandActor
+
+_DRAINING_SOURCE = """
+import os, signal, sys, time
+
+def drain(*_):
+    time.sleep(1)
+    with open(sys.argv[2], "w") as f:
+        f.write("drained")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, drain)
+os.close(os.open(sys.argv[1], os.O_CREAT | os.O_WRONLY))
+time.sleep(300)
+"""
 
 
 class _FakeExit:
@@ -107,14 +123,16 @@ class TestLifecycleBinding:
 
         assert fake_exit.codes == [7]
 
-    def test_exits_actor_process_with_one_on_signal_killed_subprocess(self, monkeypatch: pytest.MonkeyPatch):
-        """A signal-killed subprocess (negative returncode) maps to exit code 1."""
+    def test_exits_actor_process_with_128_plus_signal_on_signal_killed_subprocess(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """A signal-killed subprocess (negative returncode) maps to exit code 128+signal, as a shell reports it."""
         fake_exit = _FakeExit(monkeypatch)
 
         CommandActor().run(cmd='kill -TERM "$$"', envs={})
         fake_exit.wait()
 
-        assert fake_exit.codes == [1]
+        assert fake_exit.codes == [128 + signal.SIGTERM]
 
     def test_does_not_exit_while_subprocess_is_running(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         """The actor keeps running until the subprocess actually exits."""
@@ -177,6 +195,20 @@ class TestShutdown:
 
         actor.shutdown()
 
+    def test_an_exec_command_finishes_its_sigterm_handling_before_shutdown_returns(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ):
+        """Shutdown's SIGTERM reaches the exec'd command itself, which gets its grace period to drain."""
+        _FakeExit(monkeypatch)
+        ready_path, drained_path = tmp_path / "ready", tmp_path / "drained"
+        actor = CommandActor()
+        actor.run(cmd=_exec_command(_DRAINING_SOURCE, ready_path, drained_path), envs={})
+        _wait_for_path(ready_path)
+
+        actor.shutdown()
+
+        assert drained_path.read_text() == "drained"
+
 
 class TestKillSubprocess:
     def test_killing_the_subprocess_surfaces_as_the_actor_crash_exit(self, monkeypatch: pytest.MonkeyPatch):
@@ -188,7 +220,7 @@ class TestKillSubprocess:
         actor.kill_subprocess()
 
         fake_exit.wait()
-        assert fake_exit.codes == [1]
+        assert fake_exit.codes == [128 + signal.SIGKILL]
 
     def test_kill_before_run_is_rejected(self):
         """A crash injection into an actor with no subprocess is a caller bug."""
@@ -281,6 +313,11 @@ def _wait_for_path(path: Path) -> None:
     while not path.exists() and time.monotonic() < deadline:
         time.sleep(0.01)
     assert path.exists()
+
+
+def _exec_command(source: str, *args: Path) -> str:
+    # Mirrors how the worker manager hands a spec's command to its actor.
+    return f"exec {shlex.join([sys.executable, '-c', source, *map(str, args)])}"
 
 
 def _wait_for_process_exit(pid: int) -> None:

@@ -113,8 +113,12 @@ class ScriptArgs(U.ExecuteTrainConfig):
     # R3 rollout routing replay (arxiv 2510.11370)
     use_r3: bool = True
 
-    lora_rank: int = 16
-    lora_alpha: int = 32
+    # The published CUDA run's rank; the in-tree CUDA launcher's 16 / 32 has the same
+    # scale. At 16 / 32 the 2-node gsm8k run (40 rollouts, gate/up on the last 10 layers)
+    # learned 0.27 -> 0.93 but its train/rollout abs_diff reached 0.031-0.032 on two steps
+    # late in saturation; a smaller adapter carries a smaller train/rollout gap.
+    lora_rank: int = 8
+    lora_alpha: int = 16
     lora_dropout: float = 0.0
     target_modules: str = _TARGET_MODULES
     # gate_proj/up_proj (linear_fc1 of the dense MLP and the shared and routed experts) are

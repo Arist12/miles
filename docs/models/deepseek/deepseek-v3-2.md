@@ -33,7 +33,7 @@ Run everything inside the `radixark/miles:latest` container at `/root/miles`. Th
 |---|---|---|
 | `--model-org` / `--model-name` | `deepseek-ai` / `DeepSeek-V3.2` | The HF repository to download, and the stem of every derived directory name. |
 | `--model-dir` | `/root/models` | Holds the HF checkpoint, the `-bf16` cast, and the Megatron `_torch_dist` directory as siblings. |
-| `--model-local-dir` | `/root/models` | Node-local destination that `prepare-cp` rsyncs into; worth changing only when `--model-dir` is on shared storage. |
+| `--model-local-dir` | `/root/models` | Node-local destination each trainer pod rsyncs into before training; worth changing only when `--model-dir` is on shared storage. |
 | `--data-dir` | `/root/datasets` | Where dapo-math-17k and aime-2024 are downloaded. |
 | `--megatron-path` | `/root/Megatron-LM` | Added to `PYTHONPATH` for both conversion and training. |
 | `--output-dir` | `/root/shared_data` | Training checkpoints land under `{output-dir}/{run-id}/checkpoints`. |
@@ -93,7 +93,7 @@ python scripts/run_deepseek_v32.py full-train \
    --actor-num-nodes 8 --rollout-num-gpus 8
 ```
 
-The `full-train` subcommand chains download → FP8 → BF16 cast → optional rollout quantization → `torch_dist` conversion → training. It does not run `prepare-cp`; call that separately if you stage checkpoints onto node-local disk.
+The `full-train` subcommand chains download → FP8 → BF16 cast → optional rollout quantization → `torch_dist` conversion → training. Staging onto node-local disk is not a separate stage: `train` rsyncs the HF checkpoint and `torch_dist` into `--model-local-dir` on every trainer pod before the job starts.
 
 ### 4.2 Individual stages
 
@@ -103,9 +103,6 @@ python scripts/run_deepseek_v32.py prepare --actor-num-nodes 8
 
 # re-run just the Megatron conversion
 python scripts/run_deepseek_v32.py prepare-megatron-ckpt --actor-num-nodes 8
-
-# rsync the HF checkpoint and torch_dist into --model-local-dir on every node
-python scripts/run_deepseek_v32.py prepare-cp --actor-num-nodes 8
 
 # train, assuming the stages above already ran
 python scripts/run_deepseek_v32.py train --actor-num-nodes 8 --rollout-num-gpus 8
@@ -163,8 +160,8 @@ The `--enable-mis` flag turns on truncated importance sampling to correct the tr
 ```bash
 --sglang-mem-fraction-static 0.8
 --sglang-attention-backend nsa
---sglang-nsa-decode-backend flashmla_sparse
---sglang-nsa-prefill-backend flashmla_sparse
+--sglang-dsa-decode-backend flashmla_sparse
+--sglang-dsa-prefill-backend flashmla_sparse
 --sglang-kv-cache-dtype bf16
 --sglang-page-size 64  # the NSA KV cache requires 64 on CUDA
 --rollout-num-gpus-per-engine 8  # 2 with --use-single-node
@@ -172,7 +169,7 @@ The `--enable-mis` flag turns on truncated importance sampling to correct the tr
 --sglang-dp-size 8
 --sglang-enable-dp-attention
 --sglang-enable-dp-lm-head
---sglang-cuda-graph-max-bs 256
+--sglang-cuda-graph-max-bs-decode 256
 --sglang-moe-runner-backend flashinfer_trtllm_routed  # triton on H100 / H200
 ```
 

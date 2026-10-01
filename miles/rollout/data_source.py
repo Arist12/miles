@@ -14,6 +14,10 @@ from miles.utils.types import Sample
 logger = logging.getLogger(__name__)
 
 
+def compute_global_dataset_state_path(directory: str, *, rollout_id: int | None) -> str:
+    return os.path.join(directory, f"rollout/global_dataset_state_dict_{rollout_id}.pt")
+
+
 class DataSource(abc.ABC):
     @abc.abstractmethod
     def get_samples(self, num_samples: int) -> list[list[Sample]]:
@@ -132,26 +136,28 @@ class RolloutDataSource(DataSource):
             "sample_index": self.sample_index,
             "metadata": self.metadata,
         }
-        path = os.path.join(self.args.save, f"rollout/global_dataset_state_dict_{rollout_id}.pt")
+        path = compute_global_dataset_state_path(self.args.save, rollout_id=rollout_id)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save(state_dict, path)
 
     def load(self, rollout_id=None):
         if not self.args.rollout_global_dataset:
+            logger.warning("--disable-rollout-global-dataset: the dataset starts where a fresh run's would")
             return
 
         # A LoRA resume keeps --load on the base model; the cursor lives in the run being resumed.
         resume_root = getattr(self.args, "lora_resume_root", None)
         load_root = resume_root or self.args.load
         if load_root is None:
+            logger.warning("no --load: the dataset starts where a fresh run's would")
             return
 
-        path = os.path.join(load_root, f"rollout/global_dataset_state_dict_{rollout_id}.pt")
+        path = compute_global_dataset_state_path(load_root, rollout_id=rollout_id)
         if not os.path.exists(path):
             # Rollout -1 is the run starting at rollout 0, which has no cursor to restore.
             if resume_root is not None and rollout_id >= 0:
                 raise FileNotFoundError(f"Expected data-source checkpoint for the LoRA resume does not exist: {path}")
-            logger.info(f"Checkpoint {path} does not exist.")
+            logger.warning(f"no dataset state under {path}: the dataset starts where a fresh run's would")
             return
 
         logger.info(f"load metadata from {path}")

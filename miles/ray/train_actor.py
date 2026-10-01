@@ -136,6 +136,10 @@ class TrainRayActor(NodeProbeMixin):
         dist.init_process_group(
             backend=backend,
             timeout=timedelta(minutes=args.distributed_timeout_minutes),
+            # ROCm 10 / gfx942: RCCL comms created lazily on torch_memory_saver tensors return wrong results.
+            device_id=(
+                torch.device("cuda", local_rank) if torch.version.hip is not None and backend == "nccl" else None
+            ),
         )
         init_gloo_group()
 

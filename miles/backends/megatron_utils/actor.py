@@ -361,6 +361,7 @@ class MegatronTrainRayActor(TrainRayActor):
         if not self._asleep:
             logger.info("wake_up() called while already resident; ensuring process groups only")
             reload_process_groups()
+            ep_p2p_alltoall.reconnect_for_training()
             return
         print_memory("before wake_up model")
 
@@ -373,6 +374,7 @@ class MegatronTrainRayActor(TrainRayActor):
 
         clear_memory()
         reload_process_groups()
+        ep_p2p_alltoall.reconnect_for_training()
         self._asleep = False
         print_memory("after wake_up model")
 

@@ -11,11 +11,15 @@ split matrix moved as matched ``isend``/``irecv`` pairs, one peer at a time, com
   :func:`ring_all_to_all_single` over a dedicated communicator (forward and
   ``_AllToAll.backward`` alike, since both reach ``torch.distributed.all_to_all_single``);
 * moves the dispatcher's per-expert token-count all-gather on the world group to Gloo;
-* after every trainer process-group reload (the paused one in ``update_weights`` and
-  the wake-up) reconnects the Megatron groups and builds a fresh transport, both
-  outside the memory-saver region, keeping the previous transport alive next to it
-  until the next ``sleep()``;
+* after every wake-up (:func:`reconnect_for_training`) reconnects the Megatron groups
+  and builds a fresh transport, both outside the memory-saver region;
 * runs ``compute_log_prob`` outside the memory-saver region.
+
+The weight sync in ``update_weights`` reloads the same groups but does not train: it
+touches only the TP and EP groups, which it connects lazily inside its own memory-saver
+exclusion, and never the all-to-all. Warming every group and building a transport there
+too cost ~140 s per rollout at 32 ranks, and left the unused transport (~11 GiB per
+GPU) on the device through generation.
 
 This mirrors, call for call, the runtime patch the recipe was first validated with:
 reimplementations that differed only in bookkeeping aborted in the first training
@@ -152,7 +156,6 @@ def _warm_up_process_groups(*, install_hooks: bool) -> None:
     logger.info("EP P2P: connected %d process groups", len(connected))
 
     if install_hooks:
-        _install_reload_hook()
         _install_metadata_gather_gloo()
         _install_ring_all_to_all()
         _run_log_probs_outside_memory_saver()
@@ -195,21 +198,14 @@ def _prepare_safe_ep_group() -> None:
     )
 
 
-def _install_reload_hook() -> None:
-    import miles.backends.megatron_utils.actor as actor_module
-
-    original = actor_module.reload_process_groups
-    if getattr(original, "_ep_p2p_reload_hook", False):
+def reconnect_for_training() -> None:
+    """Call right after the trainer reloads its process groups to train (the wake-up):
+    connects Megatron's groups outside the memory-saver region and builds a fresh
+    transport. A no-op unless :func:`install` ran."""
+    if not _installed:
         return
-
-    def reload_process_groups(*args, **kwargs):
-        result = original(*args, **kwargs)
-        _warm_up_process_groups(install_hooks=False)
-        _prepare_safe_ep_group()
-        return result
-
-    reload_process_groups._ep_p2p_reload_hook = True
-    actor_module.reload_process_groups = reload_process_groups
+    _warm_up_process_groups(install_hooks=False)
+    _prepare_safe_ep_group()
 
 
 def _install_metadata_gather_gloo() -> None:

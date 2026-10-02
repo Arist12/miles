@@ -1,7 +1,7 @@
 """GLM-5.2 744B-A40B GRPO LoRA RL for AMD (MI350X / MI355X), multi-node.
 
 ROCm counterpart of scripts/run_glm5_2_744b_a40b_lora.py: TP intra-node, EP across the
-whole world. SGLang serves the DSA attention with the TileLang NSA kernels (flashmla has
+whole world. SGLang serves the DSA attention with the TileLang DSA kernels (flashmla has
 no HIP build); ``--dsa-attention-backend tilelang`` needs Megatron-Bridge's unfused-DSA
 kv up-projection support. GLM-5.2_5layer is a mechanics smoke only (zero reward).
 
@@ -45,7 +45,7 @@ _TASK_SEQ = {"dapo-math": (8192, 4096), "gsm8k": (1024, 512)}
 # Micro-batches pad to tp_size * this; miles' 128 trains a ~360-token gsm8k sample as 1024.
 _TASK_PAD_MULTIPLIER = {"dapo-math": 0, "gsm8k": 16}  # 0 => miles' default
 
-# The TileLang NSA decode kernel needs >= 4 of GLM-5.2's 64 heads per engine rank.
+# The TileLang DSA decode kernel needs >= 4 of GLM-5.2's 64 heads per engine rank.
 _MAX_ENGINE_GPUS = 16
 
 
@@ -262,9 +262,9 @@ def _execute(args: ScriptArgs) -> None:
         f"--rollout-num-gpus-per-engine {engine_gpus} "
         f"--sglang-mem-fraction-static {args.sglang_mem_fraction_static} "
         f"--sglang-ep-size {engine_gpus} "
-        "--sglang-attention-backend nsa "
+        "--sglang-attention-backend dsa "
         # ROCm: flashmla_sparse / flashmla_kv have no HIP build.
-        "--sglang-nsa-prefill-backend tilelang --sglang-nsa-decode-backend tilelang "
+        "--sglang-dsa-prefill-backend tilelang --sglang-dsa-decode-backend tilelang "
         "--sglang-page-size 64 "
         f"--sglang-context-length {args.sglang_context_length} "
         f"--sglang-cuda-graph-max-bs-decode {args.sglang_max_running_requests} "

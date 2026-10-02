@@ -88,7 +88,7 @@ def ring_all_to_all_single(
         if ops:
             for work in dist.batch_isend_irecv(ops):
                 work.wait()
-        sync()
+    sync()
 
 
 def _outside_memory_saver():

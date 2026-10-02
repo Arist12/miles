@@ -1027,6 +1027,20 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                 ),
             )
             parser.add_argument(
+                "--rollout-cell-tick-timeout",
+                type=float,
+                default=None,
+                help="Seconds one controller tick of a rollout cell may run before it is cancelled. "
+                "Unset keeps the built-in bound.",
+            )
+            parser.add_argument(
+                "--rollout-cell-init-timeout",
+                type=float,
+                default=None,
+                help="Seconds a rollout cell may stay initializing before it is past its startup deadline. "
+                "Unset keeps the built-in bound.",
+            )
+            parser.add_argument(
                 "--update-weight-transfer-mode",
                 choices=["broadcast", "p2p", "disk-delta"],
                 default="broadcast",
@@ -3192,6 +3206,9 @@ def miles_validate_args(args):
             setattr(args, k, v)
 
     validate_dashboard_args(args)
+    for name in ("rollout_cell_tick_timeout", "rollout_cell_init_timeout"):
+        value = getattr(args, name, None)
+        assert value is None or value > 0, f"--{name.replace('_', '-')} must be positive, got {value}"
 
     args.ft_components = _resolve_ft_components(args)
     assert not ("rollout" in args.ft_components and args.eval_num_gpus > 0), (

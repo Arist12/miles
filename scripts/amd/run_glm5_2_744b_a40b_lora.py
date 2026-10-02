@@ -267,7 +267,7 @@ def _execute(args: ScriptArgs) -> None:
         "--sglang-nsa-prefill-backend tilelang --sglang-nsa-decode-backend tilelang "
         "--sglang-page-size 64 "
         f"--sglang-context-length {args.sglang_context_length} "
-        f"--sglang-cuda-graph-max-bs {args.sglang_max_running_requests} "
+        f"--sglang-cuda-graph-max-bs-decode {args.sglang_max_running_requests} "
         f"--sglang-max-running-requests {args.sglang_max_running_requests} "
         f"--sglang-chunked-prefill-size {min(8192, 2048 * engine_gpus)} --sglang-watchdog-timeout 3600 "
         "--sglang-moe-runner-backend triton --sglang-disable-shared-experts-fusion "

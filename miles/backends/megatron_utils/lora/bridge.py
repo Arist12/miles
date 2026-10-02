@@ -10,6 +10,7 @@ import logging
 from argparse import Namespace
 from dataclasses import dataclass
 
+import torch
 from megatron.core.utils import get_attr_wrapped_model
 
 from miles.utils.hf_config import load_hf_config
@@ -148,15 +149,19 @@ def _setup_lora_model_via_bridge(args: Namespace) -> list:
     provider.variable_seq_lengths = True
     provider.moe_token_dispatcher_type = "alltoall"
     provider.moe_router_load_balancing_type = "none"
-    if is_multi_lora_enabled(args) and targets_expert_leaves(args.target_modules):
+    if targets_expert_leaves(args.target_modules):
         # Expert adapters cannot replay the fused permute's row_id_map, and most bridge
         # MoE providers default the fusion on — so turn it off rather than refuse to build.
         if getattr(provider, "moe_permute_fusion", False):
             logger.info(
-                "[multilora] disabling moe_permute_fusion: expert adapters replay the "
+                "disabling moe_permute_fusion: expert adapters replay the "
                 "dispatcher's permutation, which the fused kernel does not expose"
             )
         provider.moe_permute_fusion = False
+    if torch.version.hip is not None and args.colocate and getattr(provider, "moe_shared_expert_overlap", False):
+        # The overlapped EP all-to-all (side stream) and TP collectives deadlock RCCL under colocate.
+        logger.info("disabling moe_shared_expert_overlap: ROCm colocate cannot overlap EP and TP RCCL kernels")
+        provider.moe_shared_expert_overlap = False
     if getattr(args, "decoder_first_pipeline_num_layers", None) is not None:
         provider.num_layers_in_first_pipeline_stage = args.decoder_first_pipeline_num_layers
     if getattr(args, "decoder_last_pipeline_num_layers", None) is not None:

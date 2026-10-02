@@ -47,6 +47,8 @@ def write_checkpoint_dir(
 
     write_error = None
     try:
+        # Without storage shared across nodes, only rank 0's node has the directory yet.
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
         write_shards(checkpoint_dir)
     except Exception as exc:
         write_error = exc

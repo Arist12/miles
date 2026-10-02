@@ -32,13 +32,6 @@ _MEGATRON_MODEL_TYPE = {
     "GLM-5.2_5layer": "glm5.2-744B-A40B_5layer_lora",
 }
 
-# No DSA indexer and no down_proj, as in the published CUDA run (down_proj drifts the
-# train/rollout logprob gap).
-_TARGET_MODULES = "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,q_a_proj,kv_a_proj_with_mqa,q_b_proj,kv_b_proj"
-
-# Decoder layers: three dense, then MoE.
-_NUM_LAYERS = {"GLM-5.2": 78, "GLM-5.2_5layer": 5}
-
 # (seq_length, rollout_max_response_len), as in the CUDA recipe.
 _TASK_SEQ = {"dapo-math": (8192, 4096), "gsm8k": (1024, 512)}
 
@@ -65,13 +58,13 @@ class ScriptArgs(U.ExecuteTrainConfig):
     # R3 rollout routing replay (arxiv 2510.11370)
     use_r3: bool = True
 
-    # Rank and gate/up scope of the published CUDA run.
+    # The published CUDA run's rank. Attention + MLP/expert gate/up; the DSA indexer is not an
+    # HF attention target, and down_proj drifts the train/rollout logprob gap.
     lora_rank: int = 8
     lora_alpha: int = 16
     lora_dropout: float = 0.0
-    target_modules: str = _TARGET_MODULES
-    # gate_proj/up_proj only on the last N decoder layers; 0 => every layer.
-    moe_lora_last_n: int = 10
+    target_modules: str = "attn,mlp"
+    exclude_modules: str = "down_proj"
     lora_base_cpu_backup: bool = True
     experts_shared_outer_loras: bool = True
 
@@ -162,17 +155,6 @@ def _parallel_args(args: ScriptArgs, num_gpus: int) -> str:
     )
 
 
-def _target_modules(args: ScriptArgs) -> str:
-    """args.target_modules with gate_proj/up_proj narrowed to the last moe_lora_last_n layers."""
-    modules = args.target_modules.split(",")
-    if args.moe_lora_last_n <= 0 or not {"gate_proj", "up_proj"} & set(modules):
-        return args.target_modules
-    num_layers = _NUM_LAYERS[args.model_name]
-    kept = [m for m in modules if m not in ("gate_proj", "up_proj")]
-    first = max(0, num_layers - args.moe_lora_last_n)
-    return ",".join(kept + [f"*.layers.{n}.*.linear_fc1" for n in range(first, num_layers)])
-
-
 def _download_inputs(args: ScriptArgs) -> None:
     backend = args.create_backend()
     backend.exec_command_cpu(f"mkdir -p {args.data_dir} {args.model_dir}")
@@ -221,7 +203,8 @@ def _execute(args: ScriptArgs) -> None:
 
     lora_args = (
         f"--lora-rank {args.lora_rank} --lora-alpha {args.lora_alpha} --lora-dropout {args.lora_dropout} "
-        f'--target-modules "{_target_modules(args)}" --no-gradient-accumulation-fusion '
+        f"--target-modules {args.target_modules} --exclude-modules {args.exclude_modules} "
+        "--no-gradient-accumulation-fusion "
     )
     if args.experts_shared_outer_loras:
         lora_args += "--experts-shared-outer-loras "

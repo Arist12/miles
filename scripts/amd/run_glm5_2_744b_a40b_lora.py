@@ -51,7 +51,6 @@ _MAX_ENGINE_GPUS = 16
 
 @dataclass
 class ScriptArgs(U.ExecuteTrainConfig):
-    run_id: str = U.create_run_id()
     model_name: Literal["GLM-5.2", "GLM-5.2_5layer"] = "GLM-5.2"
     hardware: Literal["auto", "MI350X", "MI355X"] = "auto"
     num_gpus_per_node: int | None = None
@@ -175,13 +174,14 @@ def _target_modules(args: ScriptArgs) -> str:
 
 
 def _download_inputs(args: ScriptArgs) -> None:
-    U.exec_command_cpu(f"mkdir -p {args.data_dir} {args.model_dir}")
-    U.exec_command_cpu(f"hf download {_HF_REPO[args.model_name]} --local-dir {args.model_dir}/{args.model_name}")
+    backend = args.create_backend()
+    backend.exec_command_cpu(f"mkdir -p {args.data_dir} {args.model_dir}")
+    backend.exec_command_cpu(f"hf download {_HF_REPO[args.model_name]} --local-dir {args.model_dir}/{args.model_name}")
     match args.task:
         case "dapo-math":
-            U.hf_download_dataset("zhuzilin/dapo-math-17k", data_dir=args.data_dir)
+            backend.hf_download_dataset("zhuzilin/dapo-math-17k", data_dir=args.data_dir)
         case "gsm8k":
-            U.hf_download_dataset("zhuzilin/gsm8k", data_dir=args.data_dir)
+            backend.hf_download_dataset("zhuzilin/gsm8k", data_dir=args.data_dir)
 
 
 def _get_wandb_args(args: ScriptArgs) -> str:
@@ -300,9 +300,8 @@ def _execute(args: ScriptArgs) -> None:
         f"{_get_wandb_args(args)}{_parallel_args(args, num_gpus)}{sglang_args}{misc_args}{args.extra_args} "
     )
 
-    U.execute_train(
+    args.create_backend().execute_train(
         train_args=train_args,
-        config=args,
         num_gpus_per_node=num_gpus,
         megatron_model_type=args.megatron_model_type,
         extra_env_vars={

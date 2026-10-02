@@ -18,18 +18,9 @@ from miles.utils.object_store_config import compute_mooncake_store_config
 from miles.utils.pydantic_utils import StrictBaseModel
 from miles.utils.workers.types import WorkerCommBackend
 
-_MOONCAKE_IMPORT_ERROR: ImportError | None = None
-
-try:
-    from mooncake.store import MooncakeDistributedStore, ReplicateConfig
-    from mooncake.structured_object_store import FieldSchema, MooncakeBundleTransfer, export_ref, import_ref
-
-    _MOONCAKE_AVAILABLE = True
-except ImportError as exc:
-    _MOONCAKE_AVAILABLE = False
-    _MOONCAKE_IMPORT_ERROR = exc
-    FieldSchema = None
-    ReplicateConfig = None
+# Imported on first use (_load_mooncake): Mooncake's extensions can link the system ROCm HIP
+# runtime, and loading them before torch's leaves a process with two, so torch's GPU init fails.
+MooncakeDistributedStore = ReplicateConfig = FieldSchema = MooncakeBundleTransfer = export_ref = import_ref = None
 
 
 # ============================== types ==============================
@@ -169,7 +160,7 @@ class _MooncakeStoreObjectRef(_BaseStoreObjectRef):
 
 class MooncakeObjectStore(BaseObjectStore):
     def __init__(self, args: Namespace, *, contribute_segment: bool) -> None:
-        _check_mooncake_available()
+        _load_mooncake()
 
         self._init_kwargs: dict[str, Any] = args.mooncake_store_init_kwargs or {}
         self._replica_num: int = args.mooncake_replica_num
@@ -210,9 +201,13 @@ class MooncakeObjectStore(BaseObjectStore):
         return config
 
 
-def _check_mooncake_available() -> None:
-    if not _MOONCAKE_AVAILABLE:
-        raise ImportError("object-store-backend='mooncake' requires the mooncake package") from _MOONCAKE_IMPORT_ERROR
+def _load_mooncake() -> None:
+    global MooncakeDistributedStore, ReplicateConfig, FieldSchema, MooncakeBundleTransfer, export_ref, import_ref
+    try:
+        from mooncake.store import MooncakeDistributedStore, ReplicateConfig
+        from mooncake.structured_object_store import FieldSchema, MooncakeBundleTransfer, export_ref, import_ref
+    except ImportError as exc:
+        raise ImportError("object-store-backend='mooncake' requires the mooncake package") from exc
 
 
 def _field_schemas_for_value(value: Any, value_spec: dict[str, ValueSpec] | None) -> dict[str, Any] | None:

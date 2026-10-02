@@ -47,14 +47,14 @@ class ScriptArgs(U.ExecuteTrainConfig):
     model_name: Literal["GLM-5.2", "GLM-5.2_5layer"] = "GLM-5.2"
     hardware: Literal["auto", "MI350X", "MI355X"] = "auto"
     num_gpus_per_node: int | None = None
-    task: Literal["dapo-math", "gsm8k"] = "dapo-math"
+    task: Literal["dapo-math", "gsm8k"] = "gsm8k"
 
     hf_checkpoint: str | None = None
     model_dir: str = "/root/models"
     data_dir: str = "/root/datasets"
     megatron_path: str = "/root/Megatron-LM"
 
-    dsa_attention_backend: Literal["megatron", "tilelang"] = "tilelang"
+    dsa_attention_backend: Literal["megatron", "tilelang"] = "megatron"
     # R3 rollout routing replay (arxiv 2510.11370)
     use_r3: bool = True
 

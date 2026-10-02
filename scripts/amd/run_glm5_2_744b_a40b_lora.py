@@ -425,6 +425,14 @@ def _execute(args: ScriptArgs) -> None:
             # asynchronously); the watchdog dump is what names it.
             "TORCH_NCCL_TRACE_BUFFER_SIZE": "2000",
             "TORCH_NCCL_DUMP_ON_TIMEOUT": "1",
+            # The ROCm image sets NCCL_MIN_NCHANNELS=112, a single-node all-reduce tuning, and
+            # RCCL duplicates channels up to that minimum after applying any maximum: every
+            # communicator here came up with 64 (32 ranks) or 112 (8 ranks) channels. Under
+            # colocate the trainer tears down and rebuilds its ~16 communicators around every
+            # engine phase, which at that width cost ~7 s to connect, ~3.5 s to destroy and
+            # ~3 GiB of device memory each, per rollout.
+            "NCCL_MIN_NCHANNELS": "16",
+            "NCCL_MAX_NCHANNELS": "16",
         },
         megatron_path=args.megatron_path,
     )

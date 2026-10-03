@@ -134,7 +134,7 @@ export no_proxy=127.0.0.1 && export PYTHONUNBUFFERED=1 && ray job submit
   --attention-backend flash
   --calculate-per-token-loss
   --moe-token-dispatcher-type alltoall
-  --moe-ep-p2p-alltoall
+  --moe-alltoall-via-allgather
   --colocate
   --rollout-cell-tick-timeout 3600.0
   --rollout-cell-init-timeout 5400.0

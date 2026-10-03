@@ -271,8 +271,9 @@ def _execute(args: ScriptArgs) -> None:
     misc_args = (
         "--attention-dropout 0.0 --hidden-dropout 0.0 --accumulate-allreduce-grads-in-fp32 "
         "--attention-softmax-in-fp32 --attention-backend flash --calculate-per-token-loss "
-        # RCCL's AllToAll deadlocks on the dispatcher's exchange across nodes.
-        "--moe-token-dispatcher-type alltoall --moe-ep-p2p-alltoall --colocate "
+        # RCCL's point-to-point path (AllToAll, isend/irecv) hangs on the dispatcher's exchange
+        # across nodes.
+        "--moe-token-dispatcher-type alltoall --moe-alltoall-via-allgather --colocate "
         f"--rollout-cell-tick-timeout {args.rollout_cell_tick_timeout} "
         f"--rollout-cell-init-timeout {args.rollout_cell_init_timeout} "
         f"--actor-num-nodes {args.num_nodes} --actor-num-gpus-per-node {num_gpus} "

@@ -1,4 +1,4 @@
-"""The P2P ring must reproduce all_to_all_single exactly, including on changing uneven splits."""
+"""The all-gather exchange must reproduce all_to_all_single exactly, including on changing uneven splits."""
 
 import random
 
@@ -6,7 +6,7 @@ import torch
 import torch.distributed as dist
 from tests.fast.dist_utils import init_gloo, run_multiprocess
 
-from miles.backends.megatron_utils.ep_p2p_alltoall import ring_all_to_all_single
+from miles.backends.megatron_utils.ep_allgather_alltoall import allgather_all_to_all_single
 
 HIDDEN = 3
 
@@ -32,7 +32,7 @@ def _exchange(counts: list[list[int]], group) -> None:
     send = torch.cat([_payload(me, dst, n) for dst, n in enumerate(input_splits)])
     recv = torch.full((sum(output_splits), HIDDEN), -1.0)
 
-    ring_all_to_all_single(recv, send, output_splits, input_splits, group)
+    allgather_all_to_all_single(recv, send, output_splits, input_splits, group)
 
     expected = torch.cat([_payload(src, me, n) for src, n in enumerate(output_splits)])
     torch.testing.assert_close(recv, expected, rtol=0, atol=0)
@@ -50,7 +50,7 @@ def _worker_changing_splits(rank: int, world_size: int, port: int) -> None:
 def _worker_subgroup(rank: int, world_size: int, port: int) -> None:
     init_gloo(rank, world_size, port=port)
     try:
-        # Group order differs from global order, so peers must be addressed by global rank.
+        # Group order differs from global order; splits and slices follow group order.
         group = dist.new_group(ranks=[2, 0, 3, 1])
         for iteration in range(5):
             _exchange(_split_matrix(world_size, seed=100 + iteration, allow_zero=True), group)
@@ -58,9 +58,9 @@ def _worker_subgroup(rank: int, world_size: int, port: int) -> None:
         dist.destroy_process_group()
 
 
-def test_ring_matches_all_to_all_on_changing_uneven_splits():
+def test_matches_all_to_all_on_changing_uneven_splits():
     run_multiprocess(_worker_changing_splits, world_size=4)
 
 
-def test_ring_addresses_peers_by_global_rank_in_a_reordered_group():
+def test_follows_group_order_in_a_reordered_group():
     run_multiprocess(_worker_subgroup, world_size=4)

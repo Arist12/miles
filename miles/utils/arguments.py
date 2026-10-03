@@ -340,6 +340,15 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                 ),
             )
             parser.add_argument(
+                "--moe-ep-p2p-alltoall",
+                action="store_true",
+                default=False,
+                help=(
+                    "Megatron backend: serve the MoE token dispatcher's uneven all-to-alls as an ordered "
+                    "ring of isend/irecv pairs (works around an RCCL AllToAll deadlock across nodes)."
+                ),
+            )
+            parser.add_argument(
                 "--stream-optimizer-state-to-disk",
                 action="store_true",
                 help=(

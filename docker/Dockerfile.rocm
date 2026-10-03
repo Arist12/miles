@@ -268,6 +268,10 @@ ENV TORCHINDUCTOR_MAX_AUTOTUNE=1
 ENV TORCHINDUCTOR_MAX_AUTOTUNE_POINTWISE=1
 # Keep GPUs visible to Ray num_gpus=0 coordinators so Megatron device checks do not crash.
 ENV RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+# torch bundles its own libamdhip64.so.7 while extensions built here (Mooncake, aiter, ...) link
+# /opt/rocm's; a process that loads both lets Triton bind the other copy, and its kernels then
+# fail with "context is destroyed". Resolve every libamdhip64.so.7 to torch's.
+ENV LD_LIBRARY_PATH=/opt/venv/lib/python3.12/site-packages/torch/lib:${LD_LIBRARY_PATH}
 
 RUN rm -rf /root/.cache/pip /root/TransformerEngine /tmp/amd_patch
 

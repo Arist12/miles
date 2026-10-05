@@ -106,6 +106,10 @@ def init(
 
     # Pytorch distributed.
     _initialize_distributed(args)
+    if args.moe_token_counts_over_gloo:
+        from .moe_gloo_token_counts import install as install_gloo_token_counts
+
+        install_gloo_token_counts()
 
     indep_dp = create_indep_dp_group(
         store_addr=indep_dp_store_addr,

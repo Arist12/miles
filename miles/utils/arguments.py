@@ -340,6 +340,15 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                 ),
             )
             parser.add_argument(
+                "--moe-token-counts-over-gloo",
+                action="store_true",
+                default=False,
+                help=(
+                    "Megatron backend: all-gather the alltoall MoE dispatcher's per-expert token counts, "
+                    "from which its all-to-all splits are derived, over Gloo instead of the device backend."
+                ),
+            )
+            parser.add_argument(
                 "--stream-optimizer-state-to-disk",
                 action="store_true",
                 help=(
@@ -2846,6 +2855,10 @@ def parse_args(add_custom_arguments=None, entry="train", preprocess_args=None):
                 "please use alltoall dispatcher instead."
             )
             args.moe_token_dispatcher_type = "alltoall"
+        assert not args.moe_token_counts_over_gloo or args.moe_token_dispatcher_type == "alltoall", (
+            "--moe-token-counts-over-gloo only applies to --moe-token-dispatcher-type alltoall, "
+            f"got {args.moe_token_dispatcher_type!r}"
+        )
 
         if args.pipeline_model_parallel_size == 1:
             assert args.decoder_first_pipeline_num_layers is None and args.decoder_last_pipeline_num_layers is None, (

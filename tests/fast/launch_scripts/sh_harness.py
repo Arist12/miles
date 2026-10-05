@@ -1,4 +1,5 @@
 import difflib
+import importlib.util
 import json
 import os
 import signal
@@ -11,6 +12,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REPO_ROOT_PLACEHOLDER = "<REPO_ROOT>"
 SANDBOX_PLACEHOLDER = "<SANDBOX>"
+_TORCH_SPEC = importlib.util.find_spec("torch")
+TORCH_LIB = str(Path(_TORCH_SPEC.origin).parent / "lib") if _TORCH_SPEC and _TORCH_SPEC.origin else None
+TORCH_LIB_PLACEHOLDER = "<TORCH_LIB>"
 
 _ARG_SEPARATOR = "\x1f"
 _RECORD_SEPARATOR = "\x1e"
@@ -254,4 +258,6 @@ def _parse_capture(raw: str, sandbox: Path) -> list[list[str]]:
 
 
 def sanitize(text: str, sandbox: Path) -> str:
+    if TORCH_LIB:
+        text = text.replace(TORCH_LIB, TORCH_LIB_PLACEHOLDER)
     return text.replace(str(sandbox), SANDBOX_PLACEHOLDER).replace(str(REPO_ROOT), REPO_ROOT_PLACEHOLDER)

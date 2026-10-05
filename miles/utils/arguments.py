@@ -349,6 +349,16 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                 ),
             )
             parser.add_argument(
+                "--moe-ep-p2p-alltoall",
+                action="store_true",
+                default=False,
+                help=(
+                    "Megatron backend: serve the alltoall MoE dispatcher's uneven all-to-alls as an ordered ring "
+                    "of isend/irecv pairs (RCCL's AllToAll deadlocks on them across nodes). "
+                    "Requires --moe-token-counts-over-gloo."
+                ),
+            )
+            parser.add_argument(
                 "--stream-optimizer-state-to-disk",
                 action="store_true",
                 help=(
@@ -2858,6 +2868,9 @@ def parse_args(add_custom_arguments=None, entry="train", preprocess_args=None):
         assert not args.moe_token_counts_over_gloo or args.moe_token_dispatcher_type == "alltoall", (
             "--moe-token-counts-over-gloo only applies to --moe-token-dispatcher-type alltoall, "
             f"got {args.moe_token_dispatcher_type!r}"
+        )
+        assert not args.moe_ep_p2p_alltoall or args.moe_token_counts_over_gloo, (
+            "--moe-ep-p2p-alltoall trusts every rank's splits; it requires --moe-token-counts-over-gloo"
         )
 
         if args.pipeline_model_parallel_size == 1:

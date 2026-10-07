@@ -1825,6 +1825,38 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                 default=1e-4,
                 help="The threshold for Off-Policy Sequence Masking (OPSM).",
             )
+            parser.add_argument(
+                "--use-dppo",
+                action="store_true",
+                default=False,
+                help=(
+                    "Replace PPO's ratio clip with DPPO's divergence mask (https://arxiv.org/abs/2602.04879): "
+                    "a token leaves the gradient only once its probability under the current policy has moved "
+                    "past --dppo-delta-* from the rollout policy in its advantage's direction. Measured against "
+                    "the rollout log-probs when present; --eps-clip* are ignored."
+                ),
+            )
+            parser.add_argument(
+                "--dppo-type",
+                type=str,
+                choices=["binary_tv", "binary_kl"],
+                default="binary_tv",
+                help="DPPO divergence: binary total variation (Eq. 13) or binary KL (Eq. 14).",
+            )
+            parser.add_argument("--dppo-delta-low", type=float, default=0.15, help="DPPO threshold, A < 0.")
+            parser.add_argument("--dppo-delta-high", type=float, default=0.15, help="DPPO threshold, A > 0.")
+            parser.add_argument(
+                "--loss-aggregation",
+                type=str,
+                choices=["sample_mean", "prompt_mean"],
+                default="sample_mean",
+                help=(
+                    "How per-token losses are averaged into the step loss. sample_mean: token mean within each "
+                    "rollout, rollouts weighted equally. prompt_mean: token mean over all rollouts of a prompt, "
+                    "prompts weighted equally (the DAPO objective; ScaleRL), so long trajectories cannot dominate "
+                    "the gradient. Use --calculate-per-token-loss for a global token mean."
+                ),
+            )
             return parser
 
         def add_on_policy_distillation_arguments(parser):
@@ -3512,6 +3544,14 @@ def miles_validate_args(args):
 
     if args.eps_clip_high is None:
         args.eps_clip_high = args.eps_clip
+
+    if args.use_dppo:
+        assert args.loss_type == "policy_loss", "--use-dppo replaces the PPO surrogate of --loss-type policy_loss"
+        assert args.advantage_estimator != "gspo", "--use-dppo masks tokens; GSPO's sequence-level ratio has no token"
+    if args.loss_aggregation == "prompt_mean":
+        assert not args.calculate_per_token_loss, (
+            "--loss-aggregation prompt_mean and --calculate-per-token-loss are two different reductions; pick one"
+        )
 
     if args.eval_reward_key is None:
         args.eval_reward_key = args.reward_key

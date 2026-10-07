@@ -14,6 +14,7 @@ from miles.backends.training_utils.loss.hub.corrections import vanilla_tis_funct
 from miles.backends.training_utils.loss.hub.logit_processors import get_log_probs_and_entropy, get_values
 from miles.backends.training_utils.loss.hub.math_utils import (
     compute_approx_kl,
+    compute_dppo_policy_loss,
     compute_ess_ratio_contribution,
     compute_gspo_kl,
     compute_opsm_mask,
@@ -208,9 +209,24 @@ def policy_loss_function(
         advantages.new_zeros(()),
     )
 
-    pg_loss, pg_clipfrac = compute_policy_loss(
-        ppo_kl, advantages, args.eps_clip, args.eps_clip_high, getattr(args, "eps_clip_c", None)
-    )
+    if getattr(args, "use_dppo", False):
+        # The trust region is measured against the policy that sampled the tokens.
+        behavior_log_probs = (
+            torch.cat(rollout_old_log_probs, dim=0) if rollout_old_log_probs is not None else old_log_probs
+        )
+        behavior_log_probs = torch.where(active_tokens, behavior_log_probs, log_probs.detach())
+        pg_loss, pg_clipfrac = compute_dppo_policy_loss(
+            log_probs,
+            behavior_log_probs,
+            advantages,
+            args.dppo_delta_low,
+            args.dppo_delta_high,
+            args.dppo_type,
+        )
+    else:
+        pg_loss, pg_clipfrac = compute_policy_loss(
+            ppo_kl, advantages, args.eps_clip, args.eps_clip_high, getattr(args, "eps_clip_c", None)
+        )
 
     if getattr(args, "dump_details", None) is not None:
         from miles.backends.training_utils.metrics.debug_dump import maybe_dump_policy_loss_debug

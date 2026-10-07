@@ -40,7 +40,7 @@ ROLLOUT_DATA_VALUE_SPEC: dict[str, ValueSpec] = {
     "round_number": ValueSpec(codec="ndarray", dtype="int64"),
     "sample_indices": ValueSpec(codec="ndarray", dtype="int64"),
     "rollout_ids": ValueSpec(codec="ndarray", dtype="int64"),
-    "rollout_mask_sums": ValueSpec(codec="ndarray", dtype="int64"),
+    "rollout_mask_sums": ValueSpec(codec="ndarray", dtype="float64"),
     "multimodal_train_inputs": ValueSpec(codec="ragged_tensor_dict"),
     "prompt": ValueSpec(codec="msgpack_ragged"),
     "metadata": ValueSpec(codec="msgpack_ragged"),
@@ -105,7 +105,12 @@ def convert_samples_to_train_data(
         loss_masks.append(sample.loss_mask)
     train_data["loss_masks"] = loss_masks
 
-    train_data["rollout_mask_sums"] = _compute_rollout_mask_sums(train_data["rollout_ids"], loss_masks)
+    if getattr(args, "loss_aggregation", "sample_mean") == "prompt_mean":
+        train_data["rollout_mask_sums"] = _compute_prompt_mean_denominators(
+            args, samples, train_data["rollout_ids"], loss_masks, metadata.get("prompt_group_sizes")
+        )
+    else:
+        train_data["rollout_mask_sums"] = _compute_rollout_mask_sums(train_data["rollout_ids"], loss_masks)
 
     # overwriting the raw reward
     if samples[0].metadata and "raw_reward" in samples[0].metadata:
@@ -235,6 +240,30 @@ def _compute_rollout_mask_sums(rollout_ids: list[int], loss_masks: list[list[int
     for rid, mask in zip(rollout_ids, loss_masks, strict=True):
         totals[rid] = totals.get(rid, 0) + sum(mask)
     return [totals[rid] for rid in rollout_ids]
+
+
+def _compute_prompt_mean_denominators(
+    args: Any,
+    samples: list[Sample],
+    rollout_ids: list[int],
+    loss_masks: list[list[int]],
+    prompt_group_sizes: list[int] | None,
+) -> list[float]:
+    """Per-sample loss denominators for ``--loss-aggregation prompt_mean``.
+
+    The reducer sums each sample's masked loss over its denominator and the step divides
+    by its rollout count R. Giving every sample of prompt group p the denominator
+    T_p * P / R (T_p: loss tokens over all of p's samples; P: groups in the batch) makes
+    that the token mean within each prompt, averaged with equal weight over prompts.
+    """
+    groups = _reward_group_segments(args, samples, prompt_group_sizes)
+    scale = len(groups) / max(len(set(rollout_ids)), 1)
+    denominators = [0.0] * len(samples)
+    for segment in groups:
+        group_tokens = sum(sum(loss_masks[i]) for i in segment)
+        for i in segment:
+            denominators[i] = group_tokens * scale
+    return denominators
 
 
 def _reward_group_segments(args: Any, samples: list[Sample], prompt_group_sizes: list[int] | None) -> list[list[int]]:

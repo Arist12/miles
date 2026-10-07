@@ -277,6 +277,57 @@ def compute_policy_loss(
     return pg_losses, clipfrac
 
 
+def compute_dppo_policy_loss(
+    log_probs: torch.Tensor,
+    behavior_log_probs: torch.Tensor,
+    advantages: torch.Tensor,
+    delta_low: float,
+    delta_high: float,
+    dppo_type: str = "binary_tv",
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """DPPO policy loss (https://arxiv.org/abs/2602.04879).
+
+    PPO's ratio clip is replaced by a trust region on the divergence between the
+    current policy and the behavior policy that sampled each token, measured on that
+    token alone (the paper's binary approximations, Eqs. 13-14). A token is dropped from
+    the gradient only when it has moved past ``delta`` in the direction its advantage
+    pushes it; the importance ratio itself is not clipped.
+
+    Args:
+        log_probs: Current-policy log-probs of the sampled tokens (with grad).
+        behavior_log_probs: Log-probs of the same tokens under the sampling policy
+            (the rollout engine's, per Sec. 5.2 of the paper).
+        advantages: Per-token advantages.
+        delta_low: Threshold for tokens with negative advantage.
+        delta_high: Threshold for tokens with positive advantage.
+        dppo_type: ``binary_tv`` (probability difference) or ``binary_kl``.
+
+    Returns:
+        ``(pg_losses, masked)``: per-token losses and a float indicator of the tokens
+        excluded from the gradient.
+    """
+    behavior_log_probs = behavior_log_probs.detach()
+    ratio = _safe_clamp_log_ratio(log_probs - behavior_log_probs).exp()
+    with torch.no_grad():
+        probs = log_probs.detach().float().exp()
+        behavior_probs = behavior_log_probs.float().exp()
+        prob_diff = probs - behavior_probs
+        if dppo_type == "binary_tv":
+            masked = ((advantages > 0) & (prob_diff > delta_high)) | ((advantages < 0) & (-prob_diff > delta_low))
+        elif dppo_type == "binary_kl":
+            eps = 1e-8
+            binary_kl = behavior_probs * (behavior_log_probs.float() - log_probs.detach().float()) + (
+                1 - behavior_probs
+            ) * torch.log((1 - behavior_probs + eps) / (1 - probs + eps))
+            masked = ((advantages > 0) & (prob_diff > 0) & (binary_kl > delta_high)) | (
+                (advantages < 0) & (prob_diff < 0) & (binary_kl > delta_low)
+            )
+        else:
+            raise ValueError(f"Unknown DPPO type: {dppo_type!r}; expected 'binary_tv' or 'binary_kl'.")
+    pg_losses = -ratio * advantages * (~masked).to(ratio.dtype)
+    return pg_losses, masked.float()
+
+
 def compute_log_probs(
     logits: torch.Tensor,
     tokens: torch.Tensor,

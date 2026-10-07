@@ -57,9 +57,9 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     # loss
     use_dppo: bool = True
     loss_aggregation: str = "prompt_mean"
-    # Keep only groups whose rewards differ (aborted groups are always dropped) and
-    # sample more prompts until the batch is full: Mercor's zero-variance filter with
-    # sample_full_batch. 0 disables the filter.
+    # Groups with an infrastructure failure are always dropped. With over-sampling, also
+    # keep only groups whose rewards differ and sample more prompts until the batch is
+    # full: Mercor's zero-variance filter with sample_full_batch. 0 disables the latter.
     over_sampling_batch_size: int = 8
 
     # rollout engine
@@ -143,13 +143,11 @@ def execute(args: ScriptArgs):
     )
     if args.over_sampling_batch_size:
         agent_args += (
-            "--dynamic-sampling-filter-path miles.rollout.filter_hub.common_filters.apply_reward_nonzero_std_filter "
+            "--dynamic-sampling-filter-path generate.filter_infra_failures_and_zero_std "
             f"--over-sampling-batch-size {args.over_sampling_batch_size} "
         )
     else:
-        agent_args += (
-            "--dynamic-sampling-filter-path miles.rollout.filter_hub.dynamic_sampling_filters.check_no_aborted "
-        )
+        agent_args += "--dynamic-sampling-filter-path generate.filter_infra_failures "
 
     misc_args = (
         "--attention-dropout 0.0 --hidden-dropout 0.0 --update-weight-buffer-size 536870912 "

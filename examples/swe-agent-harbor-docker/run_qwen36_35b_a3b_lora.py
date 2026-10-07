@@ -22,6 +22,7 @@ from pathlib import Path
 
 import typer
 
+from miles.ray.utils import NOSET_VISIBLE_DEVICES_ENV_VARS_LIST
 from miles.utils.external_utils import command_utils
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -186,6 +187,11 @@ def execute(args: ScriptArgs):
             "AGENT_SERVER_URL": args.agent_server_url,
             "AGENT_MODEL_NAME": "model",
             "AGENT_TRIAL_TIMEOUT": str(args.agent_trial_timeout),
+            # Ray empties HIP/CUDA_VISIBLE_DEVICES in GPU-less actors such as the worker
+            # manager, which imports every worker class; on ROCm `import aiter` (pulled in
+            # by sglang under SGLANG_USE_AITER=1) fails without a visible device. The GPU
+            # actors already run with these set and pick their devices themselves.
+            **{name: "1" for name in NOSET_VISIBLE_DEVICES_ENV_VARS_LIST},
         },
     )
 

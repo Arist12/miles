@@ -71,6 +71,7 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     agent_server_url: str = os.environ.get("AGENT_SERVER_URL", "http://127.0.0.1:11000")
     agent_trial_timeout: int = 3600
 
+    use_wandb: bool = True
     wandb_project: str = "miles-agentic-qwen36"
     wandb_team: str = os.environ.get("WANDB_TEAM", "")
     extra_args: str = ""
@@ -158,11 +159,15 @@ def execute(args: ScriptArgs):
         misc_args += f"--dump-details {args.save_traces_dir}/{args.run_id} "
 
     wandb_args = ""
-    if os.environ.get("WANDB_API_KEY"):
+    if args.use_wandb:
+        # Without WANDB_API_KEY the SDK falls back to ~/.netrc, which keeps the key off
+        # the logged command line.
         wandb_args = (
             f"--use-wandb --wandb-project {args.wandb_project} --wandb-group {args.run_id} "
-            f"--wandb-key {os.environ['WANDB_API_KEY']} --disable-wandb-random-suffix "
+            "--disable-wandb-random-suffix "
         )
+        if os.environ.get("WANDB_API_KEY"):
+            wandb_args += f"--wandb-key {os.environ['WANDB_API_KEY']} "
         if args.wandb_team:
             wandb_args += f"--wandb-team {args.wandb_team} "
 

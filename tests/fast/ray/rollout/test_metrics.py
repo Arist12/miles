@@ -488,6 +488,18 @@ class TestComputePassrateFromSamples:
             "pass@4": pytest.approx(1.0),
         }
 
+    def test_compacted_rollout_counts_once_toward_its_group(self):
+        args = make_args(n_samples_per_prompt=2, reward_key=None)
+        samples = [
+            make_sample(group_index=0, index=0, rollout_id=0, reward=1.0),
+            make_sample(group_index=0, index=0, rollout_id=0, reward=1.0),
+            make_sample(group_index=0, index=1, rollout_id=1, reward=0.0),
+        ]
+
+        out = _compute_passrate_from_samples(args, samples)
+
+        assert out == {"pass@1": pytest.approx(0.5), "pass@2": pytest.approx(1.0)}
+
 
 class TestWeightVersionMetrics:
     def test_reports_oldest_version_statistics_and_mixed_ratio(self):
@@ -570,3 +582,39 @@ class TestEvalMetrics:
         assert step_key == "eval/step"
         assert payload["eval/gsm8k"] == 0.5
         assert not any(key.startswith("alpha/") for key in payload)
+
+    def test_compacted_eval_rollouts_are_scored_once_per_rollout(self, monkeypatch):
+        """A v2 session splits a compacted rollout into several samples; eval must not crash or overweight it."""
+        calls: list[dict] = []
+        monkeypatch.setattr(
+            "miles.ray.rollout.metrics.tracking.log", lambda _args, payload, step_key: calls.append(payload)
+        )
+        args = make_args(log_passrate=True, n_samples_per_eval_prompt=2, reward_key=None)
+        samples = [
+            make_sample(group_index=0, index=0, rollout_id=0, reward=1.0),
+            make_sample(group_index=0, index=0, rollout_id=0, reward=1.0),
+            make_sample(group_index=0, index=0, rollout_id=0, reward=1.0),
+            make_sample(group_index=0, index=1, rollout_id=1, reward=0.0),
+            make_sample(group_index=1, index=2, rollout_id=0, reward=0.0),
+            make_sample(group_index=1, index=3, rollout_id=1, reward=0.0),
+        ]
+
+        log_eval_rollout_data(0, args, {"heldout": {"rewards": [s.reward for s in samples], "samples": samples}})
+
+        [payload] = calls
+        assert payload["eval/heldout"] == pytest.approx(0.25)
+        assert payload["eval/heldout-pass@1"] == pytest.approx(0.25)
+        assert payload["eval/heldout-pass@2"] == pytest.approx(0.5)
+
+    def test_pass_rate_is_skipped_when_rewards_do_not_split_into_groups(self, monkeypatch):
+        calls: list[dict] = []
+        monkeypatch.setattr(
+            "miles.ray.rollout.metrics.tracking.log", lambda _args, payload, step_key: calls.append(payload)
+        )
+        args = make_args(log_passrate=True, n_samples_per_eval_prompt=2)
+
+        log_eval_rollout_data(0, args, {"heldout": {"rewards": [1.0, 0.0, 1.0]}})
+
+        [payload] = calls
+        assert payload["eval/heldout"] == pytest.approx(2 / 3)
+        assert not any("pass@" in key for key in payload)

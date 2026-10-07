@@ -50,6 +50,10 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     max_seq_len: int = 32768
     rollout_max_response_len: int = 8192
     rollout_temperature: float = 1.0
+    # held-out eval through the same agent path (empty disables); runs before training too
+    eval_prompt_data: str = ""
+    eval_interval: int = 8
+    n_samples_per_eval_prompt: int = 2
 
     # LoRA
     lora_rank: int = 32
@@ -110,6 +114,11 @@ def execute(args: ScriptArgs):
         f"--rollout-temperature {args.rollout_temperature} --rollout-max-response-len {args.rollout_max_response_len} "
         f"--max-seq-len {args.max_seq_len} "
     )
+    if args.eval_prompt_data:
+        rollout_args += (
+            f"--eval-prompt-data heldout {args.eval_prompt_data} --eval-interval {args.eval_interval} "
+            f"--n-samples-per-eval-prompt {args.n_samples_per_eval_prompt} "
+        )
 
     # GRPO without std normalisation or KL, as in the Mercor recipe
     algo_args = "--advantage-estimator grpo --disable-grpo-std-normalization --entropy-coef 0.0 "

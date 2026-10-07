@@ -68,6 +68,7 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     rollout_num_gpus_per_engine: int = 8
     sglang_mem_fraction_static: float = 0.5
     session_server_workers: int = 32
+    session_server_port: int = 30000
 
     # Fully async: the trainer and the engines on separate GPUs (another node, or a split
     # of this one); generation never waits on a training step, groups are submitted per
@@ -152,7 +153,7 @@ def execute(args: ScriptArgs):
         "--custom-agent-function-path swe_agent_function.run "
         "--custom-rm-path generate.reward_func "
         "--use-session-server --tito-model qwen36 "
-        f"--session-server-port 30000 --session-server-workers {args.session_server_workers} "
+        f"--session-server-port {args.session_server_port} --session-server-workers {args.session_server_workers} "
     )
     if args.fully_async:
         # Fully async installs its own rollout class; its buffer applies the filter at put

@@ -84,6 +84,15 @@ class BaseReplayManager:
         for replay in self.replays:
             replay.clear_forward()
 
+    def describe(self, replay: Replay | None) -> str:
+        position = next((i for i, r in enumerate(self.replays) if r is replay), None)
+        filled = [i for i, r in enumerate(self.replays) if r.top_indices_list]
+        span = f"{filled[0]}..{filled[-1]}" if filled else "none"
+        return (
+            f"{self.name} replay selected: {position} of {len(self.replays)} registered "
+            f"(stream_idx={getattr(replay, 'stream_idx', None)}); replays holding data: {len(filled)} ({span})"
+        )
+
     def get_topk_fn(self, old_topk_fn, return_probs):
         manager = self
 
@@ -132,11 +141,11 @@ class BaseReplayManager:
                 replay.record(top_indices)
                 return result
 
-            elif stage == "replay_forward":
-                return _get_replay_result(replay.pop_forward(), scores, topk, *args, **kwargs)
-
-            elif stage == "replay_backward":
-                return _get_replay_result(replay.pop_backward(), scores, topk, *args, **kwargs)
+            elif stage in ("replay_forward", "replay_backward"):
+                if replay is None or not replay.top_indices_list:
+                    raise IndexError(f"{stage}: nothing to replay; {manager.describe(replay)}")
+                top_indices = replay.pop_forward() if stage == "replay_forward" else replay.pop_backward()
+                return _get_replay_result(top_indices, scores, topk, *args, **kwargs)
 
             else:
                 return old_topk_fn(scores, topk, *args, **kwargs)

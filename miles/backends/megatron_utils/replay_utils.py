@@ -19,6 +19,12 @@ def register_replay_list_moe(replay_list, replay_data, *, models, **_kwargs):
                     continue
             layer_indices.append(layer_id)
 
+    # The mapping is positional, so any other count would replay one layer's routing into another.
+    if len(replay_list) != len(layer_indices):
+        raise AssertionError(
+            f"routing replay: {len(replay_list)} routers registered a replay but this rank builds "
+            f"{len(layer_indices)} MoE layers (replay data has {replay_data.shape[1]} streams)"
+        )
     for replay_idx, layer_idx in enumerate(layer_indices):
         layer_data = replay_data[:, layer_idx]
         replay_list[replay_idx].record(layer_data)

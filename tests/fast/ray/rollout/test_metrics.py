@@ -590,13 +590,15 @@ class TestEvalMetrics:
             "miles.ray.rollout.metrics.tracking.log", lambda _args, payload, step_key: calls.append(payload)
         )
         args = make_args(log_passrate=True, n_samples_per_eval_prompt=2, reward_key=None)
+        # Eval rollouts are numbered prompt-major and carry no group_index; the v2 rollout split
+        # in three is tagged with its eval number as rollout_id.
         samples = [
-            make_sample(group_index=0, index=0, rollout_id=0, reward=1.0),
-            make_sample(group_index=0, index=0, rollout_id=0, reward=1.0),
-            make_sample(group_index=0, index=0, rollout_id=0, reward=1.0),
-            make_sample(group_index=0, index=1, rollout_id=1, reward=0.0),
-            make_sample(group_index=1, index=2, rollout_id=0, reward=0.0),
-            make_sample(group_index=1, index=3, rollout_id=1, reward=0.0),
+            make_sample(group_index=None, index=0, rollout_id=0, reward=1.0),
+            make_sample(group_index=None, index=0, rollout_id=0, reward=1.0),
+            make_sample(group_index=None, index=0, rollout_id=0, reward=1.0),
+            make_sample(group_index=None, index=1, reward=0.0),
+            make_sample(group_index=None, index=2, reward=0.0),
+            make_sample(group_index=None, index=3, reward=0.0),
         ]
 
         log_eval_rollout_data(0, args, {"heldout": {"rewards": [s.reward for s in samples], "samples": samples}})

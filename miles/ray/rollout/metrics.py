@@ -38,7 +38,8 @@ def log_eval_rollout_data(rollout_id, args, data, extra_metrics: dict[str, Any] 
             )
             rewards = [0.0 if r is None else r for r in rewards]
         samples = data[key].get("samples")
-        rollout_rewards = _compacted_rollout_rewards(samples, rewards)
+        group_size = args.n_samples_per_eval_prompt
+        rollout_rewards = _compacted_eval_rollout_rewards(samples, rewards)
         episode_rewards = list(rollout_rewards.values()) if rollout_rewards else rewards
         log_dict[f"eval/{key}"] = sum(episode_rewards) / len(episode_rewards) if len(episode_rewards) > 0 else 0.0
         if samples is not None:
@@ -47,9 +48,12 @@ def log_eval_rollout_data(rollout_id, args, data, extra_metrics: dict[str, Any] 
             truncated = data[key]["truncated"]
             log_dict[f"eval/{key}-truncated_ratio"] = sum(truncated) / len(truncated)
         if args.log_passrate:
-            group_size = args.n_samples_per_eval_prompt
-            if rollout_rewards:
-                pass_rate = _compute_rollout_pass_rate(rollout_rewards, group_size)
+            if rollout_rewards and group_size > 1:
+                # Eval numbers its rollouts prompt-major: prompt * n_samples_per_eval_prompt + j.
+                groups: dict[int, list[float]] = {}
+                for eval_rollout, reward in sorted(rollout_rewards.items()):
+                    groups.setdefault(eval_rollout // group_size, []).append(reward)
+                pass_rate = _pass_rate_over_complete_groups(groups, group_size)
             elif group_size > 0 and len(rewards) % group_size == 0:
                 pass_rate = compute_pass_rate(flat_rewards=rewards, group_size=group_size)
             else:
@@ -338,39 +342,35 @@ def _compute_passrate_from_samples(args, all_samples: list[Sample]) -> dict[str,
     if group_size <= 1:
         return {}
 
-    rewards = [sample.get_reward_value(args) for sample in all_samples]
-    return _compute_rollout_pass_rate(_rollout_rewards(all_samples, rewards), group_size)
-
-
-def _rollout_rewards(samples: list[Sample], rewards: list[float]) -> dict[tuple[str, int | None, int], float]:
-    """One reward per original rollout; session compaction can split a rollout into several samples."""
+    # Session compaction can split one rollout into several samples; each rollout counts once.
     rewards_by_rollout: dict[tuple[str, int | None, int], list[float]] = {}
-    for position, (sample, reward) in enumerate(zip(samples, rewards, strict=True)):
-        rewards_by_rollout.setdefault(_get_rollout_key(sample, position), []).append(reward)
+    for position, sample in enumerate(all_samples):
+        rewards_by_rollout.setdefault(_get_rollout_key(sample, position), []).append(sample.get_reward_value(args))
+    groups: dict[int | None, list[float]] = {}
+    for (_, group_index, _), rewards in rewards_by_rollout.items():
+        groups.setdefault(group_index, []).append(sum(rewards) / len(rewards))
+    return _pass_rate_over_complete_groups(groups, group_size)
+
+
+def _compacted_eval_rollout_rewards(samples: list[Sample] | None, rewards: list[float]) -> dict[int, float] | None:
+    """Per-rollout eval rewards keyed by eval rollout number when some rollout produced several
+    samples (session compaction tags them all with ``rollout_id``), else None: the flat rewards are exact."""
+    if samples is None or len(samples) != len(rewards):
+        return None
+    rewards_by_rollout: dict[int, list[float]] = {}
+    for sample, reward in zip(samples, rewards, strict=True):
+        eval_rollout = sample.rollout_id if sample.rollout_id is not None else sample.index
+        if eval_rollout is None:
+            return None
+        rewards_by_rollout.setdefault(eval_rollout, []).append(reward)
+    if len(rewards_by_rollout) == len(rewards):
+        return None
     return {key: sum(values) / len(values) for key, values in rewards_by_rollout.items()}
 
 
-def _compacted_rollout_rewards(
-    samples: list[Sample] | None, rewards: list[float]
-) -> dict[tuple[str, int | None, int], float] | None:
-    """Per-rollout rewards when some rollout produced several samples, else None (the flat rewards are exact)."""
-    if samples is None or len(samples) != len(rewards):
-        return None
-    rollout_rewards = _rollout_rewards(samples, rewards)
-    return rollout_rewards if len(rollout_rewards) < len(rewards) else None
-
-
-def _compute_rollout_pass_rate(
-    rollout_rewards: dict[tuple[str, int | None, int], float], group_size: int
-) -> dict[str, float]:
-    """pass@k over prompt groups holding exactly ``group_size`` rollouts; incomplete groups are excluded."""
+def _pass_rate_over_complete_groups(groups: dict[Any, list[float]], group_size: int) -> dict[str, float]:
+    """pass@k over prompt groups holding exactly ``group_size`` rollouts; other groups are excluded."""
     if group_size <= 1:
-        return {}
-    groups: dict[int | None, list[float]] = {}
-    for (_, group_index, _), reward in rollout_rewards.items():
-        groups.setdefault(group_index, []).append(reward)
-    if None in groups:
-        logger.warning("pass@k: skipping, some samples carry no group_index to group rollouts by prompt.")
         return {}
     completed_groups = [group for group in groups.values() if len(group) == group_size]
     if len(completed_groups) < len(groups):

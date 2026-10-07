@@ -8,6 +8,12 @@ APEX-Agents recipe: DPPO (binary TV, delta 0.15) against the rollout log-probs,
 prompt_mean aggregation, no KL, no std normalisation; LoRA lr is 10x their full-parameter
 1e-6 (LoRA Without Regret).
 
+``--full-finetune --native`` trains all parameters through miles' own model spec from a
+converted torch_dist checkpoint (the path of scripts/run_qwen3_6_35b_a3b_mtp.py), optionally on
+several trainer nodes, with the optimizer in HBM (``--no-optimizer-cpu-offload``) and the MTP
+layer trained and served as the EAGLE draft (``--mtp``). ``AGENT_SERVER_URL`` may list one
+agent server per host.
+
 Start the agent server first (see README.md), then inside the Miles image:
 
     python examples/swe-agent-harbor-docker/run_qwen36_35b_a3b_lora.py \
@@ -59,9 +65,26 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     lora_rank: int = 32
     lora_alpha: int = 32
     lr: float = 1e-5
-    # full-parameter training instead (pass --lr 1e-6, Mercor's value); the optimizer state
-    # (~420 GB fp32) goes to host memory
+    # full-parameter training instead (pass --lr 1e-6, Mercor's value)
     full_finetune: bool = False
+    # Full-parameter training through miles' own model spec from a torch_dist checkpoint
+    # (tools/convert_hf_to_torch_dist.py; default <hf_checkpoint>_torch_dist), the path
+    # scripts/run_qwen3_6_35b_a3b_mtp.py and the R3 tests take, instead of Megatron-Bridge.
+    # With --save-dir the run resumes from its own latest checkpoint.
+    native: bool = False
+    ref_load: str = ""
+    # ~420 GB of fp32 optimizer state in host memory; on 288 GB MI355X it fits in HBM instead
+    optimizer_cpu_offload: bool = True
+    # train the MTP layer with the policy and serve it as the EAGLE draft at rollout
+    mtp: bool = False
+
+    # trainer layout: nodes, TP <= 2 (two query groups), EP 0 = the trainer GPUs of one node,
+    # tokens per GPU per micro-batch 0 = max_seq_len
+    actor_num_nodes: int = 1
+    tp: int = 2
+    ep: int = 0
+    cp: int = 1
+    max_tokens_per_gpu: int = 0
 
     # loss
     use_dppo: bool = True
@@ -109,12 +132,23 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
 def execute(args: ScriptArgs):
     U = args.create_backend()
 
-    ckpt_args = f"--hf-checkpoint {args.hf_checkpoint} --megatron-to-hf-mode bridge "
+    if args.native:
+        assert args.full_finetune, "--native trains all parameters; LoRA goes through Megatron-Bridge"
+        ckpt_args = f"--hf-checkpoint {args.hf_checkpoint} --ref-load {args.ref_load or args.hf_checkpoint + '_torch_dist'} "
+    else:
+        ckpt_args = f"--hf-checkpoint {args.hf_checkpoint} --megatron-to-hf-mode bridge "
     if args.save_dir:
         ckpt_args += f"--save {args.save_dir}/{args.run_id} --save-interval {args.save_interval} "
+        if args.native:
+            # an empty --load starts from --ref-load with fresh optimizer state
+            ckpt_args += f"--load {args.save_dir}/{args.run_id} "
 
     if args.full_finetune:
-        tuning_args = "--optimizer-cpu-offload --overlap-cpu-optimizer-d2h-h2d --use-precision-aware-optimizer "
+        tuning_args = (
+            "--optimizer-cpu-offload --overlap-cpu-optimizer-d2h-h2d --use-precision-aware-optimizer "
+            if args.optimizer_cpu_offload
+            else ""
+        )
     else:
         tuning_args = (
             f"--lora-rank {args.lora_rank} --lora-alpha {args.lora_alpha} --lora-dropout 0.0 "
@@ -152,15 +186,22 @@ def execute(args: ScriptArgs):
         "--adam-beta1 0.9 --adam-beta2 0.98 --clip-grad 1.0 "
     )
 
-    # TP <= 2 (two query groups); megatron-core GatedDeltaNet needs unpacked bshd batches
     actor_gpus = args.actor_num_gpus if args.fully_async else args.num_gpus_per_node
+    if args.native:
+        # miles' qwen3_5 spec takes packed batches, as in scripts/run_qwen3_6_35b_a3b_mtp.py
+        batch_args = f"--use-dynamic-batch-size --max-tokens-per-gpu {args.max_tokens_per_gpu or args.max_seq_len} "
+    else:
+        # megatron-core GatedDeltaNet under Bridge needs unpacked bshd batches
+        batch_args = f"--qkv-format bshd --micro-batch-size 1 --max-tokens-per-gpu {args.max_seq_len} "
     perf_args = (
-        "--tensor-model-parallel-size 2 --sequence-parallel --pipeline-model-parallel-size 1 "
-        f"--context-parallel-size 1 --expert-model-parallel-size {actor_gpus} "
+        f"--tensor-model-parallel-size {args.tp} --sequence-parallel --pipeline-model-parallel-size 1 "
+        f"--context-parallel-size {args.cp} --expert-model-parallel-size {args.ep or actor_gpus} "
         "--expert-tensor-parallel-size 1 "
         "--recompute-granularity full --recompute-method uniform --recompute-num-layers 1 "
-        f"--qkv-format bshd --micro-batch-size 1 --max-tokens-per-gpu {args.max_seq_len} "
+        f"{batch_args}"
     )
+    if args.native:
+        perf_args += "--accumulate-allreduce-grads-in-fp32 --attention-softmax-in-fp32 "
 
     sglang_args = (
         f"--rollout-num-gpus-per-engine {args.rollout_num_gpus_per_engine} "
@@ -172,9 +213,20 @@ def execute(args: ScriptArgs):
     )
     if not args.full_finetune:
         sglang_args += f"--sglang-max-lora-rank {args.lora_rank} --sglang-lora-backend triton "
-    if os.getenv("MILES_HARDWARE_PLATFORM") == "rocm" or Path("/opt/rocm").exists():
-        # ROCm shared-expert fusion needs per-expert LoRA factors; shared-outer has none.
-        sglang_args += "--sglang-disable-shared-experts-fusion "
+        if os.getenv("MILES_HARDWARE_PLATFORM") == "rocm" or Path("/opt/rocm").exists():
+            # ROCm shared-expert fusion needs per-expert LoRA factors; shared-outer has none.
+            sglang_args += "--sglang-disable-shared-experts-fusion "
+    if args.mtp:
+        # as in scripts/run_qwen3_6_35b_a3b_mtp.py: the trained MTP layer is the EAGLE draft
+        sglang_args += (
+            "--sglang-speculative-algorithm EAGLE --sglang-speculative-num-steps 2 "
+            "--sglang-speculative-eagle-topk 1 --sglang-speculative-num-draft-tokens 3 "
+            "--sglang-mamba-radix-cache-strategy extra_buffer "
+        )
+        mtp_args = "--enable-mtp-training --mtp-num-layers 1 --mtp-loss-scaling-factor 0.2 "
+    else:
+        # the model args build the MTP layer, and Megatron adds its loss whenever it exists
+        mtp_args = "--mtp-num-layers 0 " if args.native else ""
 
     agent_args = (
         "--custom-generate-function-path miles.rollout.generate_hub.agentic_tool_call.generate "
@@ -201,7 +253,7 @@ def execute(args: ScriptArgs):
 
     misc_args = (
         "--attention-dropout 0.0 --hidden-dropout 0.0 --update-weight-buffer-size 536870912 "
-        f"--actor-num-nodes 1 --actor-num-gpus-per-node {actor_gpus} "
+        f"--actor-num-nodes {args.actor_num_nodes} --actor-num-gpus-per-node {actor_gpus} "
         "--observe-training-entropy --log-passrate "
     )
     if args.fully_async:
@@ -231,7 +283,7 @@ def execute(args: ScriptArgs):
 
     train_args = (
         f"{ckpt_args}{tuning_args}{rollout_args}{algo_args}{optimizer_args}{perf_args}"
-        f"{sglang_args}{agent_args}{misc_args}{wandb_args}{args.extra_args}"
+        f"{sglang_args}{mtp_args}{agent_args}{misc_args}{wandb_args}{args.extra_args}"
     )
 
     U.execute_train(
@@ -252,6 +304,7 @@ def execute(args: ScriptArgs):
             # by sglang under SGLANG_USE_AITER=1) fails without a visible device. The GPU
             # actors already run with these set and pick their devices themselves.
             **{name: "1" for name in NOSET_VISIBLE_DEVICES_ENV_VARS_LIST},
+            **({"SGLANG_ENABLE_SPEC_V2": "1"} if args.mtp else {}),
         },
     )
 

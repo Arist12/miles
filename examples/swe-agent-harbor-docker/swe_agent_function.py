@@ -27,6 +27,19 @@ logger = logging.getLogger(__name__)
 _DEFAULT_AGENT_TRIAL_TIMEOUT_S = 7200
 
 _agent_server_client: httpx.AsyncClient | None = None
+# Trials this process has in flight per agent server.
+_in_flight: dict[str, int] = {}
+
+
+def _agent_server_urls() -> list[str]:
+    """AGENT_SERVER_URL may list several servers, comma-separated: on a multi-node run each host
+    runs its own agent server, so the sandboxes spread over the hosts' CPUs."""
+    raw = os.getenv("AGENT_SERVER_URL", os.getenv("SWE_AGENT_URL", "http://localhost:11000"))
+    return [url.strip().rstrip("/") for url in raw.split(",") if url.strip()]
+
+
+def _pick_agent_server(urls: list[str]) -> str:
+    return min(urls, key=lambda url: _in_flight.get(url, 0))
 
 
 def _agent_trial_timeout_s() -> int:
@@ -75,10 +88,7 @@ async def run(
     metadata = metadata or {}
     request_kwargs = request_kwargs or {}
 
-    agent_server_url = os.getenv(
-        "AGENT_SERVER_URL",
-        os.getenv("SWE_AGENT_URL", "http://localhost:11000"),
-    )
+    agent_server_url = _pick_agent_server(_agent_server_urls())
     model_name = os.getenv(
         "AGENT_MODEL_NAME",
         os.getenv("SWE_AGENT_MODEL_NAME", "model"),
@@ -106,6 +116,7 @@ async def run(
         request["session_server_instance_id"] = session_server_instance_id
 
     trial_timeout_s = _agent_trial_timeout_s()
+    _in_flight[agent_server_url] = _in_flight.get(agent_server_url, 0) + 1
     try:
         response = await asyncio.wait_for(
             _post_agent_server(f"{agent_server_url}/run", request),
@@ -118,8 +129,10 @@ async def run(
         logger.warning("Agent server call cancelled (sibling task failure?)")
         return None
     except Exception as e:
-        logger.error(f"Agent server call failed: {e}")
+        logger.error(f"Agent server call to {agent_server_url} failed: {e}")
         return None
+    finally:
+        _in_flight[agent_server_url] -= 1
 
     return {
         "reward": response.get("reward", 0.0),
@@ -138,7 +151,7 @@ async def abort(args) -> None:
     containers. No-op unless AGENT_SERVER_URL and session_server_instance_id are
     available.
     """
-    agent_server_url = os.getenv("AGENT_SERVER_URL", os.getenv("SWE_AGENT_URL"))
+    agent_server_urls = _agent_server_urls() if os.getenv("AGENT_SERVER_URL", os.getenv("SWE_AGENT_URL")) else []
 
     instances = getattr(args, "session_server_instances", None) or []
     instance_ids = {instance.instance_id for instance in instances if instance.instance_id}
@@ -146,7 +159,7 @@ async def abort(args) -> None:
     if singular:
         instance_ids.add(singular)
 
-    if not agent_server_url or not instance_ids:
+    if not agent_server_urls or not instance_ids:
         return
 
     headers = None
@@ -154,14 +167,15 @@ async def abort(args) -> None:
     if admin_secret:
         headers = {"Authorization": f"Bearer {admin_secret}"}
 
-    for instance_id in instance_ids:
-        try:
-            result = await post(
-                f"{agent_server_url.rstrip('/')}/flush",
-                {"session_server_instance_id": instance_id},
-                max_retries=3,
-                headers=headers,
-            )
-            logger.info(f"Flushed agent server {agent_server_url}: {result}")
-        except Exception as e:
-            logger.warning(f"Failed to flush agent server {agent_server_url}: {e}")
+    for agent_server_url in agent_server_urls:
+        for instance_id in instance_ids:
+            try:
+                result = await post(
+                    f"{agent_server_url}/flush",
+                    {"session_server_instance_id": instance_id},
+                    max_retries=3,
+                    headers=headers,
+                )
+                logger.info(f"Flushed agent server {agent_server_url}: {result}")
+            except Exception as e:
+                logger.warning(f"Failed to flush agent server {agent_server_url}: {e}")

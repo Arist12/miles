@@ -44,12 +44,16 @@ def _get_agent_server_client() -> httpx.AsyncClient:
             (socket.IPPROTO_TCP, getattr(socket, "TCP_KEEPINTVL", 5), 30),
             (socket.IPPROTO_TCP, getattr(socket, "TCP_KEEPCNT", 6), 5),
         ]
-        transport = httpx.AsyncHTTPTransport(socket_options=socket_options)
-        _agent_server_client = httpx.AsyncClient(
-            transport=transport,
-            limits=httpx.Limits(max_connections=64, max_keepalive_connections=32),
-            timeout=None,
+        # Each trial holds one connection for its whole run, and the agent server queues on its
+        # own --max-concurrent, so the pool must not be the tighter bound. The limits belong on
+        # the transport: AsyncClient ignores its own `limits` when given a transport, which
+        # left this pool at httpx's default of 100 connections.
+        max_connections = int(os.environ.get("AGENT_SERVER_MAX_CONNECTIONS", "1024"))
+        transport = httpx.AsyncHTTPTransport(
+            socket_options=socket_options,
+            limits=httpx.Limits(max_connections=max_connections, max_keepalive_connections=32),
         )
+        _agent_server_client = httpx.AsyncClient(transport=transport, timeout=None)
     return _agent_server_client
 
 

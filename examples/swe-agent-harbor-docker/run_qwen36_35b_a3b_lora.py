@@ -201,7 +201,8 @@ def execute(args: ScriptArgs):
         f"{batch_args}"
     )
     if args.native:
-        perf_args += "--accumulate-allreduce-grads-in-fp32 --attention-softmax-in-fp32 "
+        # as in miles' Qwen3.5 e2e cases, including the AMD one
+        perf_args += "--accumulate-allreduce-grads-in-fp32 --attention-softmax-in-fp32 --attention-backend flash "
 
     sglang_args = (
         f"--rollout-num-gpus-per-engine {args.rollout_num_gpus_per_engine} "
@@ -213,9 +214,10 @@ def execute(args: ScriptArgs):
     )
     if not args.full_finetune:
         sglang_args += f"--sglang-max-lora-rank {args.lora_rank} --sglang-lora-backend triton "
-        if os.getenv("MILES_HARDWARE_PLATFORM") == "rocm" or Path("/opt/rocm").exists():
-            # ROCm shared-expert fusion needs per-expert LoRA factors; shared-outer has none.
-            sglang_args += "--sglang-disable-shared-experts-fusion "
+    if os.getenv("MILES_HARDWARE_PLATFORM") == "rocm" or Path("/opt/rocm").exists():
+        # ROCm shared-expert fusion needs per-expert LoRA factors (shared-outer has none);
+        # miles' AMD Qwen3.5 CI case runs full-parameter without it too.
+        sglang_args += "--sglang-disable-shared-experts-fusion "
     if args.mtp:
         # as in scripts/run_qwen3_6_35b_a3b_mtp.py: the trained MTP layer is the EAGLE draft
         sglang_args += (

@@ -1,6 +1,7 @@
 """Qwen3.6-35B-A3B LoRA agentic RL on one node, Harbor docker sandboxes (validated on 8x MI355X).
 
-Synchronous colocated GRPO: the policy serves through the Miles session server (TITO,
+Synchronous colocated GRPO by default (``--fully-async`` puts the trainer and the engines on
+separate GPUs instead): the policy serves through the Miles session server (TITO,
 ``--tito-model qwen36``), a Harbor agent server on the same host runs each trajectory in
 its own docker sandbox and returns the verifier's reward. Loss defaults follow the Mercor
 APEX-Agents recipe: DPPO (binary TV, delta 0.15) against the rollout log-probs,
@@ -68,6 +69,15 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     sglang_mem_fraction_static: float = 0.5
     session_server_workers: int = 32
 
+    # Fully async: the trainer and the engines on separate GPUs (another node, or a split
+    # of this one); generation never waits on a training step, groups are submitted per
+    # finished sample, and the adapter is broadcast to the engines after each step.
+    fully_async: bool = False
+    actor_num_gpus: int = 8
+    rollout_num_gpus: int = 8
+    max_weight_staleness: int = 3
+    async_max_concurrent_samples: int = 128
+
     # agent server
     agent_server_url: str = os.environ.get("AGENT_SERVER_URL", "http://127.0.0.1:11000")
     agent_trial_timeout: int = 3600
@@ -87,9 +97,10 @@ def execute(args: ScriptArgs):
 
     lora_args = (
         f"--lora-rank {args.lora_rank} --lora-alpha {args.lora_alpha} --lora-dropout 0.0 "
-        '--target-modules "all-linear" --experts-shared-outer-loras --lora-base-cpu-backup '
-        "--no-gradient-accumulation-fusion "
+        '--target-modules "all-linear" --experts-shared-outer-loras --no-gradient-accumulation-fusion '
     )
+    if not args.fully_async:
+        lora_args += "--lora-base-cpu-backup "
 
     rollout_args = (
         f"--prompt-data {args.prompt_data} --input-key prompt --metadata-key metadata --rollout-shuffle "
@@ -114,9 +125,10 @@ def execute(args: ScriptArgs):
     )
 
     # TP <= 2 (two query groups); megatron-core GatedDeltaNet needs unpacked bshd batches
+    actor_gpus = args.actor_num_gpus if args.fully_async else args.num_gpus_per_node
     perf_args = (
         "--tensor-model-parallel-size 2 --sequence-parallel --pipeline-model-parallel-size 1 "
-        f"--context-parallel-size 1 --expert-model-parallel-size {args.num_gpus_per_node} "
+        f"--context-parallel-size 1 --expert-model-parallel-size {actor_gpus} "
         "--expert-tensor-parallel-size 1 "
         "--recompute-granularity full --recompute-method uniform --recompute-num-layers 1 "
         f"--qkv-format bshd --micro-batch-size 1 --max-tokens-per-gpu {args.max_seq_len} "
@@ -139,23 +151,37 @@ def execute(args: ScriptArgs):
         "--custom-generate-function-path miles.rollout.generate_hub.agentic_tool_call.generate "
         "--custom-agent-function-path swe_agent_function.run "
         "--custom-rm-path generate.reward_func "
-        "--rollout-function-path generate.RolloutFn "
         "--use-session-server --tito-model qwen36 "
         f"--session-server-port 30000 --session-server-workers {args.session_server_workers} "
     )
-    if args.over_sampling_batch_size:
-        agent_args += (
-            "--dynamic-sampling-filter-path generate.filter_infra_failures_and_zero_std "
-            f"--over-sampling-batch-size {args.over_sampling_batch_size} "
-        )
+    if args.fully_async:
+        # Fully async installs its own rollout class; its buffer applies the filter at put
+        # time while the worker keeps the engines full.
+        agent_args += "--dynamic-sampling-filter-path generate.filter_infra_failures_and_zero_std "
     else:
-        agent_args += "--dynamic-sampling-filter-path generate.filter_infra_failures "
+        agent_args += "--rollout-function-path generate.RolloutFn "
+        if args.over_sampling_batch_size:
+            agent_args += (
+                "--dynamic-sampling-filter-path generate.filter_infra_failures_and_zero_std "
+                f"--over-sampling-batch-size {args.over_sampling_batch_size} "
+            )
+        else:
+            agent_args += "--dynamic-sampling-filter-path generate.filter_infra_failures "
 
     misc_args = (
         "--attention-dropout 0.0 --hidden-dropout 0.0 --update-weight-buffer-size 536870912 "
-        f"--actor-num-nodes 1 --actor-num-gpus-per-node {args.num_gpus_per_node} --colocate "
+        f"--actor-num-nodes 1 --actor-num-gpus-per-node {actor_gpus} "
         "--observe-training-entropy --log-passrate "
     )
+    if args.fully_async:
+        misc_args += (
+            f"--fully-async --rollout-num-gpus {args.rollout_num_gpus} --num-gpus-per-node {args.num_gpus_per_node} "
+            "--update-weight-transfer-mode broadcast --pause-generation-mode retract "
+            f"--max-weight-staleness {args.max_weight_staleness} "
+            f"--async-max-concurrent-samples {args.async_max_concurrent_samples} "
+        )
+    else:
+        misc_args += "--colocate "
     if args.save_traces_dir:
         misc_args += f"--dump-details {args.save_traces_dir}/{args.run_id} "
 
@@ -181,6 +207,7 @@ def execute(args: ScriptArgs):
         train_args=train_args,
         num_gpus_per_node=args.num_gpus_per_node,
         megatron_model_type=args.megatron_model_type,
+        train_script="train_async.py" if args.fully_async else "train.py",
         megatron_path=args.megatron_path,
         extra_env_vars={
             "PYTHONPATH": f"{args.megatron_path}:{SCRIPT_DIR}:{command_utils.repo_base_dir}",

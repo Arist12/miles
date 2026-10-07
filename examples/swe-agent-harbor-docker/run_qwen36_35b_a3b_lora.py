@@ -59,6 +59,9 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     lora_rank: int = 32
     lora_alpha: int = 32
     lr: float = 1e-5
+    # full-parameter training instead (pass --lr 1e-6, Mercor's value); the optimizer state
+    # (~420 GB fp32) goes to host memory
+    full_finetune: bool = False
 
     # loss
     use_dppo: bool = True
@@ -100,12 +103,15 @@ def execute(args: ScriptArgs):
     if args.save_dir:
         ckpt_args += f"--save {args.save_dir}/{args.run_id} --save-interval {args.save_interval} "
 
-    lora_args = (
-        f"--lora-rank {args.lora_rank} --lora-alpha {args.lora_alpha} --lora-dropout 0.0 "
-        '--target-modules "all-linear" --experts-shared-outer-loras --no-gradient-accumulation-fusion '
-    )
-    if not args.fully_async:
-        lora_args += "--lora-base-cpu-backup "
+    if args.full_finetune:
+        tuning_args = "--optimizer-cpu-offload --overlap-cpu-optimizer-d2h-h2d --use-precision-aware-optimizer "
+    else:
+        tuning_args = (
+            f"--lora-rank {args.lora_rank} --lora-alpha {args.lora_alpha} --lora-dropout 0.0 "
+            '--target-modules "all-linear" --experts-shared-outer-loras --no-gradient-accumulation-fusion '
+        )
+        if not args.fully_async:
+            tuning_args += "--lora-base-cpu-backup "
 
     rollout_args = (
         f"--prompt-data {args.prompt_data} --input-key prompt --metadata-key metadata --rollout-shuffle "
@@ -149,10 +155,11 @@ def execute(args: ScriptArgs):
         f"--sglang-mem-fraction-static {args.sglang_mem_fraction_static} "
         f"--sglang-context-length {args.max_seq_len} "
         "--sglang-dtype bfloat16 --sglang-decode-log-interval 1000 "
-        f"--sglang-max-lora-rank {args.lora_rank} --sglang-lora-backend triton "
         "--sglang-reasoning-parser qwen3 --sglang-tool-call-parser qwen3_coder "
         "--sglang-router-port 31000 "
     )
+    if not args.full_finetune:
+        sglang_args += f"--sglang-max-lora-rank {args.lora_rank} --sglang-lora-backend triton "
     if os.getenv("MILES_HARDWARE_PLATFORM") == "rocm" or Path("/opt/rocm").exists():
         # ROCm shared-expert fusion needs per-expert LoRA factors; shared-outer has none.
         sglang_args += "--sglang-disable-shared-experts-fusion "
@@ -209,14 +216,16 @@ def execute(args: ScriptArgs):
             wandb_args += f"--wandb-team {args.wandb_team} "
 
     train_args = (
-        f"{ckpt_args}{lora_args}{rollout_args}{algo_args}{optimizer_args}{perf_args}"
+        f"{ckpt_args}{tuning_args}{rollout_args}{algo_args}{optimizer_args}{perf_args}"
         f"{sglang_args}{agent_args}{misc_args}{wandb_args}{args.extra_args}"
     )
 
     U.execute_train(
         train_args=train_args,
         num_gpus_per_node=args.num_gpus_per_node,
-        megatron_model_type=args.megatron_model_type,
+        megatron_model_type=(
+            args.megatron_model_type.removesuffix("_lora") if args.full_finetune else args.megatron_model_type
+        ),
         train_script="train_async.py" if args.fully_async else "train.py",
         megatron_path=args.megatron_path,
         extra_env_vars={

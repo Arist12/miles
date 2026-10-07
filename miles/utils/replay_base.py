@@ -86,7 +86,7 @@ class BaseReplayManager:
 
     def describe(self, replay: Replay | None) -> str:
         position = next((i for i, r in enumerate(self.replays) if r is replay), None)
-        filled = [i for i, r in enumerate(self.replays) if r.top_indices_list]
+        filled = [i for i, r in enumerate(self.replays) if getattr(r, "top_indices_list", None)]
         span = f"{filled[0]}..{filled[-1]}" if filled else "none"
         return (
             f"{self.name} replay selected: {position} of {len(self.replays)} registered "
@@ -142,9 +142,12 @@ class BaseReplayManager:
                 return result
 
             elif stage in ("replay_forward", "replay_backward"):
-                if replay is None or not replay.top_indices_list:
-                    raise IndexError(f"{stage}: nothing to replay; {manager.describe(replay)}")
-                top_indices = replay.pop_forward() if stage == "replay_forward" else replay.pop_backward()
+                if replay is None:
+                    raise IndexError(f"{stage}: no replay selected; {manager.describe(replay)}")
+                try:
+                    top_indices = replay.pop_forward() if stage == "replay_forward" else replay.pop_backward()
+                except IndexError as e:
+                    raise IndexError(f"{e}; {manager.describe(replay)}") from None
                 return _get_replay_result(top_indices, scores, topk, *args, **kwargs)
 
             else:

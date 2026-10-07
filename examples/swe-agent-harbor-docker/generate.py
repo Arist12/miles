@@ -31,14 +31,20 @@ logger = logging.getLogger(__name__)
 # -- Infrastructure failures --
 
 
+# Unscored trials the policy is answerable for: it ran out of context or out of its time
+# budget. These keep their 0.0 reward, as Terminal-Bench scores them.
+_POLICY_LIMIT_EXIT_STATUSES = ("SequenceLengthLimitExceeded", "TimeLimitExceeded")
+
+
 def is_infra_failure(sample: Sample) -> bool:
-    """The verifier never scored the trial, for a reason other than the policy running out
-    of context: an environment that failed to build or start, a sandbox or harness crash,
-    or an unreachable agent server. Its 0.0 reward says nothing about the policy."""
+    """The verifier never scored the trial, for a reason other than the policy exhausting
+    its context or time budget: an environment that failed to build or start, a sandbox or
+    harness crash, or an unreachable agent server. Its 0.0 reward says nothing about the
+    policy."""
     metadata = sample.metadata or {}
     if metadata.get("eval_report"):
         return False
-    return metadata.get("exit_status") != "SequenceLengthLimitExceeded"
+    return metadata.get("exit_status") not in _POLICY_LIMIT_EXIT_STATUSES
 
 
 def filter_infra_failures(args, samples: list[Sample | list[Sample]], **kwargs) -> FilterOutput:

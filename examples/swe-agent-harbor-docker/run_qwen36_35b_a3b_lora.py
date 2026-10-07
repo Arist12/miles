@@ -76,6 +76,13 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     sglang_mem_fraction_static: float = 0.5
     session_server_workers: int = 32
     session_server_port: int = 30000
+    # TITO session server: "v1" (linear) or "v2" (append-only tree: a rewritten history,
+    # e.g. a harness compaction, becomes a new branch and each kept leaf its own sample)
+    session_server_version: str = "v1"
+    session_message_matcher: str = "strict"
+    # MoE rollout routing replay (R3); SGLang's retract-mode weight update has known R3
+    # issues, so pair it with --pause-generation-mode in_place
+    use_r3: bool = False
 
     # Fully async: the trainer and the engines on separate GPUs (another node, or a split
     # of this one); generation never waits on a training step, groups are submitted per
@@ -85,6 +92,9 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     rollout_num_gpus: int = 8
     max_weight_staleness: int = 3
     async_max_concurrent_samples: int = 128
+    # what in-flight requests do during a weight update: retract (re-prefill afterwards),
+    # in_place (keep the KV cache), abort
+    pause_generation_mode: str = "retract"
 
     # agent server
     agent_server_url: str = os.environ.get("AGENT_SERVER_URL", "http://127.0.0.1:11000")
@@ -134,6 +144,8 @@ def execute(args: ScriptArgs):
     else:
         algo_args += "--eps-clip 0.2 --eps-clip-high 0.28 "
     algo_args += f"--loss-aggregation {args.loss_aggregation} "
+    if args.use_r3:
+        algo_args += "--use-rollout-routing-replay "
 
     optimizer_args = (
         f"--optimizer adam --lr {args.lr} --lr-decay-style constant --weight-decay 0.01 "
@@ -168,7 +180,9 @@ def execute(args: ScriptArgs):
         "--custom-generate-function-path miles.rollout.generate_hub.agentic_tool_call.generate "
         "--custom-agent-function-path swe_agent_function.run "
         "--custom-rm-path generate.reward_func "
-        "--use-session-server --tito-model qwen36 "
+        "--custom-rollout-log-function-path generate.log_rollout_agent_metrics "
+        f"--use-session-server {args.session_server_version} --tito-model qwen36 "
+        f"--session-message-matcher {args.session_message_matcher} "
         f"--session-server-port {args.session_server_port} --session-server-workers {args.session_server_workers} "
     )
     if args.fully_async:
@@ -193,7 +207,7 @@ def execute(args: ScriptArgs):
     if args.fully_async:
         misc_args += (
             f"--fully-async --rollout-num-gpus {args.rollout_num_gpus} --num-gpus-per-node {args.num_gpus_per_node} "
-            "--update-weight-transfer-mode broadcast --pause-generation-mode retract "
+            f"--update-weight-transfer-mode broadcast --pause-generation-mode {args.pause_generation_mode} "
             f"--max-weight-staleness {args.max_weight_staleness} "
             f"--async-max-concurrent-samples {args.async_max_concurrent_samples} "
         )

@@ -14,6 +14,8 @@ Dynamic filter uses the general-purpose ``check_no_aborted`` from
 Components:
   - reward_func: reads pre-computed reward from sample metadata
   - aggregate_agent_metrics: aggregates agent timing/count metrics
+  - log_rollout_agent_metrics: --custom-rollout-log-function-path hook that logs them
+    in both synchronous and fully-async mode
   - RolloutFn: InferenceRolloutFn subclass that logs agent metrics
 """
 
@@ -95,10 +97,30 @@ def _agg_mean(metrics: dict, all_metrics: list[dict], keys: list[str], prefix: s
             metrics[f"{prefix}{key}{suffix}"] = sum(values) / len(values)
 
 
+def _with_derived_timings(metrics: dict) -> dict:
+    """Fill the model/environment split from per-request latencies when the agent did not
+    report it. terminus-2 reports ``api_request_times_msec`` (one entry per model call) and
+    Harbor the phase durations; time in the agent phase outside model calls is tool and
+    sandbox execution plus harness overhead."""
+    out = dict(metrics)
+    requests = out.get("api_request_times_msec")
+    if isinstance(requests, list) and requests:
+        out.setdefault("model_query_time_sum", sum(requests) / 1000)
+        out.setdefault("model_query_time_avg", sum(requests) / 1000 / len(requests))
+    run, model = out.get("agent_run_time"), out.get("model_query_time_sum")
+    if run and model is not None:
+        out.setdefault("env_execution_time_sum", max(run - model, 0.0))
+        out.setdefault("model_time_ratio", min(model / run, 1.0))
+        out.setdefault("env_time_ratio", max(1.0 - model / run, 0.0))
+    if run and out.get("turns"):
+        out.setdefault("time_per_turn", run / out["turns"])
+    return out
+
+
 def aggregate_agent_metrics(samples: list[Sample]) -> dict:
     """Aggregate agent metrics across samples for logging."""
     all_metrics = [
-        s.metadata.get("agent_metrics", {})
+        _with_derived_timings(s.metadata["agent_metrics"])
         for s in samples
         if hasattr(s, "metadata") and s.metadata and s.metadata.get("agent_metrics")
     ]
@@ -113,7 +135,11 @@ def aggregate_agent_metrics(samples: list[Sample]) -> dict:
             metrics[f"agent/{key}_mean"] = sum(values) / len(values)
             metrics[f"agent/{key}_sum"] = sum(values)
 
-    _agg_mean(metrics, all_metrics, ["model_query_time_sum", "env_execution_time_sum", "eval_time", "agent_run_time"])
+    _agg_mean(
+        metrics,
+        all_metrics,
+        ["model_query_time_sum", "env_execution_time_sum", "eval_time", "agent_run_time", "env_setup_time"],
+    )
     _agg_mean(metrics, all_metrics, ["time_per_turn", "model_query_time_avg", "env_execution_time_avg"], suffix="")
     _agg_mean(metrics, all_metrics, ["model_time_ratio", "env_time_ratio", "eval_time_ratio"], suffix="")
 
@@ -128,6 +154,18 @@ def aggregate_agent_metrics(samples: list[Sample]) -> dict:
         metrics[f"agent/exit_status/{status or 'none'}"] = statuses.count(status) / len(statuses)
 
     return metrics
+
+
+def log_rollout_agent_metrics(rollout_id, args, samples, rollout_extra_metrics, rollout_time) -> bool:
+    """``--custom-rollout-log-function-path`` hook: add the agent metrics to the rollout log.
+
+    Runs for every trained rollout in synchronous and fully-async mode alike; fully async
+    installs its own rollout class, so ``RolloutFn`` never sees those batches.
+    """
+    flat = [s for item in samples for s in (item if isinstance(item, list) else [item])]
+    if isinstance(rollout_extra_metrics, dict):
+        rollout_extra_metrics.update(aggregate_agent_metrics(flat))
+    return False  # keep miles' default rollout logging, which includes these metrics
 
 
 # -- Rollout Function --

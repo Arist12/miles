@@ -104,6 +104,51 @@ def test_zero_is_kept_when_an_agent_actually_measures_zero(generate_module: Modu
     assert metrics["agent/tool_calls_sum"] == 0
 
 
+# What the Harbor agent server returns for a terminus-2 trial: phase durations plus the
+# agent's own metadata, which lists the latency of every model call.
+TERMINUS_2 = {
+    "turns": 4,
+    "api_request_times_msec": [2000.0, 3000.0, 1000.0, 4000.0],
+    "agent_run_time": 40.0,
+    "env_setup_time": 7.0,
+    "eval_time": 3.0,
+    "total_time": 52.0,
+}
+
+
+def test_model_and_environment_time_are_derived_from_request_latencies(generate_module: ModuleType) -> None:
+    metrics = generate_module.aggregate_agent_metrics([sample_with(TERMINUS_2)])
+
+    assert metrics["agent/model_query_time_sum_mean"] == pytest.approx(10.0)
+    assert metrics["agent/model_query_time_avg"] == pytest.approx(2.5)
+    assert metrics["agent/env_execution_time_sum_mean"] == pytest.approx(30.0)
+    assert metrics["agent/model_time_ratio"] == pytest.approx(0.25)
+    assert metrics["agent/env_time_ratio"] == pytest.approx(0.75)
+    assert metrics["agent/time_per_turn"] == pytest.approx(10.0)
+    assert metrics["agent/env_setup_time_mean"] == pytest.approx(7.0)
+
+
+def test_agent_reported_breakdown_wins_over_derivation(generate_module: ModuleType) -> None:
+    reported = {**TERMINUS_2, "model_query_time_sum": 12.0, "model_time_ratio": 0.4}
+    metrics = generate_module.aggregate_agent_metrics([sample_with(reported)])
+
+    assert metrics["agent/model_query_time_sum_mean"] == pytest.approx(12.0)
+    assert metrics["agent/model_time_ratio"] == pytest.approx(0.4)
+
+
+def test_rollout_log_hook_adds_agent_metrics_and_keeps_default_logging(generate_module: ModuleType) -> None:
+    """Fully async never goes through RolloutFn, so the log hook is what reports these."""
+    extra = {"rollout/fully_async/avg_staleness": 1.5}
+    group = [sample_with(TERMINUS_2), sample_with(TERMINUS_2)]
+
+    skip_default = generate_module.log_rollout_agent_metrics(0, None, [group], extra, 1.0)
+
+    assert skip_default is False
+    assert extra["rollout/fully_async/avg_staleness"] == 1.5
+    assert extra["agent/turns_mean"] == 4
+    assert extra["agent/model_time_ratio"] == pytest.approx(0.25)
+
+
 def test_samples_without_agent_metrics_are_ignored(generate_module: ModuleType) -> None:
     assert generate_module.aggregate_agent_metrics([sample_with({})]) == {}
     assert generate_module.aggregate_agent_metrics([SimpleNamespace(metadata={})]) == {}

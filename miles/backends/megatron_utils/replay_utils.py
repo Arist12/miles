@@ -1,6 +1,23 @@
 from megatron.core.transformer.transformer_block import get_num_layers_to_build
 from megatron.core.transformer.transformer_layer import get_transformer_layer_offset
 
+from miles.utils.replay_base import Replay
+
+
+def _live_router_replays(models) -> list[Replay]:
+    """Replays of the routers reachable from the model, in module (= layer) order.
+
+    Routers register a replay when constructed, so a model that replaces its decoder after
+    ``GPTModel.__init__`` (Megatron-Bridge's ``Qwen3VLGPTModel`` rebuilds it as a
+    ``Qwen3VLTransformerBlock``) leaves the discarded decoder's replays registered first.
+    """
+    return [
+        replay
+        for model in models
+        for module in model.modules()
+        if isinstance(replay := getattr(module, "routing_replay", None), Replay)
+    ]
+
 
 def register_replay_list_moe(replay_list, replay_data, *, models, **_kwargs):
     """Map replay streams to Megatron MoE layers using the local model layout."""
@@ -19,12 +36,13 @@ def register_replay_list_moe(replay_list, replay_data, *, models, **_kwargs):
                     continue
             layer_indices.append(layer_id)
 
+    live_replays = _live_router_replays(models)
     # The mapping is positional, so any other count would replay one layer's routing into another.
-    if len(replay_list) != len(layer_indices):
+    if len(live_replays) != len(layer_indices):
         raise AssertionError(
-            f"routing replay: {len(replay_list)} routers registered a replay but this rank builds "
-            f"{len(layer_indices)} MoE layers (replay data has {replay_data.shape[1]} streams)"
+            f"routing replay: the model holds {len(live_replays)} routers with a replay "
+            f"({len(replay_list)} registered) but this rank builds {len(layer_indices)} MoE layers "
+            f"(replay data has {replay_data.shape[1]} streams)"
         )
-    for replay_idx, layer_idx in enumerate(layer_indices):
-        layer_data = replay_data[:, layer_idx]
-        replay_list[replay_idx].record(layer_data)
+    for replay, layer_idx in zip(live_replays, layer_indices, strict=True):
+        replay.record(replay_data[:, layer_idx])

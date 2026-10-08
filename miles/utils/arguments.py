@@ -1039,6 +1039,17 @@ def get_miles_extra_args_provider(add_custom_arguments=None):
                 ),
             )
             parser.add_argument(
+                "--update-weight-engines-per-group",
+                type=int,
+                default=0,
+                help=(
+                    "Broadcast modes: send to the rollout engines through NCCL groups of this many engines "
+                    "each (sender + those engines), one after another; 0 (default) puts every engine in one "
+                    "group. Smaller groups avoid communicators the collective library cannot plan, e.g. RCCL "
+                    "with one trainer GPU and several full 8-GPU rollout nodes."
+                ),
+            )
+            parser.add_argument(
                 "--update-weight-transfer-mode",
                 choices=["broadcast", "broadcast_packed", "p2p", "disk-delta"],
                 default="broadcast",

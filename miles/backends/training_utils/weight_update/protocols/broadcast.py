@@ -28,7 +28,8 @@ class UpdateWeightFromDistributed(WeightTransferProtocol):
 
     def __init__(self, args: Namespace) -> None:
         super().__init__(args)
-        self._model_update_groups = None
+        # (group name, engines, NCCL group) for each group of engines the sender broadcasts to
+        self._engine_groups: list[tuple[str, Sequence[SGLangApiClient], dist.ProcessGroup]] = []
         parallel_state = get_parallel_state()
         self._engine_lock: AbstractContextManager = (
             create_world_ticket_lock(
@@ -55,30 +56,43 @@ class UpdateWeightFromDistributed(WeightTransferProtocol):
         self._selector = selector
         self._engine_gpu_counts = engine_gpu_counts
 
-        # One sender per replica set; one NCCL group (sender + all engines) per shard.
+        # One sender per replica set; per shard, NCCL groups of the sender plus the engines,
+        # all engines in one group unless --update-weight-engines-per-group splits them.
         replica_rank, _ = get_data_replica_rank_and_size(parallel_state, placement)
         self.is_sender = replica_rank == 0
         shard = 0 if placement.gather_pp else parallel_state.pp.rank
         if self.is_sender:
             self.group_name = f"miles-pp_{shard}"
-            disconnect_rollout_engines_from_distributed(
-                self.args, self.group_name, self._model_update_groups, self.rollout_engines
+            for name, engines, group in self._engine_groups:
+                disconnect_rollout_engines_from_distributed(self.args, name, group, engines)
+            self._engine_groups = []
+            counts = (
+                list(engine_gpu_counts)
+                if engine_gpu_counts is not None
+                else [self.args.rollout_num_gpus_per_engine] * len(rollout_engines)
             )
-            self._model_update_groups = connect_rollout_engines_from_distributed(
-                self.args, self.group_name, rollout_engines, engine_gpu_counts=engine_gpu_counts
-            )
+            per_group = getattr(self.args, "update_weight_engines_per_group", 0) or len(rollout_engines)
+            for start in range(0, len(rollout_engines), per_group):
+                name = self.group_name if per_group >= len(rollout_engines) else f"{self.group_name}_e{start}"
+                engines = rollout_engines[start : start + per_group]
+                group = connect_rollout_engines_from_distributed(
+                    self.args, name, engines, engine_gpu_counts=counts[start : start + per_group]
+                )
+                self._engine_groups.append((name, engines, group))
 
     def send_bucket(self, bucket: list[tuple[str, torch.Tensor]]) -> None:
-        """Lock → broadcast → clear → unlock. Lock prevents NCCL deadlock."""
+        """Lock → broadcast to each engine group → clear → unlock. Lock prevents NCCL deadlock."""
         with self._engine_lock:
-            futures = update_weights_from_distributed(
-                self.group_name,
-                self._model_update_groups,
-                self.rollout_engines,
-                bucket,
-                selector=self._selector,
-                transfer_mode=getattr(self.args, "update_weight_transfer_mode", "broadcast"),
-            )
+            futures = []
+            for name, engines, group in self._engine_groups:
+                futures += update_weights_from_distributed(
+                    name,
+                    group,
+                    engines,
+                    bucket,
+                    selector=self._selector,
+                    transfer_mode=getattr(self.args, "update_weight_transfer_mode", "broadcast"),
+                )
             async_utils.wait_futures(futures)
             bucket.clear()
 

@@ -115,6 +115,9 @@ class ScriptArgs(command_utils.ExecuteTrainConfig):
     rollout_num_gpus: int = 8
     max_weight_staleness: int = 3
     async_max_concurrent_samples: int = 128
+    # weight broadcast in NCCL groups of this many engines (0: one group with every engine);
+    # 1 on MI355X with more than one rollout node (see --update-weight-engines-per-group)
+    update_weight_engines_per_group: int = 0
     # what in-flight requests do during a weight update: retract (re-prefill afterwards),
     # in_place (keep the KV cache), abort
     pause_generation_mode: str = "retract"
@@ -264,6 +267,7 @@ def execute(args: ScriptArgs):
             f"--update-weight-transfer-mode broadcast --pause-generation-mode {args.pause_generation_mode} "
             f"--max-weight-staleness {args.max_weight_staleness} "
             f"--async-max-concurrent-samples {args.async_max_concurrent_samples} "
+            f"--update-weight-engines-per-group {args.update_weight_engines_per_group} "
         )
     else:
         misc_args += "--colocate "

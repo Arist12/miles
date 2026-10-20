@@ -181,6 +181,16 @@ History handling depends on the selected server version:
   no sample when a later request re-sent its exact prompt tokens; a later request
   that differs is a separate branch and its own sample
   (`--session-sample-picker-path`).
+  A harness that re-queries after rejecting an output creates such a branch
+  when the re-query does not replay that output as stored, for example when it
+  drops the output or omits its `reasoning_content` or `tool_calls`. The
+  rejected attempt then trains with the trajectory reward;
+  `miles.rollout.session.v2.picker_hub.drop_rolled_back_leaves` trims it. If the
+  harness then continues from the history before the re-query, this picker also
+  trims the re-query's leaf, so the accepted output is not trained, as with v1's
+  rollback. A replay the matcher accepts, such as a text-only output under
+  `strict` or the same content under `role_content_only`, extends the rejected
+  turn instead, and every built-in picker keeps it.
 
 Whether a replayed message counts as "the same" as the stored one is decided by
 `--session-message-matcher` (default `strict`); see
